@@ -54,7 +54,15 @@
         "ProjectSettings/": true,
         "UserSettings/": true,
         "temp/": true,
-        "Temp/": true
+        "Temp/": true,
+        "Packages/": true,
+        "Assets/Settings/": true,
+        "Assets/Plugins/": true,
+        ".git*": true,
+        "S*.csproj": true,
+        "U*.csproj": true,
+        "A*.csproj": true,
+        "G*.sln": true,
     },
     "dotnet.defaultSolution": "GalconAITest.sln"
 }
