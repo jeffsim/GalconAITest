@@ -65,6 +65,8 @@
         "M*.csproj": true,
         "**/*.asmdef": true,
         "G*.sln": true,
+        "Assets/Scenes": true,
+        "Assets/Resources": true
     },
     "dotnet.defaultSolution": "GalconAITest.sln"
 }
