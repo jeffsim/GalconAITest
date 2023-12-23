@@ -1,17 +1,17 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class GameMgr : MonoBehaviour
 {
-    // Start is called before the first frame update
+    public TownData Town;
+
     void Start()
     {
-        
+        var world = GameDefns.Instance.WorldDefns["mainWorld"];
+        Town = new TownData(world.Towns[0].Town);
     }
 
-    // Update is called once per frame
     void Update()
     {
+        Town.Update();
     }
 }

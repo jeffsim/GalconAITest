@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+using Sirenix.Serialization;
 using UnityEngine;
 
 public enum BuildingClass
@@ -52,7 +53,7 @@ public class BuildingDefn : BaseDefn
     // to skip past AI checks.  TODO: specific to the ArcheryRange building, maybe it should be training them more?
     public bool WorkersSitIdle = false;
 
-    [SerializeReference] public ItemCountDictionary ItemsNeededToConstruct = new ItemCountDictionary();
+    [OdinSerialize] public Dictionary<ItemDefn, int> ItemsNeededToConstruct = new();
 
     // =============================================================
     [TitleGroup("Defense")]

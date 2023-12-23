@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Sirenix.Serialization;
 using UnityEngine;
-using UnityEngine.Splines;
-
-public class ItemCountDictionary : SerializedDictionary<ItemDefn, int> { }
 
 [Serializable]
 public class Town_NodeDefn
@@ -45,8 +43,16 @@ public class Town_NodeDefn
 
     // Starting inventory 
     // note: supply chains become a challenge in larger levels - player should build storage buildings near the front lines...
-    [SerializeReference] public ItemCountDictionary StartingItemCounts = new ItemCountDictionary();
+    // [SerializeReference] public ItemCountDictionary StartingItemCounts = new ItemCountDictionary();
+    // Fucking dictionaries and serialization.
+    public ItemDefn StartingItem1;
+    public int StartingItemCount1;
+    public ItemDefn StartingItem2;
+    public int StartingItemCount2;
+    public ItemDefn StartingItem3;
+    public int StartingItemCount3;
+
 
     // What buildings are allowed to be constructed in this node.  If empty, then all buildings are allowed
-    public List<BuildingDefn> AllowedBuildings = new List<BuildingDefn>();
+    public List<BuildingDefn> AllowedBuildings = new();
 }

@@ -2,20 +2,11 @@ using UnityEngine;
 
 public enum WorkerType { Unset, Worker, Defender };
 
-public class RaceVisualDictionary : SerializedDictionary<RaceDefn, GameObject> { }
-
 [CreateAssetMenu(fileName = "WorkerDefn")]
 public class WorkerDefn : BaseDefn
 {
     public string FriendlyName;
     public WorkerType WorkerType = WorkerType.Worker;
-
-    // Visual
-    [SerializeReference] public RaceVisualDictionary RacialVisuals = new RaceVisualDictionary();
-    public GameObject DefaultRacialVisual; // use this if not present in RacialVisual
-
-    // e.g. a Warrior needs a Shield item and a Sword item in the building to begin training
-    [SerializeReference] public ItemCountDictionary ItemsNeededToTrain = new ItemCountDictionary();
 
     // ===== Health/Defense stats
 

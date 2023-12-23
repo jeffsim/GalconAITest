@@ -1,0 +1,918 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba40ddb7a672144348894273f778f708, type: 3}
+  m_Name: SmallAITestTown
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes: []
+  Id: SmallAITestTown
+  IsTestDefn: 0
+  FriendlyName: SmallAITestTown
+  TutorialStageId: 
+  Ground: {fileID: 8855031290177710783, guid: 19b80e03d510e4dbc965b80118918808, type: 3}
+  GroundOffset: {x: 0, y: -0.54, z: 0}
+  WinLoseCondition: 0
+  Events: []
+  WorldLoc: {x: 0, y: 0, z: 0}
+  StartingCameraPosition: {x: -28.545338, y: 74.501015, z: -71.0553}
+  PlayerRaces:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: 09d249e534cbc1641a8e479a912b70a7, type: 2}
+  - {fileID: 11400000, guid: 6e0e3cafbb547f44b85198843a4ebf59, type: 2}
+  - {fileID: 11400000, guid: ab75b954ca5d0ff498f81e2e7c2022bd, type: 2}
+  VisibleSpotsAtStart: []
+  EnemyIntelligence: 1
+  AIConstraints: []
+  Nodes:
+  - Id: 0
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 0, y: 0.6, z: 0}
+    PlayerIdOwnedBy: 3
+    NodeDefn: {fileID: 11400000, guid: f3a7fbdcc4aee0b448c4da00ce807b21, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 0}
+    BuildingLevel: 1
+    NumStartingWorkers: 6
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 1
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 24.813898, y: 0.6, z: 25.152737}
+    PlayerIdOwnedBy: 2
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 11400000, guid: 3ecbd565530b87147b17803cd1bc62bd, type: 2}
+    BuildingLevel: 1
+    NumStartingWorkers: 2
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 2
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 24.769989, y: 0.6, z: -0.38243866}
+    PlayerIdOwnedBy: 0
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 0}
+    BuildingLevel: 1
+    NumStartingWorkers: 0
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 3
+    IsBuildingEnabled: 1
+    WorldLoc: {x: -0.087038994, y: 0.6, z: -18.617294}
+    PlayerIdOwnedBy: 0
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 0}
+    BuildingLevel: 1
+    NumStartingWorkers: 0
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 4
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 23.374945, y: 0.6, z: -18.535189}
+    PlayerIdOwnedBy: 0
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 0}
+    BuildingLevel: 1
+    NumStartingWorkers: 0
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 5
+    IsBuildingEnabled: 1
+    WorldLoc: {x: -19.568186, y: 0.6, z: -19.055504}
+    PlayerIdOwnedBy: 1
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 11400000, guid: 3ecbd565530b87147b17803cd1bc62bd, type: 2}
+    BuildingLevel: 1
+    NumStartingWorkers: 10
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 6
+    IsBuildingEnabled: 1
+    WorldLoc: {x: -20.033371, y: 0.6, z: -0.05890274}
+    PlayerIdOwnedBy: 3
+    NodeDefn: {fileID: 11400000, guid: b155cc85d0c543b498d97dc7d1fa5980, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 11400000, guid: 1dd99e345bf1fdf4e90b3acea7eb995c, type: 2}
+    BuildingLevel: 1
+    NumStartingWorkers: 6
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 7
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 22.921535, y: 0.6, z: -32.710026}
+    PlayerIdOwnedBy: 3
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 11400000, guid: bb7d7f6d919ea604285d7d774c927fc4, type: 2}
+    BuildingLevel: 2
+    NumStartingWorkers: 20
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 8
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 43.946194, y: 0.6, z: -0.13769913}
+    PlayerIdOwnedBy: 3
+    NodeDefn: {fileID: 11400000, guid: f3a7fbdcc4aee0b448c4da00ce807b21, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 0}
+    BuildingLevel: 1
+    NumStartingWorkers: 6
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 9
+    IsBuildingEnabled: 1
+    WorldLoc: {x: -0.64698887, y: 0.6, z: -34.23049}
+    PlayerIdOwnedBy: 3
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 11400000, guid: bb7d7f6d919ea604285d7d774c927fc4, type: 2}
+    BuildingLevel: 1
+    NumStartingWorkers: 10
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 10
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 40.830513, y: 0.6, z: -19.281822}
+    PlayerIdOwnedBy: 3
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 11400000, guid: bb7d7f6d919ea604285d7d774c927fc4, type: 2}
+    BuildingLevel: 3
+    NumStartingWorkers: 30
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  - Id: 11
+    IsBuildingEnabled: 1
+    WorldLoc: {x: 0.07470429, y: 0.6, z: 27.464355}
+    PlayerIdOwnedBy: 0
+    NodeDefn: {fileID: 11400000, guid: 4eb4b443d76fe72498296f769177ed7a, type: 2}
+    FogOfWarVisibilityRadiusOnClear: 40
+    BuildingRotation: 0
+    BuildingInNode: {fileID: 0}
+    BuildingLevel: 1
+    NumStartingWorkers: 0
+    StartingItem1: {fileID: 0}
+    StartingItemCount1: 0
+    StartingItem2: {fileID: 0}
+    StartingItemCount2: 0
+    StartingItem3: {fileID: 0}
+    StartingItemCount3: 0
+    AllowedBuildings: []
+  NodeConnections:
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 4
+    Node2Id: 3
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: 23.374945
+          y: 0.6
+          z: -18.535189
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: -2.9999819
+          y: -0.0000004877688
+          z: -0.010498491
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: -0.087038994
+          y: 0.6
+          z: -18.617294
+        TangentIn:
+          x: 2.9999819
+          y: 0.0000004877688
+          z: 0.010498491
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 3
+    Node2Id: 5
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: -0.087038994
+          y: 0.6
+          z: -18.617294
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: -2.9992414
+          y: 0.00000058729586
+          z: -0.06746502
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: -19.568186
+          y: 0.6
+          z: -19.055504
+        TangentIn:
+          x: 2.9992414
+          y: -0.00000058729586
+          z: 0.06746502
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 5
+    Node2Id: 6
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: -19.568186
+          y: 0.6
+          z: -19.055504
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: -0.073441416
+          y: 0
+          z: 2.999101
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: -20.033371
+          y: 0.6
+          z: -0.05890274
+        TangentIn:
+          x: 0.073441416
+          y: -0
+          z: -2.999101
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 3
+    Node2Id: 0
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: -0.087038994
+          y: 0.6
+          z: -18.617294
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: 0.014025353
+          y: 0.00000030734773
+          z: 2.999967
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: 0
+          y: 0.6
+          z: 0
+        TangentIn:
+          x: -0.014025353
+          y: -0.00000030734773
+          z: -2.999967
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 1
+    Node2Id: 2
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: 24.813898
+          y: 0.6
+          z: 25.152737
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: -0.0051586498
+          y: -0.00000044816903
+          z: -2.9999955
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: 24.769989
+          y: 0.6
+          z: -0.38243866
+        TangentIn:
+          x: 0.0051586498
+          y: 0.00000044816903
+          z: 2.9999955
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 2
+    Node2Id: 4
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: 24.769989
+          y: 0.6
+          z: -0.38243866
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: -0.22987309
+          y: 0.000001257159
+          z: -2.99118
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: 23.374945
+          y: 0.6
+          z: -18.535189
+        TangentIn:
+          x: 0.22987309
+          y: -0.000001257159
+          z: 2.99118
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 7
+    Node2Id: 4
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: 22.921535
+          y: 0.6
+          z: -32.710026
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: 0.09591167
+          y: 0.00000080693985
+          z: 2.9984665
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: 23.374945
+          y: 0.6
+          z: -18.535189
+        TangentIn:
+          x: -0.09591167
+          y: -0.00000080693985
+          z: -2.9984665
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 8
+    Node2Id: 2
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: 43.85849
+          y: 0.6
+          z: -0.294384
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: -2.9987686
+          y: 0.08483195
+          z: -0.013833225
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: 24.769989
+          y: 0.6
+          z: -0.38243866
+        TangentIn:
+          x: 2.9987686
+          y: -0.08483195
+          z: 0.013833225
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 9
+    Node2Id: 3
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: -0.6774502
+          y: 0.6
+          z: -34.31658
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: 0.11267631
+          y: 0.10305582
+          z: 2.9961114
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: -0.087038994
+          y: 0.6
+          z: -18.617294
+        TangentIn:
+          x: -0.11267631
+          y: -0.10305582
+          z: -2.9961114
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 10
+    Node2Id: 4
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: 40.830513
+          y: 0.6
+          z: -19.281822
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: -2.995829
+          y: 0.09267884
+          z: 0.1281417
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: 23.374945
+          y: 0.6
+          z: -18.535189
+        TangentIn:
+          x: 2.995829
+          y: -0.09267884
+          z: -0.1281417
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1
+  - ConnectionType: {fileID: 11400000, guid: 86de63d5b952dad4ab75ac477adccd83, type: 2}
+    Node1Id: 11
+    Node2Id: 1
+    PathSpline:
+      m_EditModeType: 1
+      m_Knots:
+      - Position:
+          x: 0.07470429
+          y: 0.6
+          z: 27.464355
+        TangentIn:
+          x: 0
+          y: 0
+          z: 0
+        TangentOut:
+          x: 2.9862835
+          y: 0.065183386
+          z: -0.27903697
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      - Position:
+          x: 24.813898
+          y: 0.6
+          z: 25.152737
+        TangentIn:
+          x: -2.9862835
+          y: -0.065183386
+          z: 0.27903697
+        TangentOut:
+          x: 0
+          y: 0
+          z: 0
+        Rotation:
+          value:
+            x: 0
+            y: 0
+            z: 0
+            w: 1
+      m_MetaData: []
+      m_Closed: 0
+      m_IntData:
+        m_Data: []
+      m_FloatData:
+        m_Data: []
+      m_Float4Data:
+        m_Data: []
+      m_ObjectData:
+        m_Data: []
+    PathSplineWidths:
+      m_IndexUnit: 2
+      m_DefaultValue: 0
+      m_DataPoints:
+      - m_Index: 0
+        m_Value: 1
+      - m_Index: 1
+        m_Value: 1
+    IsBidirectional: 1

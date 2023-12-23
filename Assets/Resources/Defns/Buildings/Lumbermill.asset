@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e75d84e7abf74cb19c5077568ca91fd, type: 3}
+  m_Name: Lumbermill
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes: []
+  Id: Lumbermill
+  IsTestDefn: 0
+  FriendlyName: Lumbermill
+  Visual: {fileID: 2223203704234084998, guid: db071dbc859175f438d2dcfc0052f9a0, type: 3}
+  VisualVariants: []
+  BuildingClass: 2
+  BuildingType: 7
+  CanBeDestroyedByPlayer: 1
+  CanAssignWorkers: 1
+  CanBeOwned: 1
+  CanBeBuiltOnAnyNode: 1
+  WorkersSitIdle: 0
+  ItemsNeededToConstruct2:
+    rid: 4742124914534514757
+  DefenseChance: 0.65
+  BuildingCanAutoAttack: 0
+  AutoAttackType: 0
+  AutoAttackMinRange: 5
+  AutoAttackMaxRange: 20
+  SecondsBetweenAutoAttacks: 0.1
+  ArrowDamage: 8
+  ArrowDamageRandom: 4
+  WorkerDefn: {fileID: 11400000, guid: 91cbd743794f55c4cb52dccfd7fd9e24, type: 2}
+  GainsWorkersOverTime: 0
+  TrainingType: 2
+  TrainingTime: 1
+  DefaultNumResourcesGatherablePerGatherer: 1
+  GatherableResource: {fileID: 11400000, guid: e418e5706e2a14373ae7a14a2947fd1c, type: 2}
+  CraftableItems:
+  - {fileID: 11400000, guid: 6d8fe0af8a92d544fb26a64379543100, type: 2}
+  - {fileID: 11400000, guid: 33eebea76001c064c86dacd62faed229, type: 2}
+  DefaultMaxCrafters: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 4742124914534514757
+      type: {class: ItemCountDictionary, ns: , asm: Assembly-CSharp}
+      data:
+        exported_Keys: []
+        exported_Values: 

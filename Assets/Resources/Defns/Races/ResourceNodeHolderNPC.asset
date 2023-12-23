@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 871144642e38c47cf83b4c9ddf2b5d53, type: 3}
+  m_Name: ResourceNodeHolderNPC
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes:
+    - Name: Affinities
+      Entry: 7
+      Data: 0|System.Collections.Generic.Dictionary`2[[RaceDefn, Farwatch.MainGame],[Affinity,
+        Farwatch.MainGame]], mscorlib
+    - Name: comparer
+      Entry: 7
+      Data: 1|System.Collections.Generic.ObjectEqualityComparer`1[[RaceDefn, Farwatch.MainGame]],
+        mscorlib
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 12
+      Data: 0
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+  Id: ResourceNodeHolderNPC
+  IsTestDefn: 0
+  Visual: {fileID: 100006, guid: c6bbcbe4d1e13ba42a153bef98944df7, type: 3}
+  Name: ResourceNodeHolderNPC
+  Description: 
+  WorkerColorTexture: {fileID: 2800000, guid: f2b97751d409bbb4280ddeafb158075b, type: 3}
+  Color: {r: 0.26415092, g: 0.26415092, b: 0.26415092, a: 1}
+  HouseRoofMaterial: {fileID: 2100000, guid: 74c906a917de4124e90cc9db67685612, type: 2}
+  IsComputerAI: 1
+  AttacksEnemies: 0
+  ExpandsTerritory: 0
+  WorkersSitIdle: 1
+  NeutralUntilAttacked: 0

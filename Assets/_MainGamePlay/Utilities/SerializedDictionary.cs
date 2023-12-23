@@ -3,7 +3,7 @@ using UnityEngine;
 using System;
 
 [Serializable]
-public class SerializedDictionary<T1, T2> : Dictionary<T1, T2>, ISerializationCallbackReceiver
+public class SerializedDictionary2<T1, T2> : Dictionary<T1, T2>, ISerializationCallbackReceiver
 {
     [HideInInspector, SerializeField] List<T1> exported_Keys = new List<T1>();
     [HideInInspector, SerializeReference] List<T2> exported_Values = new List<T2>();

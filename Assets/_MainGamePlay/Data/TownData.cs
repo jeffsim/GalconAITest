@@ -31,10 +31,7 @@ public class TownData
     public TownData(TownDefn townDefn)
     {
         DefnId = townDefn.Id;
-    }
 
-    public void InitializeOnFirstEnter()
-    {
         for (int i = 0; i < Defn.PlayerRaces.Count; i++)
         {
             if (i == 0) // null/no-player
@@ -75,6 +72,8 @@ public class TownData
         }
 
         UpdatePaths();
+
+        ConstantAIGameData.Initialize(this);
     }
 
     public void AddNode(Town_NodeDefn townNode)
@@ -84,8 +83,16 @@ public class TownData
         NodeDict[node.Id] = node;
 
         if (townNode.IsBuildingEnabled)
-            foreach (var item in townNode.StartingItemCounts)
-                node.AddItem(item.Key.ItemType, item.Value);
+        {
+            if (townNode.StartingItem1 != null) node.AddItem(townNode.StartingItem1.ItemType, townNode.StartingItemCount1);
+            if (townNode.StartingItem2 != null) node.AddItem(townNode.StartingItem2.ItemType, townNode.StartingItemCount2);
+            if (townNode.StartingItem3 != null) node.AddItem(townNode.StartingItem3.ItemType, townNode.StartingItemCount3);
+            // foreach (var item in townNode.StartingItemCounts)
+            // {
+            //     var itemType = GameDefns.Instance.ItemDefns[item.Key].ItemType;
+            //     node.AddItem(itemType, item.Value);
+            // }
+        }
     }
 
     public void Update()

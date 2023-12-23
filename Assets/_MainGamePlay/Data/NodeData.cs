@@ -14,8 +14,8 @@ public class WorkerData
     }
 }
 
-public class ItemTypeNeedDictionary : SerializedDictionary<ItemType, NeedData> { }
-public class IntStringDictionary : SerializedDictionary<int, string> { }
+public class ItemTypeNeedDictionary : SerializedDictionary2<ItemType, NeedData> { }
+public class IntStringDictionary : SerializedDictionary2<int, string> { }
 
 public class NodeData
 {

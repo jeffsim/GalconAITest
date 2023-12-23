@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb3bb7930a7b324c8be30fb4e7b5177, type: 3}
+  m_Name: Archer
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes: []
+  Id: Archer
+  FriendlyName: Archer
+  WorkerType: 2
+  RacialVisuals:
+    rid: 1767752628415496235
+  DefaultRacialVisual: {fileID: 3447711905656471221, guid: 6e84fece8a286e5499422aa574cef222,
+    type: 3}
+  ItemsNeededToTrain:
+    rid: 1767752628415496243
+  Health: 10
+  HealthRandom: 4
+  DefendChance: 0.9
+  AttackHitChance: 0.9
+  AttackDamage: 10
+  AttackDamageRandom: 4
+  references:
+    version: 2
+    RefIds:
+    - rid: 1767752628415496235
+      type: {class: RaceVisualDictionary, ns: , asm: Farwatch.MainGame}
+      data:
+        exported_Keys:
+        - {fileID: 11400000, guid: de48e68d028e84ba592eddbb4fd9bd78, type: 2}
+        - {fileID: 11400000, guid: e41b89d611f4448ae826c20e03d4e89d, type: 2}
+        - {fileID: 11400000, guid: 73dfbdeb9a58940169b97999ae928da5, type: 2}
+        exported_Values:
+        - {fileID: 8136913503570933307, guid: db49cbdba62ab43328a02c97ce68e8ce, type: 3}
+        - {fileID: 138126, guid: 856cd2a959fb9f344819d9ea6d19dd5d, type: 3}
+        - {fileID: 5833755455673379213, guid: d8c6f65c212cd2943997e75862b6699b, type: 3}
+    - rid: 1767752628415496243
+      type: {class: ItemCountDictionary, ns: , asm: Farwatch.MainGame}
+      data:
+        exported_Keys: []
+        exported_Values: 
