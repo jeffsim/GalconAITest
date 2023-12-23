@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PlasticPipe.PlasticProtocol.Messages;
 using UnityEngine;
 
 public class GameMgr : MonoBehaviour
@@ -8,12 +9,20 @@ public class GameMgr : MonoBehaviour
     public List<Node> Nodes = new();
     public Material NodeConnectionMat;
     public GameObject NodesFolder;
+    public TownDefn TestTownDefn;
 
     void OnEnable()
     {
+        ResetTown();
+    }
+
+    void ResetTown()
+    {
+        Town = new TownData(TestTownDefn);
+
         NodesFolder.RemoveAllChildren();
         Nodes.Clear();
-        Town = new TownData();
+
         foreach (var nodeData in Town.Nodes)
         {
             var nodeGO = Instantiate(NodePrefab);
@@ -22,21 +31,27 @@ public class GameMgr : MonoBehaviour
             Nodes.Add(nodeGO);
         }
 
-        addLineRenderer(Nodes[0], Nodes[5]);
-        addLineRenderer(Nodes[0], Nodes[1]);
-        addLineRenderer(Nodes[1], Nodes[2]);
-        addLineRenderer(Nodes[2], Nodes[4]);
-        addLineRenderer(Nodes[4], Nodes[7]);
+        foreach (var nodeData in Town.Nodes)
+            foreach (var conn in nodeData.ConnectedNodes)
+                addLineRenderer(conn.Start, conn.End);
+
+        Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
+        Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
     }
 
-    private void addLineRenderer(Node startNode, Node endNode)
+    public void OnResetClicked()
+    {
+        ResetTown();
+    }
+
+    private void addLineRenderer(NodeData startNode, NodeData endNode)
     {
         LineRenderer lineRenderer = new GameObject("Path Line").AddComponent<LineRenderer>();
-        lineRenderer.transform.SetParent(NodesFolder.transform); 
+        lineRenderer.transform.SetParent(NodesFolder.transform);
         lineRenderer.material = NodeConnectionMat;
         lineRenderer.widthMultiplier = 0.05f;
 
-        List<Vector3> points = new() { startNode.Data.WorldLoc, endNode.Data.WorldLoc };
+        List<Vector3> points = new() { startNode.WorldLoc, endNode.WorldLoc };
 
         lineRenderer.positionCount = points.Count;
         lineRenderer.SetPositions(points.ToArray());

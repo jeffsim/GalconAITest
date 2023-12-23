@@ -1,14 +1,21 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class BuildingData
 {
+    public BuildingDefn Defn;
+
+    public BuildingData(BuildingDefn defn)
+    {
+        Defn = defn;
+    }
 }
 
 public class PlayerData
 {
     public string Name;
-    public Color Color;
+    public Color Color = Color.white;
     public bool ControlledByAI;
 }
 
@@ -17,26 +24,30 @@ public class TownData
     public List<PlayerData> Players = new();
     public List<NodeData> Nodes = new();
 
-    public TownData()
+    public TownData(TownDefn townDefn)
     {
         // Create players
         Players.Add(new PlayerData() { Name = "Player R", Color = Color.red, ControlledByAI = true });
         Players.Add(new PlayerData() { Name = "Player G", Color = Color.green, ControlledByAI = true });
         Players.Add(new PlayerData() { Name = "Player B", Color = Color.blue, ControlledByAI = true });
 
-        // Create Nodes
-        for (int y = 0; y < 3; y++)
-            for (int x = 0; x < 3; x++)
-                Nodes.Add(new NodeData() { OwnedBy = null, WorldLoc = new Vector3(x * 5, 0, y * 5) });
-
-        // Assign node owners
-        Nodes[0].OwnedBy = Players[0];
-        Nodes[5].OwnedBy = Players[1];
-        Nodes[8].OwnedBy = Players[2];
+        foreach (var nodeDefn in townDefn.Nodes)
+        {
+            var node = new NodeData()
+            {
+                OwnedBy = nodeDefn.OwnedByPlayerId == -1 ? null : Players[nodeDefn.OwnedByPlayerId],
+                WorldLoc = nodeDefn.WorldLoc,
+                NodeId = Nodes.Count,
+                NumWorkers = nodeDefn.NumStartingWorkers,
+            };
+            if (nodeDefn.StartingBuilding != null)
+                node.Building = new BuildingData(nodeDefn.StartingBuilding);
+            Nodes.Add(node);
+        }
 
         // Create Node Connections
-        Nodes[0].ConnectedNodes.Add(new NodeConnection() { Start = Nodes[0], End = Nodes[1], TravelCost = 1 });
-        Nodes[0].ConnectedNodes.Add(new NodeConnection() { Start = Nodes[1], End = Nodes[8], TravelCost = 1 });
+        foreach (var nodeConnectionDefn in townDefn.NodeConnections)
+            Nodes[nodeConnectionDefn.Nodes.x].ConnectedNodes.Add(new NodeConnection() { Start = Nodes[nodeConnectionDefn.Nodes.x], End = Nodes[nodeConnectionDefn.Nodes.y], TravelCost = 1 });
     }
 
     public void Update()

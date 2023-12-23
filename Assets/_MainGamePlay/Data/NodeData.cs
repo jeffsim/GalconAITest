@@ -11,9 +11,10 @@ public class NodeConnection
 public class NodeData
 {
     public PlayerData OwnedBy;
-
+    public int NodeId;
     public Vector3 WorldLoc;
 
     public List<NodeConnection> ConnectedNodes = new();
     public BuildingData Building;
+    public int NumWorkers;
 }
