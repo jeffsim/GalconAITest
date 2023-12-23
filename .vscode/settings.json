@@ -62,6 +62,8 @@
         "S*.csproj": true,
         "U*.csproj": true,
         "A*.csproj": true,
+        "M*.csproj": true,
+        "**/*.asmdef": true,
         "G*.sln": true,
     },
     "dotnet.defaultSolution": "GalconAITest.sln"

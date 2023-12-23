@@ -6,11 +6,10 @@ public class GameMgr : MonoBehaviour
 
     void Start()
     {
-        var world = GameDefns.Instance.WorldDefns["mainWorld"];
-        Town = new TownData(world.Towns[0].Town);
+        Town = new TownData();
     }
 
-    void Update()
+    void Update() 
     {
         Town.Update();
     }
