@@ -14,6 +14,8 @@ public class GameMgr : MonoBehaviour
     void OnEnable()
     {
         ResetTown();
+
+        Application.targetFrameRate = 60;
     }
 
     void ResetTown()
@@ -35,8 +37,8 @@ public class GameMgr : MonoBehaviour
             foreach (var conn in nodeData.ConnectedNodes)
                 addLineRenderer(conn.Start, conn.End);
 
-        Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
-        Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
+     //   Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
+   //     Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
     }
 
     public void OnResetClicked()

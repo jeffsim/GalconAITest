@@ -27,23 +27,13 @@ public class TownData
     public TownData(TownDefn townDefn)
     {
         // Create players
+        Players.Add(null); // no player (unowned)
         Players.Add(new PlayerData() { Name = "Player R", Color = Color.red, ControlledByAI = true });
         Players.Add(new PlayerData() { Name = "Player G", Color = Color.green, ControlledByAI = true });
         Players.Add(new PlayerData() { Name = "Player B", Color = Color.blue, ControlledByAI = true });
 
         foreach (var nodeDefn in townDefn.Nodes)
-        {
-            var node = new NodeData()
-            {
-                OwnedBy = nodeDefn.OwnedByPlayerId == -1 ? null : Players[nodeDefn.OwnedByPlayerId],
-                WorldLoc = nodeDefn.WorldLoc,
-                NodeId = Nodes.Count,
-                NumWorkers = nodeDefn.NumStartingWorkers,
-            };
-            if (nodeDefn.StartingBuilding != null)
-                node.Building = new BuildingData(nodeDefn.StartingBuilding);
-            Nodes.Add(node);
-        }
+            Nodes.Add(new NodeData(nodeDefn, Nodes.Count, Players[nodeDefn.OwnedByPlayerId]));
 
         // Create Node Connections
         foreach (var nodeConnectionDefn in townDefn.NodeConnections)
