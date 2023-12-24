@@ -5,9 +5,9 @@ using UnityEngine;
 public class GameMgr : MonoBehaviour
 {
     public TownData Town;
-    public Node NodePrefab;
+    public NodeGO NodePrefab;
     public Worker WorkerPrefab;
-    public List<Node> Nodes = new();
+    public List<NodeGO> Nodes = new();
     public List<Worker> Workers = new();
     public Material NodeConnectionMat;
     
@@ -42,7 +42,7 @@ public class GameMgr : MonoBehaviour
         }
 
         foreach (var nodeData in Town.Nodes)
-            foreach (var conn in nodeData.ConnectedNodes)
+            foreach (var conn in nodeData.NodeConnections)
                 addLineRenderer(conn.Start, conn.End);
 
         // Workers

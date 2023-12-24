@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-public class Node : MonoBehaviour
+public class NodeGO : MonoBehaviour
 {
     public NodeData Data;
     public TextMeshPro NodeIdText;

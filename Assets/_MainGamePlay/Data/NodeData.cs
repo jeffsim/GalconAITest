@@ -14,14 +14,12 @@ public class NodeData
     public int NodeId;
     public Vector3 WorldLoc;
 
-    public List<NodeConnection> ConnectedNodes = new();
+    public List<NodeConnection> NodeConnections = new();
     public BuildingData Building;
     public int NumWorkers;
-    private NodeDefn nodeDefn;
 
     public NodeData(NodeDefn nodeDefn, int nodeId, PlayerData player)
     {
-        this.nodeDefn = nodeDefn;
         OwnedBy = player;
         WorldLoc = nodeDefn.WorldLoc;
         NodeId = nodeId;
