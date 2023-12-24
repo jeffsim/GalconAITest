@@ -6,10 +6,16 @@ public class GameMgr : MonoBehaviour
 {
     public TownData Town;
     public Node NodePrefab;
+    public Worker WorkerPrefab;
     public List<Node> Nodes = new();
+    public List<Worker> Workers = new();
     public Material NodeConnectionMat;
+    
     public GameObject NodesFolder;
+    public GameObject WorkersFolder;
+
     public TownDefn TestTownDefn;
+    public WorkerDefn TestWorkerDefn;
 
     void OnEnable()
     {
@@ -20,10 +26,12 @@ public class GameMgr : MonoBehaviour
 
     void ResetTown()
     {
-        Town = new TownData(TestTownDefn);
+        Town = new TownData(TestTownDefn, TestWorkerDefn);
 
         NodesFolder.RemoveAllChildren();
+        WorkersFolder.RemoveAllChildren();
         Nodes.Clear();
+        Workers.Clear();
 
         foreach (var nodeData in Town.Nodes)
         {
@@ -37,8 +45,17 @@ public class GameMgr : MonoBehaviour
             foreach (var conn in nodeData.ConnectedNodes)
                 addLineRenderer(conn.Start, conn.End);
 
-     //   Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
-   //     Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
+        // Workers
+        foreach (var workerData in Town.Workers)
+        {
+            var workerGO = Instantiate(WorkerPrefab);
+            workerGO.transform.SetParent(WorkersFolder.transform);
+            workerGO.InitializeForData(workerData);
+            Workers.Add(workerGO);
+        }
+
+        //   Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
+        //     Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
     }
 
     public void OnResetClicked()
