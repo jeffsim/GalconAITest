@@ -49,7 +49,6 @@ class AI_NodeState
 class AI_TownState
 {
     public AI_NodeState[] Nodes;
-    public List<AI_NodeState> PlayerOwnedNodes;
 
     TownData townData;
     PlayerData player;
@@ -64,16 +63,9 @@ class AI_TownState
         for (int i = 0; i < townData.Nodes.Count; i++)
             Nodes[i] = new AI_NodeState(townData.Nodes[i]);
 
-        // Initialize Player owned nodes list; also update EmptyNeighborNodes now that all Nodes are initialized.
-        PlayerOwnedNodes = new();
         for (int i = 0; i < townData.Nodes.Count; i++)
-        {
-            var sourceNode = townData.Nodes[i];
-            if (sourceNode.OwnedBy == player)
-                PlayerOwnedNodes.Add(Nodes[i]);
-            foreach (var neighborNode in sourceNode.NodeConnections)
+            foreach (var neighborNode in townData.Nodes[i].NodeConnections)
                 Nodes[i].NeighborNodes.Add(Nodes[townData.Nodes.IndexOf(neighborNode.End)]);
-        }
     }
 
     internal void SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend)
@@ -81,7 +73,6 @@ class AI_TownState
         // We are capturing a new node; need to update lists (e.g. PlayerOwnedNodes)
         sourceNode.NumWorkers -= numToSend;
         destNode.NumWorkers += numToSend;
-        PlayerOwnedNodes.Add(destNode);
         destNode.OwnedBy = player;
     }
 
@@ -90,7 +81,6 @@ class AI_TownState
         // We are undo'ing capture of a new node; need to restore lists (e.g. PlayerOwnedNodes)
         sourceNode.NumWorkers += numSent;
         destNode.NumWorkers -= numSent;
-        PlayerOwnedNodes.Remove(destNode);
         destNode.OwnedBy = null;
     }
 
@@ -107,7 +97,7 @@ class AI_TownState
     }
 
     internal void SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend,
-            out bool attackerTookControlOfNode, out int originalDestNodeNumWorkers, out PlayerData originalOwner)
+            out bool nodeOwnerChanged, out int originalDestNodeNumWorkers, out PlayerData originalOwner)
     {
         originalDestNodeNumWorkers = destNode.NumWorkers;
         originalOwner = destNode.OwnedBy;
@@ -116,31 +106,31 @@ class AI_TownState
         sourceNode.NumWorkers -= numToSend;
         destNode.NumWorkers -= numToSend;
 
-        attackerTookControlOfNode = false;
-        if (destNode.NumWorkers <= 0)
+        nodeOwnerChanged = false;
+        if (destNode.NumWorkers == 0)
+        {
+            // attackers and defenders both died
+            destNode.OwnedBy = null;
+            nodeOwnerChanged = true;
+        }
+        else if (destNode.NumWorkers < 0)
         {
             // we captured the node
-            attackerTookControlOfNode = true;
-
-            destNode.NumWorkers = -destNode.NumWorkers;
-            PlayerOwnedNodes.Add(destNode);
+            nodeOwnerChanged = true;
             destNode.OwnedBy = player;
 
-            throw new NotImplementedException(" Need to remove destNode from the original owner's playerownednodes...");
+            destNode.NumWorkers = -destNode.NumWorkers;
         }
     }
 
     internal void Undo_SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent,
-                                               bool attackerTookControlOfNode, int originalDestNodeNumWorkers, PlayerData originalOwner)
+                                               bool nodeOwnerChanged, int originalDestNodeNumWorkers, PlayerData originalOwner)
     {
-        if (attackerTookControlOfNode)
+        if (nodeOwnerChanged)
         {
             sourceNode.NumWorkers += numSent;
             destNode.NumWorkers = originalDestNodeNumWorkers;
             destNode.OwnedBy = originalOwner;
-
-            PlayerOwnedNodes.Remove(destNode);
-            throw new NotImplementedException(" Need to add destNode back into the previous owner's playerownednodes...");
         }
     }
 }
@@ -170,17 +160,21 @@ public class PlayerAI
     float recursivelyDetermineBestAction(AI_TownState state, int curDepth = 0)
     {
         float bestValue = 0;
-        foreach (var node in state.PlayerOwnedNodes)
+        foreach (var node in state.Nodes)
         {
+            if (node.OwnedBy != player)
+                continue; // only process nodes we own
+
             // Expand to neighboring nodes.
             foreach (var neighborNode in node.NeighborNodes)
             {
                 if (!neighborNode.HasBuilding)
                 {
                     // note: state value calculation should ensure taht we don't overly spread ourselves thin (unless that's the AI's weights)
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToEmptyNode(node, neighborNode, 0.1f, state, curDepth));
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToEmptyNode(node, neighborNode, 0.5f, state, curDepth));
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToEmptyNode(node, neighborNode, 0.95f, state, curDepth));
+                    // TODO: need to account for workers already walking to the node
+                    bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.1f, state, curDepth));
+                    bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.5f, state, curDepth));
+                    bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.95f, state, curDepth));
                 }
             }
 
@@ -190,9 +184,11 @@ public class PlayerAI
                 if (neighborNode.OwnedBy != player && neighborNode.OwnedBy.Hates(player))
                 {
                     // TODO: don't send arbitrary % like this; instead send the # needed to win
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToAttackNode(node, neighborNode, 0.1f, state, curDepth));
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToAttackNode(node, neighborNode, 0.5f, state, curDepth));
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToAttackNode(node, neighborNode, 0.95f, state, curDepth));
+                    // TODO: need to account for workers already walking to the node
+                    // attack to disrupt enemies' strategy
+                    bestValue = Math.Max(bestValue, SendWorkersToAttackNode(node, neighborNode, 0.1f, state, curDepth));
+                    bestValue = Math.Max(bestValue, SendWorkersToAttackNode(node, neighborNode, 0.5f, state, curDepth));
+                    bestValue = Math.Max(bestValue, SendWorkersToAttackNode(node, neighborNode, 0.95f, state, curDepth));
                 }
             }
 
@@ -207,9 +203,10 @@ public class PlayerAI
             {
                 if (neighborNode.OwnedBy == player)
                 {
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToOwnedNode(node, neighborNode, 0.1f, state, curDepth));
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToOwnedNode(node, neighborNode, 0.5f, state, curDepth));
-                    bestValue = Math.Max(bestValue, TrySendingWorkersToOwnedNode(node, neighborNode, 0.95f, state, curDepth));
+                    // TODO: need to account for workers already walking to the node
+                    bestValue = Math.Max(bestValue, SendWorkersToOwnedNode(node, neighborNode, 0.1f, state, curDepth));
+                    bestValue = Math.Max(bestValue, SendWorkersToOwnedNode(node, neighborNode, 0.5f, state, curDepth));
+                    bestValue = Math.Max(bestValue, SendWorkersToOwnedNode(node, neighborNode, 0.95f, state, curDepth));
                 }
             }
 
@@ -220,6 +217,8 @@ public class PlayerAI
                 // Prioritize buildings that progress a strategy
                 // Prioritize buildings that provide defense
 
+                // TODO: need to account for workers already walking to the node
+
                 // note: prioritization doesn't apply here (that's baked into the state value calc), but we should apply logi here
                 // to avoid trying to build "unuseful" buildings
             }
@@ -228,6 +227,7 @@ public class PlayerAI
             if (node.HasBuilding)
             {
                 // TODO: How do we determine if we *should* upgrade a building?
+                // TODO: need to account for workers already walking to the node
             }
 
         }
@@ -236,16 +236,16 @@ public class PlayerAI
     }
 
 
-    private float TrySendingWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
+    private float SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
     {
         int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
-        state.SendWorkersToAttackNode(sourceNode, targetNode, numToSend, out bool attackerTookControlOfNode, out int originalDestNodeNumWorkers, out PlayerData originalOwner);
+        state.SendWorkersToAttackNode(sourceNode, targetNode, numToSend, out bool nodeOwnerChanged, out int originalDestNodeNumWorkers, out PlayerData originalOwner);
         var value = recursivelyDetermineBestAction(state, curDepth + 1);
-        state.Undo_SendWorkersToAttackNode(sourceNode, targetNode, numToSend, attackerTookControlOfNode, originalDestNodeNumWorkers, originalOwner);
+        state.Undo_SendWorkersToAttackNode(sourceNode, targetNode, numToSend, nodeOwnerChanged, originalDestNodeNumWorkers, originalOwner);
         return value;
     }
 
-    private float TrySendingWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
+    private float SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
     {
         int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
         state.SendWorkersToEmptyNode(sourceNode, targetNode, numToSend);
@@ -254,7 +254,7 @@ public class PlayerAI
         return value;
     }
 
-    private float TrySendingWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
+    private float SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
     {
         int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
         state.SendWorkersToOwnedNode(sourceNode, targetNode, numToSend);
