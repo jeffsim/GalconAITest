@@ -6,29 +6,23 @@ public class Node : MonoBehaviour
     public NodeData Data;
     public TextMeshPro NodeIdText;
     public TextMeshPro BuildingText;
+    public MeshRenderer BaseObject;
+    public MeshRenderer BuildingObject;
 
     public void InitializeForNodeData(NodeData data)
     {
         name = "Node " + data.NodeId + " - " + data.WorldLoc;
         NodeIdText.text = data.NodeId.ToString();
-        BuildingText.text = data.Building?.Defn.Name ?? "empty";
+        BuildingText.text = data.Building?.Defn.Name ?? "";
 
         Data = data;
         transform.position = data.WorldLoc;
+
+        BuildingText.color = data.OwnedBy?.Color ?? Color.white;
         if (data.OwnedBy != null)
-        {
-            BuildingText.color = data.OwnedBy.Color;
-            if (data.Building != null)
-                GetComponent<MeshRenderer>().material.color = data.Building.Defn.Color;
-            else
-                GetComponent<MeshRenderer>().material.color = data.OwnedBy.Color;
-        }
-        else
-        {
-            BuildingText.color = Color.white;
-            var color = data.Building != null ? data.Building.Defn.Color : Color.gray;
-            GetComponent<MeshRenderer>().material.color = color;
-        }
+            BaseObject.material.color = data.OwnedBy.Color;
+        BuildingObject.material.color = data.Building?.Defn.Color ?? Color.gray;
+        BuildingObject.gameObject.SetActive(data.Building != null);
     }
 
     void Update()
