@@ -12,6 +12,12 @@ public class AIAction
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
     public BuildingDefn BuildingToConstruct;
+
+#if DEBUG
+    // Keep track of the optimal actions to perform after this one; only used for debugging
+    public AIAction NextAction;
+    // public List<AIAction> NextActions = new List<AIAction>();
+#endif
 }
 
 public class PlayerAI
@@ -43,16 +49,27 @@ public class PlayerAI
         // enact the action
         if (bestAction.Type == AIActionType.DoNothing)
             return; // no action to take
-        switch (bestAction.Type)
+
+        var actionToOutput = bestAction;
+        int spaces = 0;
+        while (actionToOutput.NextAction != null)
         {
-            case AIActionType.SendWorkersToNode:
-                Debug.Log(bestAction.Type + " " + bestAction.Count + " workers from " + bestAction.SourceNode.NodeId + " to " + bestAction.DestNode.NodeId);
-                break;
-            case AIActionType.ConstructBuildingInOwnedNode:
-                Debug.Log(bestAction.Type + " " + bestAction.BuildingToConstruct.Name + " in " + bestAction.SourceNode.NodeId);
-                break;
-            default:
-                throw new Exception("Unhandled AIActionType: " + bestAction.Type);
+            // create empty string with 'spaces' indentation
+            string str = new string(' ', spaces * 2);
+
+            switch (bestAction.Type)
+            {
+                case AIActionType.SendWorkersToNode:
+                    Debug.Log(str + bestAction.Type + " " + bestAction.Count + " workers from " + bestAction.SourceNode.NodeId + " to " + bestAction.DestNode.NodeId);
+                    break;
+                case AIActionType.ConstructBuildingInOwnedNode:
+                    Debug.Log(str + bestAction.Type + " " + bestAction.BuildingToConstruct.Name + " in " + bestAction.SourceNode.NodeId);
+                    break;
+                default:
+                    throw new Exception("Unhandled AIActionType: " + bestAction.Type);
+            }
+            spaces++;
+            actionToOutput = actionToOutput.NextAction;
         }
     }
 
@@ -94,6 +111,7 @@ public class PlayerAI
                             bestAction.Count = numToSend;
                             bestAction.SourceNode = node;
                             bestAction.DestNode = neighborNode;
+                            bestAction.NextAction = actionScore;
                         }
 
                         // Undo the action
@@ -119,6 +137,7 @@ public class PlayerAI
                             bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
                             bestAction.SourceNode = node;
                             bestAction.BuildingToConstruct = buildingDefn;
+                            bestAction.NextAction = actionScore;
                         }
 
                         // Undo the action
