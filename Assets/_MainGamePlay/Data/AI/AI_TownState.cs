@@ -10,6 +10,8 @@ class AI_TownState
 
     Dictionary<GoodDefn, int> TownInventory = new(100);
 
+    public Dictionary<int, bool> HaveSentWorkersToOrFromNode = new();
+
     public AI_TownState(PlayerData player)
     {
         this.player = player;
@@ -44,8 +46,12 @@ class AI_TownState
 
         // Initialize inventory
         foreach (var node in townData.Nodes)
+        {
             foreach (var invItem in node.Inventory)
                 TownInventory[invItem.Key] = invItem.Value;
+        }
+
+        HaveSentWorkersToOrFromNode.Clear();
     }
 
     internal float EvaluateScore()
@@ -81,6 +87,9 @@ class AI_TownState
         sourceNode.NumWorkers -= numToSend;
         destNode.NumWorkers += numToSend;
         destNode.OwnedBy = player;
+
+        HaveSentWorkersToOrFromNode[sourceNode.NodeId] = true;
+        HaveSentWorkersToOrFromNode[destNode.NodeId] = true;
     }
 
     internal void Undo_SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)

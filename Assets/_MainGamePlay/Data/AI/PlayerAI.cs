@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 public partial class PlayerAI
@@ -7,7 +6,7 @@ public partial class PlayerAI
     PlayerData player;
     AI_TownState aiTownState;
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
-    int maxDepth = 8;
+    int maxDepth = 2;
 
     public PlayerAI(PlayerData playerData)
     {
@@ -25,7 +24,6 @@ public partial class PlayerAI
         aiTownState.UpdateState(townData);
 
         // Determine the best action to take, and then take it
-
         var bestAction = RecursivelyDetermineBestAction();
         performAction(bestAction);
     }
@@ -42,38 +40,49 @@ public partial class PlayerAI
             bestAction.Score = aiTownState.EvaluateScore();
             return bestAction;
         }
+
         foreach (var node in aiTownState.Nodes)
         {
-            if (node.OwnedBy != player)
-                continue; // only process nodes that we own
+            if (node.OwnedBy != player) continue; // only process nodes that we own
 
-            // Try expanding to neighboring empty nodes.
-            if (node.NumWorkers > minWorkersInNodeBeforeConsideringSendingAnyOut)
-                foreach (var neighborNode in node.NeighborNodes)
-                    if (!neighborNode.HasBuilding)
-                    {
-                        // Update the townstate to reflect building the building, and consume the resources for it
-                        int numToSend = Math.Max(1, node.NumWorkers / 2);
-                        aiTownState.SendWorkersToEmptyNode(node, neighborNode, numToSend);
-
-                        // Recursively determine the value of this action.  Note that the following function gaurantees to restore any changes to townstate.
-                        var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
-                        if (actionScore.Score > bestAction.Score)
-                        {
-                            // This is the best action so far; save the action so we can return it
-                            bestAction.Score = actionScore.Score;
-                            bestAction.Type = AIActionType.SendWorkersToNode;
-                            bestAction.Count = numToSend;
-                            bestAction.SourceNode = node;
-                            bestAction.DestNode = neighborNode;
-                            bestAction.NextAction = actionScore;
-                        }
-
-                        // Undo the action
-                        aiTownState.Undo_SendWorkersToEmptyNode(node, neighborNode, numToSend);
-                    }
+            TrySendWorkersFromNode(node, ref bestAction, curDepth);
         }
         return bestAction;
+    }
+
+    // Try expanding to neighboring empty nodes.
+    private void TrySendWorkersFromNode(AI_NodeState node, ref AIAction bestAction, int curDepth)
+    {
+        if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
+            return; // not enough workers in node to send any out
+
+        if (aiTownState.HaveSentWorkersToOrFromNode.ContainsKey(node.NodeId))
+            return; // don't send workers from the same node twice in an AI stack, or from a node we sent workers to in the stack.
+
+        foreach (var neighborNode in node.NeighborNodes)
+        {
+            if (aiTownState.HaveSentWorkersToOrFromNode.ContainsKey(neighborNode.NodeId))
+                continue;  // don't send workers to the same node twice in an AI stack.  This disallows some odd strategies but cleans up lots of odd stuff
+
+            int numToSend = Math.Max(1, node.NumWorkers / 2);
+            aiTownState.SendWorkersToEmptyNode(node, neighborNode, numToSend);
+
+            // Recursively determine the value of this action.  Note that the following function gaurantees to restore any changes to townstate.
+            var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
+            if (actionScore.Score > bestAction.Score)
+            {
+                // This is the best action so far; save the action so we can return it
+                bestAction.Score = actionScore.Score;
+                bestAction.Type = AIActionType.SendWorkersToNode;
+                bestAction.Count = numToSend;
+                bestAction.SourceNode = node;
+                bestAction.DestNode = neighborNode;
+                bestAction.NextAction = actionScore;
+            }
+
+            // Undo the action
+            aiTownState.Undo_SendWorkersToEmptyNode(node, neighborNode, numToSend);
+        }
     }
 
     private void performAction(AIAction bestAction)
