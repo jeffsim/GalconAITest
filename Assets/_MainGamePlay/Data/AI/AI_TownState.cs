@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using UnityEditor;
 
 class AI_TownState
 {
@@ -53,8 +51,10 @@ class AI_TownState
     }
 
     internal void SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend,
-            out bool nodeOwnerChanged, out int originalDestNodeNumWorkers, out PlayerData originalOwner)
+            out int originalSourceNodeNumWorkers, out int originalDestNodeNumWorkers, out PlayerData originalOwner)
     {
+        // store all values we need to undo the action (anything we change below)
+        originalSourceNodeNumWorkers = sourceNode.NumWorkers;
         originalDestNodeNumWorkers = destNode.NumWorkers;
         originalOwner = destNode.OwnedBy;
 
@@ -62,31 +62,39 @@ class AI_TownState
         sourceNode.NumWorkers -= numToSend;
         destNode.NumWorkers -= numToSend;
 
-        nodeOwnerChanged = false;
         if (destNode.NumWorkers == 0)
         {
             // attackers and defenders both died
             destNode.OwnedBy = null;
-            nodeOwnerChanged = true;
         }
         else if (destNode.NumWorkers < 0)
         {
             // we captured the node
-            nodeOwnerChanged = true;
             destNode.OwnedBy = player;
 
             destNode.NumWorkers = -destNode.NumWorkers;
         }
     }
 
-    internal void Undo_SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent,
-                                               bool nodeOwnerChanged, int originalDestNodeNumWorkers, PlayerData originalOwner)
+    internal void Undo_SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode,
+                                               int originalSourceNodeNumWorkers, int originalDestNodeNumWorkers, PlayerData originalOwner)
     {
-        if (nodeOwnerChanged)
-        {
-            sourceNode.NumWorkers += numSent;
-            destNode.NumWorkers = originalDestNodeNumWorkers;
-            destNode.OwnedBy = originalOwner;
-        }
+        sourceNode.NumWorkers = originalSourceNodeNumWorkers;
+        destNode.NumWorkers = originalDestNodeNumWorkers;
+        destNode.OwnedBy = originalOwner;
+    }
+
+    internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn)
+    {
+        node.Building.buildingDefn = buildingDefn;
+    }
+
+    internal void Undo_BuildBuilding(AI_NodeState node)
+    {
+        node.Building.buildingDefn = null;
+    }
+
+    internal void ConsumeResources(BuildingDefn buildingDefn, AI_NodeState node)
+    {
     }
 }
