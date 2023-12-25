@@ -11,6 +11,7 @@ public class AIAction
     public int Count;
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
+    public BuildingDefn BuildingToConstruct;
 }
 
 public class PlayerAI
@@ -42,7 +43,17 @@ public class PlayerAI
         // enact the action
         if (bestAction.Type == AIActionType.DoNothing)
             return; // no action to take
-        Debug.Log(bestAction.Type + " " + bestAction.Count + " workers from " + bestAction.SourceNode.NodeId + " to " + bestAction.DestNode.NodeId);
+        switch (bestAction.Type)
+        {
+            case AIActionType.SendWorkersToNode:
+                Debug.Log(bestAction.Type + " " + bestAction.Count + " workers from " + bestAction.SourceNode.NodeId + " to " + bestAction.DestNode.NodeId);
+                break;
+            case AIActionType.ConstructBuildingInOwnedNode:
+                Debug.Log(bestAction.Type + " " + bestAction.BuildingToConstruct.Name + " in " + bestAction.SourceNode.NodeId);
+                break;
+            default:
+                throw new Exception("Unhandled AIActionType: " + bestAction.Type);
+        }
     }
 
     int maxDepth = 8;
@@ -88,29 +99,38 @@ public class PlayerAI
                         // Undo the action
                         aiTownState.Undo_SendWorkersToEmptyNode(node, neighborNode, numToSend);
                     }
+
+            // Try constructing a building in node if we have resources to build it and those resources are accessible
+            if (!node.HasBuilding)
+            {
+                foreach (BuildingDefn buildingDefn in GameDefns.Instance.BuildingDefns.Values)
+                {
+                    if (buildingDefn.CanBeBuiltByPlayer && BuildingCanBePurchased(buildingDefn, node))
+                    {
+                        // Update the townstate to reflect building the building, and consume the resources for it
+                        aiTownState.BuildBuilding(node, buildingDefn, out GoodDefn resource1, out int resource1Amount, out GoodDefn resource2, out int resource2Amount);
+
+                        // Recursively determine the value of this action
+                        var actionScore = RecursivelyDetermineBestAction_Simple(curDepth + 1);
+                        if (actionScore.Score > bestAction.Score)
+                        {
+                            // This is the best action so far; save the action so we can return it
+                            bestAction.Score = actionScore.Score;
+                            bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
+                            bestAction.SourceNode = node;
+                            bestAction.BuildingToConstruct = buildingDefn;
+                        }
+
+                        // Undo the action
+                        aiTownState.Undo_BuildBuilding(node, resource1, resource1Amount, resource2, resource2Amount);
+                    }
+                }
+            }
         }
         return bestAction;
     }
 
 
-    // Try constructing a building in node if we have resources to build it and those resources are accessible
-    // if (!node.HasBuilding)
-    // {
-    //     foreach (BuildingDefn buildingDefn in GameDefns.Instance.BuildingDefns.Values)
-    //     {
-    //         if (buildingDefn.CanBeBuiltByPlayer && BuildingCanBePurchased(buildingDefn, node))
-    //         {
-    //             // Update the townstate to reflect building the building, and consume the resources for it
-    //             aiTownState.BuildBuilding(node, buildingDefn, out GoodDefn resource1, out int resource1Amount, out GoodDefn resource2, out int resource2Amount);
-
-    //             // Recursively determine the value of this action
-    //             var value = RecursivelyDetermineBestAction_Simple(curDepth + 1);
-
-    //             // Undo the action
-    //             aiTownState.Undo_BuildBuilding(node, resource1, resource1Amount, resource2, resource2Amount);
-    //         }
-    //     }
-    // }
 
     internal bool BuildingCanBePurchased(BuildingDefn buildingDefn, AI_NodeState buildInNode)
     {

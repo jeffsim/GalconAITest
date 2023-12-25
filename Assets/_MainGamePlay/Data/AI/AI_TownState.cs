@@ -60,6 +60,11 @@ class AI_TownState
             else if (node.OwnedBy != null)
                 score -= 1;
 
+        // Add score for each building in a node we own
+        foreach (var node in Nodes)
+            if (node.OwnedBy == player && node.HasBuilding)
+                score += 1;
+
         return score;
     }
 
