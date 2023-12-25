@@ -21,5 +21,6 @@ MonoBehaviour:
     PrefabModificationsReferencedUnityObjects: []
     PrefabModifications: []
     SerializationNodes: []
-  Name: test
+  Id: TestWorkerDefn
+  Name: TestWorkerDefn
   Color: {r: 0.73861265, g: 0, b: 1, a: 1}
