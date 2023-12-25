@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 315161828a8d7453f963b5d8d419bac3, type: 3}
-  m_Name: Forest
+  m_Name: Carpenter
   m_EditorClassIdentifier: 
   serializationData:
     SerializedFormat: 2
@@ -21,13 +21,19 @@ MonoBehaviour:
     PrefabModificationsReferencedUnityObjects: []
     PrefabModifications: []
     SerializationNodes: []
-  Id: Forest
-  Name: Forest
-  Color: {r: 0, g: 1, b: 0.05740881, a: 1}
+  Id: Carpenter
+  Name: Carpenter
+  Color: {r: 0.4509804, g: 0, b: 0.08856832, a: 1}
   WorkerDefn: {fileID: 0}
-  CanBeBuiltByPlayer: 0
-  ConstructionRequirements: []
+  CanBeBuiltByPlayer: 1
+  ConstructionRequirements:
+  - Good: {fileID: 11400000, guid: 5eb686fd1272dc74c8876ccbc130c9da, type: 2}
+    Amount: 2
+  - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+    Amount: 1
   CanGatherResources: 0
   GatherableResource: {fileID: 0}
-  CanCraftGoods: 0
-  CraftableGoods: []
+  CanCraftGoods: 1
+  CraftableGoods:
+  - {fileID: 11400000, guid: 83348bb31bf6120419ab9aea7efba36e, type: 2}
+  - {fileID: 11400000, guid: f0ae232d3a3389349b7e36df1345973d, type: 2}

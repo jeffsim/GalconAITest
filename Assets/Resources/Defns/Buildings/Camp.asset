@@ -21,5 +21,13 @@ MonoBehaviour:
     PrefabModificationsReferencedUnityObjects: []
     PrefabModifications: []
     SerializationNodes: []
+  Id: Camp
   Name: Camp
   Color: {r: 0.5529971, g: 0, b: 1, a: 1}
+  WorkerDefn: {fileID: 0}
+  CanBeBuiltByPlayer: 0
+  ConstructionRequirements: []
+  CanGatherResources: 0
+  GatherableResource: {fileID: 0}
+  CanCraftGoods: 0
+  CraftableGoods: []

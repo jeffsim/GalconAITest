@@ -21,5 +21,13 @@ MonoBehaviour:
     PrefabModificationsReferencedUnityObjects: []
     PrefabModifications: []
     SerializationNodes: []
+  Id: Woodcutter
   Name: Woodcutter
   Color: {r: 0, g: 0.4528302, b: 0.048278306, a: 1}
+  WorkerDefn: {fileID: 0}
+  CanBeBuiltByPlayer: 1
+  ConstructionRequirements: []
+  CanGatherResources: 1
+  GatherableResource: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+  CanCraftGoods: 0
+  CraftableGoods: []
