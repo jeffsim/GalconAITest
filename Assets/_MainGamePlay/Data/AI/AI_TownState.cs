@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -24,8 +25,17 @@ class AI_TownState
             Nodes[i] = new AI_NodeState(townData.Nodes[i]);
 
         for (int i = 0; i < townData.Nodes.Count; i++)
-            foreach (var neighborNode in townData.Nodes[i].NodeConnections)
-                Nodes[i].NeighborNodes.Add(Nodes[townData.Nodes.IndexOf(neighborNode.End)]);
+        {
+            var nodeConns = townData.Nodes[i].NodeConnections;
+            foreach (var nodeConn in nodeConns)
+            {
+                var endIndex = townData.Nodes.IndexOf(nodeConn.End);
+                var endNode = Nodes[endIndex];
+                Nodes[i].NeighborNodes.Add(endNode);
+                if (nodeConn.IsTwoWay)
+                    endNode.NeighborNodes.Add(Nodes[i]);
+            }
+        }
     }
 
     internal void UpdateState(TownData townData)
@@ -36,6 +46,21 @@ class AI_TownState
         foreach (var node in townData.Nodes)
             foreach (var invItem in node.Inventory)
                 TownInventory[invItem.Key] = invItem.Value;
+    }
+
+    internal float EvaluateScore()
+    {
+        // TODO: Add weights based on AI's personality
+        float score = 0;
+
+        // Add score for each node we own; subtract score for each node owned by another player
+        foreach (var node in Nodes)
+            if (node.OwnedBy == player)
+                score += 1;
+            else if (node.OwnedBy != null)
+                score -= 1;
+
+        return score;
     }
 
     internal int GetNumItem(GoodDefn good)
@@ -131,7 +156,7 @@ class AI_TownState
             resource1 = null;
             resource1Amount = 0;
         }
-        
+
         // == resource 2
         if (reqs.Count > 1)
         {
@@ -158,5 +183,16 @@ class AI_TownState
             TownInventory[resource1] += resource1Amount;
         if (resource2 != null)
             TownInventory[resource2] += resource2Amount;
+    }
+
+    internal bool IsGameOver()
+    {
+        // game is over if we own all nodes or we own no nodes
+        // todo: add other 'game over' conditions (e.g. complete quest, etc)
+        int numNodesOwned = 0;
+        foreach (var node in Nodes)
+            if (node.OwnedBy == player)
+                numNodesOwned++;
+        return numNodesOwned == 0 || numNodesOwned == Nodes.Length;
     }
 }

@@ -66,7 +66,7 @@ MonoBehaviour:
   - WorldLoc: {x: 8, y: 0, z: -4}
     OwnedByPlayerId: 1
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
-    NumStartingWorkers: 82
+    NumStartingWorkers: 2
   - WorldLoc: {x: 0, y: 0, z: 6}
     OwnedByPlayerId: 3
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}

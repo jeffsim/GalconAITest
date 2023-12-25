@@ -1,23 +1,6 @@
-using System;
 using System.Collections.Generic;
-using UnityEditor;
 
-public enum AIActionType { SendWorkersToNode, ConstructBuildingInOwnedNode };
-
-public class AIAction
-{
-    public AIActionType Type;
-    public int Count;
-    public NodeData SourceNode;
-    public NodeData DestNode;
-}
-
-class AI_PlayerState
-{
-
-}
-
-class AI_BuildingState
+public class AI_BuildingState
 {
     public BuildingDefn buildingDefn;
 
@@ -27,7 +10,7 @@ class AI_BuildingState
     }
 }
 
-class AI_NodeState
+public class AI_NodeState
 {
     private NodeData nodeData;
     public List<AI_NodeState> NeighborNodes = new();
