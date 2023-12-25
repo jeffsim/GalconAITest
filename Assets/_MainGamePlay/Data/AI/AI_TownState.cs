@@ -1,16 +1,19 @@
-using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 class AI_TownState
 {
     public AI_NodeState[] Nodes;
 
-    TownData townData;
     PlayerData player;
+
+    Dictionary<GoodDefn, int> TownInventory = new();
 
     public AI_TownState(TownData townData, PlayerData player)
     {
-        this.townData = townData;
         this.player = player;
+
+        // Initialize Town data that never changes; e.g. the list of nodes in the town.  Data that does change (e.g. Node inventories) is updated in UpdateState()
 
         // Initialize Node list
         Nodes = new AI_NodeState[townData.Nodes.Count];
@@ -20,6 +23,23 @@ class AI_TownState
         for (int i = 0; i < townData.Nodes.Count; i++)
             foreach (var neighborNode in townData.Nodes[i].NodeConnections)
                 Nodes[i].NeighborNodes.Add(Nodes[townData.Nodes.IndexOf(neighborNode.End)]);
+    }
+
+    internal void UpdateState(TownData townData)
+    {
+        // update things that change in the 'real' game; e.g. the list of Nodes in the town doesn't change, but the items in the nodes' inventories do
+
+        // Initialize inventory
+        foreach (var node in townData.Nodes)
+            foreach (var invItem in node.Inventory)
+                TownInventory[invItem.Key] = invItem.Value;
+    }
+
+    internal int GetNumItem(GoodDefn good)
+    {
+        if (TownInventory.TryGetValue(good, out int num))
+            return num;
+        return 0;
     }
 
     internal void SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend)
@@ -96,5 +116,11 @@ class AI_TownState
 
     internal void ConsumeResources(BuildingDefn buildingDefn, AI_NodeState node)
     {
+        Debug.Log("TODO");
+    }
+
+    internal void Undo_ConsumeResources(AI_NodeState node)
+    {
+        Debug.Log("TODO");
     }
 }

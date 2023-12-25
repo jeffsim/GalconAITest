@@ -4,30 +4,34 @@ using System.Collections.Generic;
 public class PlayerAI
 {
     PlayerData player;
+    AI_TownState aiTownState;
+
+    int minWorkersInNodeBeforeConsideringSendingAnyOut = 5;
+    List<BuildingDefn> buildingList = new(20);
 
     public PlayerAI(PlayerData playerData)
     {
         player = playerData;
+        aiTownState = new AI_TownState(TownData.Instance, player);
     }
 
     internal void Update(TownData townData)
     {
-        // Recursively take actions, modifying the state data (and then restoring it) as we go.  Find the highest value action.
-        var state = new AI_TownState(townData, player);
-        recursivelyDetermineBestAction_Simple(state);
-    }
+        aiTownState.UpdateState(townData);
 
-    int minWorkersInNodeBeforeConsideringSendingAnyOut = 5;
+        // Recursively take actions, modifying the state data (and then restoring it) as we go.  Find the highest value action.
+        RecursivelyDetermineBestAction_Simple();
+    }
 
     // Actions a player-owned Node can take:
     // 1. Send 50% of workers to a node that neighbors the node
     // 2. Construct a building in a node we own.
-    float recursivelyDetermineBestAction_Simple(AI_TownState state, int curDepth = 0)
+    float RecursivelyDetermineBestAction_Simple(int curDepth = 0)
     {
         float bestValue = 0;
         var buildableBuildings = getBuildableBuildings();
 
-        foreach (var node in state.Nodes)
+        foreach (var node in aiTownState.Nodes)
         {
             if (node.OwnedBy != player)
                 continue; // only process nodes we own
@@ -37,15 +41,15 @@ public class PlayerAI
                 foreach (var neighborNode in node.NeighborNodes)
                     if (!neighborNode.HasBuilding)
                     {
-                        // update the townstate to reflect sending workers to the neighbor node
-                        int numToSend = Math.Max(0, node.NumWorkers / 2);
-                        state.SendWorkersToEmptyNode(node, neighborNode, numToSend);
+                        // Update the townstate to reflect building the building, and consume the resources for it
+                        int numToSend = Math.Max(1, node.NumWorkers / 2);
+                        aiTownState.SendWorkersToEmptyNode(node, neighborNode, numToSend);
 
-                        // recursively determine the value of this action
-                        var value = recursivelyDetermineBestAction_Simple(state, curDepth + 1);
+                        // Recursively determine the value of this action
+                        var value = RecursivelyDetermineBestAction_Simple(curDepth + 1);
 
-                        // undo the action
-                        state.Undo_SendWorkersToEmptyNode(node, neighborNode, numToSend);
+                        // Undo the action
+                        aiTownState.Undo_SendWorkersToEmptyNode(node, neighborNode, numToSend);
                     }
 
             // Try constructing a building in node if we have resources to build it and those resources are accessible
@@ -53,16 +57,16 @@ public class PlayerAI
             {
                 foreach (BuildingDefn buildingDefn in buildableBuildings)
                 {
-                    // update the townstate to reflect building the building, and consume the resources for it
-                    state.BuildBuilding(node, buildingDefn);
-                    state.ConsumeResources(buildingDefn, node);
+                    // Update the townstate to reflect building the building, and consume the resources for it
+                    aiTownState.BuildBuilding(node, buildingDefn);
+                    aiTownState.ConsumeResources(buildingDefn, node);
 
-                    // recursively determine the value of this action
-                    var value = recursivelyDetermineBestAction_Simple(state, curDepth + 1);
+                    // Recursively determine the value of this action
+                    var value = RecursivelyDetermineBestAction_Simple(curDepth + 1);
 
-                    // undo the action
-                    state.Undo_BuildBuilding(node);
-                    state.Undo_ConsumeResources(node);
+                    // Undo the action
+                    aiTownState.Undo_BuildBuilding(node);
+                    aiTownState.Undo_ConsumeResources(node);
                 }
             }
         }
@@ -71,9 +75,21 @@ public class PlayerAI
 
     private List<BuildingDefn> getBuildableBuildings()
     {
-        throw new NotImplementedException();
+        buildingList.Clear();
+        foreach (var buildingDefn in GameDefns.Instance.BuildingDefns.Values)
+            if (BuildingCanBePurchased(buildingDefn))
+                buildingList.Add(buildingDefn);
+        return buildingList;
     }
 
+    internal bool BuildingCanBePurchased(BuildingDefn buildingDefn)
+    {
+        // return true if the user has in stock the necessary resources to build the building
+        foreach (var cost in buildingDefn.ConstructionRequirements)
+            if (aiTownState.GetNumItem(cost.Good) < cost.Amount)
+                return false;
+        return true;
+    }
 
     // Actions a player-owned Node can take:
     // 1. Send workers to a node that neighbors a node we own.
@@ -165,7 +181,7 @@ public class PlayerAI
     {
         int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
         state.SendWorkersToAttackNode(sourceNode, targetNode, numToSend, out int originalSourceNodeNumWorkers, out int originalDestNodeNumWorkers, out PlayerData originalOwner);
-        var value = recursivelyDetermineBestAction(state, curDepth + 1);
+        var value = recursivelyDetermineBestAction_Full(state, curDepth + 1);
         state.Undo_SendWorkersToAttackNode(sourceNode, targetNode, originalSourceNodeNumWorkers, originalDestNodeNumWorkers, originalOwner);
         return value;
     }
@@ -174,7 +190,7 @@ public class PlayerAI
     {
         int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
         state.SendWorkersToEmptyNode(sourceNode, targetNode, numToSend);
-        var value = recursivelyDetermineBestAction(state, curDepth + 1);
+        var value = recursivelyDetermineBestAction_Full(state, curDepth + 1);
         state.Undo_SendWorkersToEmptyNode(sourceNode, targetNode, numToSend);
         return value;
     }
@@ -183,7 +199,7 @@ public class PlayerAI
     {
         int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
         state.SendWorkersToOwnedNode(sourceNode, targetNode, numToSend);
-        var value = recursivelyDetermineBestAction(state, curDepth + 1);
+        var value = recursivelyDetermineBestAction_Full(state, curDepth + 1);
         state.Undo_SendWorkersToOwnedNode(sourceNode, targetNode, numToSend);
         return value;
     }

@@ -20,7 +20,7 @@ public class NodeConnectionDefn
 }
 
 [CreateAssetMenu()]
-public class TownDefn : SerializedScriptableObject
+public class TownDefn : BaseDefn
 {
     public List<NodeDefn> Nodes = new();
     public List<NodeConnectionDefn> NodeConnections = new();

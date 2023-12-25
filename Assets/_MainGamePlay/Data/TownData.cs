@@ -1,15 +1,16 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class TownData
 {
+    public static TownData Instance;
     public List<PlayerData> Players = new();
     public List<NodeData> Nodes = new();
     public List<WorkerData> Workers = new();
 
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
     {
+        Instance = this;
         // Create players
         Players.Add(null); // no player (e.g. for unowned Node)
         Players.Add(new PlayerData() { Name = "Player R", Color = Color.red, ControlledByAI = true, WorkerDefn = testWorkerDefn });

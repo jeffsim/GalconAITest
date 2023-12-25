@@ -30,7 +30,7 @@ class AI_BuildingState
 class AI_NodeState
 {
     private NodeData nodeData;
-    public List<AI_NodeState> NeighborNodes;
+    public List<AI_NodeState> NeighborNodes = new();
     public int NumWorkers;
 
     public AI_BuildingState Building;

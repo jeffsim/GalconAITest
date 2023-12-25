@@ -17,6 +17,7 @@ public class NodeData
     public List<NodeConnection> NodeConnections = new();
     public BuildingData Building;
     public int NumWorkers;
+    public Dictionary<GoodDefn, int> Inventory = new();
 
     public NodeData(NodeDefn nodeDefn, int nodeId, PlayerData player)
     {
