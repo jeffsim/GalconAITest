@@ -11,6 +11,7 @@ public class TownData
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
     {
         Instance = this;
+
         // Create players
         Players.Add(null); // no player (e.g. for unowned Node)
         Players.Add(new PlayerData() { Name = "Player R", Color = Color.red, ControlledByAI = true, WorkerDefn = testWorkerDefn });
@@ -29,11 +30,16 @@ public class TownData
         foreach (var node in Nodes)
             for (int i = 0; i < node.NumWorkers; i++)
                 Workers.Add(new WorkerData(node.WorldLoc, node.OwnedBy));
+
+        foreach (var player in Players)
+            player?.InitializeStaticData(this);
     }
 
     public void Update()
     {
-        foreach (var player in Players)
-            player?.Update(this);
+        // testing one player for now
+        Players[2].Update(this);
+        // foreach (var player in Players)
+        //     player?.Update(this);
     }
 }

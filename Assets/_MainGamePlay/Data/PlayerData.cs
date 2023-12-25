@@ -14,6 +14,11 @@ public class PlayerData
         AI = new PlayerAI(this);
     }
 
+    public void InitializeStaticData(TownData townData)
+    {
+        AI.InitializeStaticData(townData);
+    }
+    
     public void Update(TownData townData)
     {
         AI.Update(townData);

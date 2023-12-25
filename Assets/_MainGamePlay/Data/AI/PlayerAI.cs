@@ -6,13 +6,18 @@ public class PlayerAI
     PlayerData player;
     AI_TownState aiTownState;
 
-    int minWorkersInNodeBeforeConsideringSendingAnyOut = 5;
+    int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
     List<BuildingDefn> buildingList = new(20);
 
     public PlayerAI(PlayerData playerData)
     {
         player = playerData;
-        aiTownState = new AI_TownState(TownData.Instance, player);
+        aiTownState = new AI_TownState(player);
+    }
+
+    public void InitializeStaticData(TownData townData)
+    {
+        aiTownState.InitializeStaticData(townData);
     }
 
     internal void Update(TownData townData)
@@ -29,12 +34,11 @@ public class PlayerAI
     float RecursivelyDetermineBestAction_Simple(int curDepth = 0)
     {
         float bestValue = 0;
-        var buildableBuildings = getBuildableBuildings();
 
         foreach (var node in aiTownState.Nodes)
         {
             if (node.OwnedBy != player)
-                continue; // only process nodes we own
+                continue; // only process nodes that we own
 
             // Try expanding to neighboring empty nodes.
             if (node.NumWorkers > minWorkersInNodeBeforeConsideringSendingAnyOut)
@@ -55,35 +59,30 @@ public class PlayerAI
             // Try constructing a building in node if we have resources to build it and those resources are accessible
             if (!node.HasBuilding)
             {
-                foreach (BuildingDefn buildingDefn in buildableBuildings)
+                foreach (BuildingDefn buildingDefn in GameDefns.Instance.BuildingDefns.Values)
                 {
-                    // Update the townstate to reflect building the building, and consume the resources for it
-                    aiTownState.BuildBuilding(node, buildingDefn);
-                    aiTownState.ConsumeResources(buildingDefn, node);
+                    if (buildingDefn.CanBeBuiltByPlayer && BuildingCanBePurchased(buildingDefn, node))
+                    {
+                        // Update the townstate to reflect building the building, and consume the resources for it
+                        aiTownState.BuildBuilding(node, buildingDefn, out GoodDefn resource1, out int resource1Amount, out GoodDefn resource2, out int resource2Amount);
 
-                    // Recursively determine the value of this action
-                    var value = RecursivelyDetermineBestAction_Simple(curDepth + 1);
+                        // Recursively determine the value of this action
+                        var value = RecursivelyDetermineBestAction_Simple(curDepth + 1);
 
-                    // Undo the action
-                    aiTownState.Undo_BuildBuilding(node);
-                    aiTownState.Undo_ConsumeResources(node);
+                        // Undo the action
+                        aiTownState.Undo_BuildBuilding(node, resource1, resource1Amount, resource2, resource2Amount);
+                    }
                 }
             }
         }
         return bestValue;
     }
 
-    private List<BuildingDefn> getBuildableBuildings()
+    internal bool BuildingCanBePurchased(BuildingDefn buildingDefn, AI_NodeState buildInNode)
     {
-        buildingList.Clear();
-        foreach (var buildingDefn in GameDefns.Instance.BuildingDefns.Values)
-            if (BuildingCanBePurchased(buildingDefn))
-                buildingList.Add(buildingDefn);
-        return buildingList;
-    }
+        // TODO: I'm still not handling the case where goods needed are in a Node that is blocked by enemy nodes.
+        //       The following code needs only look at nodes that are reachable from buildInNode.
 
-    internal bool BuildingCanBePurchased(BuildingDefn buildingDefn)
-    {
         // return true if the user has in stock the necessary resources to build the building
         foreach (var cost in buildingDefn.ConstructionRequirements)
             if (aiTownState.GetNumItem(cost.Good) < cost.Amount)

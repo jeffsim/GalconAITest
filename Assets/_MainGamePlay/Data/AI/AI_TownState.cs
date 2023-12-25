@@ -7,14 +7,17 @@ class AI_TownState
 
     PlayerData player;
 
-    Dictionary<GoodDefn, int> TownInventory = new();
+    Dictionary<GoodDefn, int> TownInventory = new(100);
 
-    public AI_TownState(TownData townData, PlayerData player)
+    public AI_TownState(PlayerData player)
     {
         this.player = player;
 
-        // Initialize Town data that never changes; e.g. the list of nodes in the town.  Data that does change (e.g. Node inventories) is updated in UpdateState()
+    }
 
+    // Initialize Town data that never changes; e.g. the list of nodes in the town.  Data that does change (e.g. Node inventories) is updated in UpdateState()
+    public void InitializeStaticData(TownData townData)
+    {
         // Initialize Node list
         Nodes = new AI_NodeState[townData.Nodes.Count];
         for (int i = 0; i < townData.Nodes.Count; i++)
@@ -104,23 +107,56 @@ class AI_TownState
         destNode.OwnedBy = originalOwner;
     }
 
-    internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn)
+    internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn, out GoodDefn resource1, out int resource1Amount, out GoodDefn resource2, out int resource2Amount)
     {
+        Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
+        Debug.Assert(node.Building.buildingDefn == null, "can only build in empty nodes.");
         node.Building.buildingDefn = buildingDefn;
+
+        // Consume resources
+        var reqs = buildingDefn.ConstructionRequirements;
+        Debug.Assert(reqs.Count <= 2, "only support buildings with 1 or 2 construction requirements for now.");
+
+        // == resource 1
+        if (reqs.Count > 0)
+        {
+            resource1 = reqs[0].Good;
+            resource1Amount = reqs[0].Amount;
+
+            // TODO: Need to consume from particular nodes, not just the town inventory
+            TownInventory[resource1] -= resource1Amount;
+        }
+        else
+        {
+            resource1 = null;
+            resource1Amount = 0;
+        }
+        
+        // == resource 2
+        if (reqs.Count > 1)
+        {
+            resource2 = reqs[1].Good;
+            resource2Amount = reqs[1].Amount;
+
+            // TODO: Need to consume from particular nodes, not just the town inventory
+            TownInventory[resource2] -= resource2Amount;
+        }
+        else
+        {
+            resource2 = null;
+            resource2Amount = 0;
+        }
     }
 
-    internal void Undo_BuildBuilding(AI_NodeState node)
+    internal void Undo_BuildBuilding(AI_NodeState node, GoodDefn resource1, int resource1Amount, GoodDefn resource2, int resource2Amount)
     {
+        // Undo build building in empty node
         node.Building.buildingDefn = null;
-    }
 
-    internal void ConsumeResources(BuildingDefn buildingDefn, AI_NodeState node)
-    {
-        Debug.Log("TODO");
-    }
-
-    internal void Undo_ConsumeResources(AI_NodeState node)
-    {
-        Debug.Log("TODO");
+        // Undo Consume resources
+        if (resource1 != null)
+            TownInventory[resource1] += resource1Amount;
+        if (resource2 != null)
+            TownInventory[resource2] += resource2Amount;
     }
 }

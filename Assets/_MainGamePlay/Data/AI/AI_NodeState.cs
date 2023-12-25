@@ -36,10 +36,12 @@ class AI_NodeState
     public AI_BuildingState Building;
     public bool HasBuilding => Building.buildingDefn != null;
     public PlayerData OwnedBy;
+    public int NodeId;
 
     public AI_NodeState(NodeData nodeData)
     {
         this.nodeData = nodeData;
+        NodeId = nodeData.NodeId;
         Building = new AI_BuildingState(nodeData.Building);
         NumWorkers = nodeData.NumWorkers;
         OwnedBy = nodeData.OwnedBy;
