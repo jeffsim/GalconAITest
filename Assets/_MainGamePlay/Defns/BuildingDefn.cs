@@ -21,6 +21,12 @@ public class BuildingDefn : BaseDefn
     [ShowIf("CanGatherResources")]
     public GoodDefn GatherableResource;
 
+    // ResourceNode
+    [Header("Resource"), Space(10)]
+    public bool CanBeGatheredFrom = false;
+    [ShowIf("CanBeGatheredFrom")]
+    public GoodDefn GatheredResource;
+
     // Crafting
     [Header("Crafting"), Space(10)]
     public bool CanCraftGoods = false;

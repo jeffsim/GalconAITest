@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 class AI_TownState
@@ -8,9 +9,10 @@ class AI_TownState
 
     PlayerData player;
 
-    Dictionary<GoodDefn, int> TownInventory = new(100);
+    Dictionary<GoodDefn, int> PlayerTownInventory = new(100);
 
-    public Dictionary<int, bool> HaveSentWorkersToOrFromNode = new();
+    public Dictionary<int, bool> HaveSentWorkersToNode = new();
+    public Dictionary<int, bool> HaveSentWorkersFromNode = new();
 
     public AI_TownState(PlayerData player)
     {
@@ -48,10 +50,11 @@ class AI_TownState
         foreach (var node in townData.Nodes)
         {
             foreach (var invItem in node.Inventory)
-                TownInventory[invItem.Key] = invItem.Value;
+                PlayerTownInventory[invItem.Key] = invItem.Value;
         }
 
-        HaveSentWorkersToOrFromNode.Clear();
+        HaveSentWorkersToNode.Clear();
+        HaveSentWorkersFromNode.Clear();
     }
 
     internal float EvaluateScore()
@@ -66,30 +69,62 @@ class AI_TownState
             else if (node.OwnedBy != null)
                 score -= 1;
 
-        // Add score for each building in a node we own
+        // Add score for each building in a node we own that is "useful"
         foreach (var node in Nodes)
             if (node.OwnedBy == player && node.HasBuilding)
-                score += 1;
+            {
+                // Resource gathering buildings are useful if they can reach a resource node.
+                // These buildings are more useful the close to the resource node they are.
+                var building = node.Building;
+                if (building.buildingDefn.CanGatherResources)
+                {
+                    int dist = DistanceToResourceNode(node, building.buildingDefn.GatherableResource);
+                    if (dist == 1)
+                        score += 1.5f;
+                    else if (dist < 3) // 2-3
+                        score += 1;
+                    // no score if > 3
+                }
+
+                // Defensive buildings are useful if...
+
+                // Storage buildings are useful if...
+
+                // Crafting buildings are useful if...
+
+            }
 
         return score;
     }
 
+    private int DistanceToResourceNode(AI_NodeState node, GoodDefn gatherableResource)
+    {
+        int curDist = 0;
+        // For now, only look at neighboring nodes.  Nee to recurse out.  PriorityQueue/super-simple A*
+        foreach (var neighbor in node.NeighborNodes)
+            if (neighbor.HasBuilding && neighbor.Building.buildingDefn.CanBeGatheredFrom && neighbor.Building.buildingDefn.GatheredResource == gatherableResource)
+                curDist = 1;
+        return curDist;
+    }
+
     internal int GetNumItem(GoodDefn good)
     {
-        if (TownInventory.TryGetValue(good, out int num))
+        if (PlayerTownInventory.TryGetValue(good, out int num))
             return num;
         return 0;
     }
 
-    internal void SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend)
+    internal void SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
     {
+        numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
+
         // We are capturing a new node; need to update lists (e.g. PlayerOwnedNodes)
-        sourceNode.NumWorkers -= numToSend;
-        destNode.NumWorkers += numToSend;
+        sourceNode.NumWorkers -= numSent;
+        destNode.NumWorkers += numSent;
         destNode.OwnedBy = player;
 
-        HaveSentWorkersToOrFromNode[sourceNode.NodeId] = true;
-        HaveSentWorkersToOrFromNode[destNode.NodeId] = true;
+        HaveSentWorkersFromNode[sourceNode.NodeId] = true;
+        HaveSentWorkersToNode[destNode.NodeId] = true;
     }
 
     internal void Undo_SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)
@@ -163,7 +198,7 @@ class AI_TownState
             resource1Amount = reqs[0].Amount;
 
             // TODO: Need to consume from particular nodes, not just the town inventory
-            TownInventory[resource1] -= resource1Amount;
+            PlayerTownInventory[resource1] -= resource1Amount;
         }
         else
         {
@@ -178,7 +213,7 @@ class AI_TownState
             resource2Amount = reqs[1].Amount;
 
             // TODO: Need to consume from particular nodes, not just the town inventory
-            TownInventory[resource2] -= resource2Amount;
+            PlayerTownInventory[resource2] -= resource2Amount;
         }
         else
         {
@@ -194,9 +229,9 @@ class AI_TownState
 
         // Undo Consume resources
         if (resource1 != null)
-            TownInventory[resource1] += resource1Amount;
+            PlayerTownInventory[resource1] += resource1Amount;
         if (resource2 != null)
-            TownInventory[resource2] += resource2Amount;
+            PlayerTownInventory[resource2] += resource2Amount;
     }
 
     internal bool IsGameOver()
@@ -208,5 +243,20 @@ class AI_TownState
             if (node.OwnedBy == player)
                 numNodesOwned++;
         return numNodesOwned == 0 || numNodesOwned == Nodes.Length;
+    }
+
+    internal bool CraftingResourcesCanBeReachedFromNode(AI_NodeState node, List<Good_CraftingRequirements> craftingReqs)
+    {
+        foreach (var req in craftingReqs)
+            if (!resourcesCanBeReachedFromNode(node, req))
+                return false;
+        return true;
+    }
+
+    private bool resourcesCanBeReachedFromNode(AI_NodeState node, Good_CraftingRequirements req)
+    {
+        // TODO: For now just see if resources are owned by player anywhere in Town; this needs to be updated
+        // to only consider nodes that can be traversed to from 'node'
+        return PlayerTownInventory.ContainsKey(req.Good) && PlayerTownInventory[req.Good] >= req.Amount;
     }
 }

@@ -71,6 +71,10 @@ MonoBehaviour:
     OwnedByPlayerId: 3
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
     NumStartingWorkers: 4
+  - WorldLoc: {x: -2.5, y: 0, z: 2.5}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
+    NumStartingWorkers: 0
   NodeConnections:
   - Nodes: {x: 4, y: 3}
   - Nodes: {x: 3, y: 5}
@@ -83,3 +87,4 @@ MonoBehaviour:
   - Nodes: {x: 9, y: 3}
   - Nodes: {x: 10, y: 4}
   - Nodes: {x: 11, y: 1}
+  - Nodes: {x: 6, y: 12}

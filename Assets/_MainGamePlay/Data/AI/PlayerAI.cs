@@ -6,7 +6,7 @@ public partial class PlayerAI
     PlayerData player;
     AI_TownState aiTownState;
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
-    int maxDepth = 2;
+    int maxDepth = 8;
 
     public PlayerAI(PlayerData playerData)
     {
@@ -33,11 +33,12 @@ public partial class PlayerAI
     // 2. Construct a building in a node we own.
     AIAction RecursivelyDetermineBestAction(int curDepth = 0)
     {
+        // Keep track of the best action in this 'level' of the AI stack, and return it
         AIAction bestAction = new(); // todo. Pool?  Or just precreate a static list of 100000 of them and use + increment indexer (so no push/pop)? etc
+        bestAction.Score = aiTownState.EvaluateScore();
 
         if (curDepth == maxDepth || aiTownState.IsGameOver())
         {
-            bestAction.Score = aiTownState.EvaluateScore();
             return bestAction;
         }
 
@@ -46,8 +47,45 @@ public partial class PlayerAI
             if (node.OwnedBy != player) continue; // only process nodes that we own
 
             TrySendWorkersFromNode(node, ref bestAction, curDepth);
+            TryConstructBuildingInNode(node, ref bestAction, curDepth);
         }
         return bestAction;
+    }
+
+    // Try constructing a building in the specified node
+    private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth)
+    {
+        if (node.HasBuilding)
+            return; // already has one
+
+        // Only attempt to construct buildings that we have resources within 'reach' to build.
+        foreach (var buildingDefn in GameDefns.Instance.BuildingDefns.Values)
+        {
+            if (!buildingDefn.CanBeBuiltByPlayer)
+                continue;
+            if (!aiTownState.CraftingResourcesCanBeReachedFromNode(node, buildingDefn.ConstructionRequirements))
+                continue;
+
+            // Update the townstate to reflect building the building, and consume the resources for it
+            aiTownState.BuildBuilding(node, buildingDefn, out GoodDefn resource1, out int resource1Amount, out GoodDefn resource2, out int resource2Amount);
+
+            // Recursively determine the value of this action
+            var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
+            if (actionScore.Score > bestAction.Score)
+            {
+                // This is the best action so far; save the action so we can return it
+                bestAction.Score += actionScore.Score;
+                bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
+                bestAction.SourceNode = node;
+                bestAction.BuildingToConstruct = buildingDefn;
+#if DEBUG
+                bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
+#endif
+            }
+
+            // Undo the action
+            aiTownState.Undo_BuildBuilding(node, resource1, resource1Amount, resource2, resource2Amount);
+        }
     }
 
     // Try expanding to neighboring empty nodes.
@@ -56,32 +94,41 @@ public partial class PlayerAI
         if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return; // not enough workers in node to send any out
 
-        if (aiTownState.HaveSentWorkersToOrFromNode.ContainsKey(node.NodeId))
+        // Must have a building in a node to send workers from it 
+        if (!node.HasBuilding)
+            return;
+
+        // Can't send to nodes we don't own (that's handled separately via Attack action)
+        if (node.OwnedBy != player)
+            return;
+
+        if (aiTownState.HaveSentWorkersFromNode.ContainsKey(node.NodeId))
             return; // don't send workers from the same node twice in an AI stack, or from a node we sent workers to in the stack.
 
         foreach (var neighborNode in node.NeighborNodes)
         {
-            if (aiTownState.HaveSentWorkersToOrFromNode.ContainsKey(neighborNode.NodeId))
+            if (aiTownState.HaveSentWorkersToNode.ContainsKey(neighborNode.NodeId))
                 continue;  // don't send workers to the same node twice in an AI stack.  This disallows some odd strategies but cleans up lots of odd stuff
 
-            int numToSend = Math.Max(1, node.NumWorkers / 2);
-            aiTownState.SendWorkersToEmptyNode(node, neighborNode, numToSend);
+            aiTownState.SendWorkersToEmptyNode(node, neighborNode, .5f, out int numSent);
 
-            // Recursively determine the value of this action.  Note that the following function gaurantees to restore any changes to townstate.
+            // Recursively determine the value of this action.
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
             if (actionScore.Score > bestAction.Score)
             {
-                // This is the best action so far; save the action so we can return it
+                // This is the best action so far in this 'level' of the AI stack; save the action so we can return it
                 bestAction.Score = actionScore.Score;
                 bestAction.Type = AIActionType.SendWorkersToNode;
-                bestAction.Count = numToSend;
+                bestAction.Count = numSent;
                 bestAction.SourceNode = node;
                 bestAction.DestNode = neighborNode;
-                bestAction.NextAction = actionScore;
+#if DEBUG
+                bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
+#endif
             }
 
             // Undo the action
-            aiTownState.Undo_SendWorkersToEmptyNode(node, neighborNode, numToSend);
+            aiTownState.Undo_SendWorkersToEmptyNode(node, neighborNode, numSent);
         }
     }
 

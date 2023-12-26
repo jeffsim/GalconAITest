@@ -23,9 +23,9 @@ public partial class PlayerAI
                 {
                     // note: state value calculation should ensure taht we don't overly spread ourselves thin (unless that's the AI's weights)
                     // TODO: need to account for workers already walking to the node
-                    bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.1f, state, curDepth));
-                    bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.5f, state, curDepth));
-                    bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.95f, state, curDepth));
+                    // bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.1f, state, curDepth));
+                    // bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.5f, state, curDepth));
+                    // bestValue = Math.Max(bestValue, SendWorkersToEmptyNode(node, neighborNode, 0.95f, state, curDepth));
                 }
             }
 
@@ -94,14 +94,14 @@ public partial class PlayerAI
         return value;
     }
 
-    private float SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
-    {
-        int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
-        state.SendWorkersToEmptyNode(sourceNode, targetNode, numToSend);
-        var value = recursivelyDetermineBestAction_Full(state, curDepth + 1);
-        state.Undo_SendWorkersToEmptyNode(sourceNode, targetNode, numToSend);
-        return value;
-    }
+    // private float SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
+    // {
+    //     int numToSend = Math.Max(0, Math.Min(sourceNode.NumWorkers - 1, (int)(sourceNode.NumWorkers * percentToSend)));
+    //     state.SendWorkersToEmptyNode(sourceNode, targetNode, numToSend);
+    //     var value = recursivelyDetermineBestAction_Full(state, curDepth + 1);
+    //     state.Undo_SendWorkersToEmptyNode(sourceNode, targetNode, numToSend);
+    //     return value;
+    // }
 
     private float SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState targetNode, float percentToSend, AI_TownState state, int curDepth)
     {
