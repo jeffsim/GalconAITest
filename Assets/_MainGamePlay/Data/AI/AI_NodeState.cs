@@ -20,6 +20,7 @@ public class AI_NodeState
     public bool HasBuilding => Building.buildingDefn != null;
     public PlayerData OwnedBy;
     public int NodeId;
+    internal bool IsResourceNode => HasBuilding && Building.buildingDefn.CanBeGatheredFrom;
 
     public AI_NodeState(NodeData nodeData)
     {

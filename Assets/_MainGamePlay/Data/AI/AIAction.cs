@@ -12,6 +12,5 @@ public class AIAction
 #if DEBUG
     // Keep track of the optimal actions to perform after this one; only used for debugging
     public AIAction NextAction;
-    // public List<AIAction> NextActions = new List<AIAction>();
 #endif
 }

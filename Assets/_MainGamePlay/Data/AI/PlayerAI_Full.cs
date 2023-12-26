@@ -111,4 +111,37 @@ public partial class PlayerAI
         state.Undo_SendWorkersToOwnedNode(sourceNode, targetNode, numToSend);
         return value;
     }
+
+    private void performAction(AIAction bestAction)
+    {
+        if (bestAction.Type == AIActionType.DoNothing)
+            return; // no action to take
+
+        var actionToOutput = bestAction;
+        int spaces = 0;
+        while (actionToOutput.NextAction != null)
+        {
+            // create empty string with 'spaces' indentation
+            string str = new string(' ', Math.Max(0, spaces - 1) * 4);
+            if (actionToOutput != bestAction)
+                str += "\u21B3";
+
+            switch (actionToOutput.Type)
+            {
+                case AIActionType.SendWorkersToNode:
+                    Debug.Log(str + "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId);
+                    break;
+                case AIActionType.ConstructBuildingInOwnedNode:
+                    Debug.Log(str + "Construct " + actionToOutput.BuildingToConstruct.Name + " in " + actionToOutput.SourceNode.NodeId);
+                    break;
+                case AIActionType.DoNothing:
+                    Debug.Log(str + "Do nothing");
+                    break;
+                default:
+                    throw new Exception("Unhandled AIActionType: " + actionToOutput.Type);
+            }
+            spaces++;
+            actionToOutput = actionToOutput.NextAction;
+        }
+    }
 }

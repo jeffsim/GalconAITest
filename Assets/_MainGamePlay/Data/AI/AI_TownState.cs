@@ -64,35 +64,32 @@ class AI_TownState
 
         // Add score for each node we own; subtract score for each node owned by another player
         foreach (var node in Nodes)
-            if (node.OwnedBy == player)
-                score += 1;
-            else if (node.OwnedBy != null)
-                score -= 1;
+            if (node.OwnedBy == player) score += 1;
+            // else if (node.OwnedBy != null) score -= 1;
 
         // Add score for each building in a node we own that is "useful"
         foreach (var node in Nodes)
-            if (node.OwnedBy == player && node.HasBuilding)
-            {
-                // Resource gathering buildings are useful if they can reach a resource node.
-                // These buildings are more useful the close to the resource node they are.
-                var building = node.Building;
-                if (building.buildingDefn.CanGatherResources)
+            if (node.OwnedBy == player)
+                if (!node.HasBuilding)
+                    score += .1f; // some score for owning empty nodes
+                else
                 {
-                    int dist = DistanceToResourceNode(node, building.buildingDefn.GatherableResource);
-                    if (dist == 1)
-                        score += 1.5f;
-                    else if (dist < 3) // 2-3
-                        score += 1;
-                    // no score if > 3
+                    // Resource gathering buildings are useful if they can reach a resource node.
+                    // These buildings are more useful the close to the resource node they are.
+                    var building = node.Building;
+                    if (building.buildingDefn.CanGatherResources)
+                    {
+                        int dist = DistanceToResourceNode(node, building.buildingDefn.GatherableResource);
+                        if (dist == 1)
+                            score += 1.5f;
+                    }
+
+                    // Defensive buildings are useful if...
+
+                    // Storage buildings are useful if...
+
+                    // Crafting buildings are useful if...
                 }
-
-                // Defensive buildings are useful if...
-
-                // Storage buildings are useful if...
-
-                // Crafting buildings are useful if...
-
-            }
 
         return score;
     }
@@ -123,8 +120,8 @@ class AI_TownState
         destNode.NumWorkers += numSent;
         destNode.OwnedBy = player;
 
-        HaveSentWorkersFromNode[sourceNode.NodeId] = true;
-        HaveSentWorkersToNode[destNode.NodeId] = true;
+        // HaveSentWorkersFromNode[sourceNode.NodeId] = true;
+        // HaveSentWorkersToNode[destNode.NodeId] = true;
     }
 
     internal void Undo_SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)
@@ -246,6 +243,13 @@ class AI_TownState
     }
 
     internal bool CraftingResourcesCanBeReachedFromNode(AI_NodeState node, List<Good_CraftingRequirements> craftingReqs)
+    {
+        foreach (var req in craftingReqs)
+            if (!resourcesCanBeReachedFromNode(node, req))
+                return false;
+        return true;
+    }
+    internal bool ConstructionResourcesCanBeReachedFromNode(AI_NodeState node, List<Good_CraftingRequirements> craftingReqs)
     {
         foreach (var req in craftingReqs)
             if (!resourcesCanBeReachedFromNode(node, req))
