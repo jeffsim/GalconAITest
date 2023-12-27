@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using PlasticPipe.PlasticProtocol.Messages;
 using UnityEngine;
 
 public class GameMgr : MonoBehaviour
@@ -10,15 +9,19 @@ public class GameMgr : MonoBehaviour
     public List<NodeGO> Nodes = new();
     public List<Worker> Workers = new();
     public Material NodeConnectionMat;
-    
+
     public GameObject NodesFolder;
     public GameObject WorkersFolder;
 
     public TownDefn TestTownDefn;
     public WorkerDefn TestWorkerDefn;
 
+    public int MaxAISteps = 8;
+    public static GameMgr Instance;
+
     void OnEnable()
     {
+        Instance = this;
         ResetTown();
 
         Application.targetFrameRate = 60;

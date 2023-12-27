@@ -23,8 +23,8 @@ MonoBehaviour:
     SerializationNodes: []
   Id: woodplank
   FriendlyName: woodplank
+  GoodType: 8
   CraftingRequirements:
   - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
     Amount: 4
-  SpriteToShowInTimer: {fileID: 0}
-  SpriteToShowInBuildingInfo: {fileID: 0}
+  Sprite: {fileID: 0}

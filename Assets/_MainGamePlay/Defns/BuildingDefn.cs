@@ -19,13 +19,13 @@ public class BuildingDefn : BaseDefn
     [Header("Gathering"), Space(10)]
     public bool CanGatherResources = false;
     [ShowIf("CanGatherResources")]
-    public GoodDefn GatherableResource;
+    public GoodDefn ResourceThisNodeCanGoGather;
 
     // ResourceNode
     [Header("Resource"), Space(10)]
     public bool CanBeGatheredFrom = false;
     [ShowIf("CanBeGatheredFrom")]
-    public GoodDefn GatheredResource;
+    public GoodDefn ResourceGatheredFromThisNode;
 
     // Crafting
     [Header("Crafting"), Space(10)]

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 public class AI_NodeState
@@ -14,28 +15,28 @@ public class AI_NodeState
     public int DistanceToClosestResourceNode_Wood;
     public int DistanceToClosestResourceNode_Stone;
     public int DistanceToClosestResourceNode_StoneWoodPlank;
-    
+
     // Buildings
     public bool HasBuilding;
     public bool CanBeGatheredFrom;
 
-    public bool CanGatherResources;
+    public bool CanGoGatherResources;
 
-    public GoodType GatherableResourceType;
-    public GoodType GatheredResourceType;
+    public GoodType ResourceThisNodeCanGoGather;
+    public GoodType ResourceGatheredFromThisNode;
 
     public void ClearBuilding() => HasBuilding = false;
 
     public void SetBuilding(BuildingDefn buildingDefn)
     {
         HasBuilding = true;
-        CanGatherResources = buildingDefn.CanGatherResources;
-        if (CanGatherResources)
-            GatherableResourceType = buildingDefn.GatherableResource.GoodType;
+        CanGoGatherResources = buildingDefn.CanGatherResources;
+        if (CanGoGatherResources)
+            ResourceThisNodeCanGoGather = buildingDefn.ResourceThisNodeCanGoGather.GoodType;
 
         CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
         if (CanBeGatheredFrom)
-            GatheredResourceType = buildingDefn.GatheredResource.GoodType;
+            ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
     }
 
     public AI_NodeState(NodeData nodeData)
@@ -43,7 +44,11 @@ public class AI_NodeState
         // set static fields
         this.nodeData = nodeData;
         NodeId = nodeData.NodeId;
+        Update();
+    }
 
+    internal void UpdateDistanceToResource()
+    {
         // find the closest node for each gatherable resourcetype
         DistanceToClosestResourceNode_Wood = findClosestResourceNode(GoodType.Wood);
         DistanceToClosestResourceNode_Stone = findClosestResourceNode(GoodType.Stone);
@@ -52,11 +57,11 @@ public class AI_NodeState
 
     private int findClosestResourceNode(GoodType gatherableResource)
     {
-        var dist = 1;
+        var dist = int.MaxValue;
 
         // For now, only look at neighboring nodes.  Need to recurse out.  PriorityQueue/super-simple A*
         foreach (var neighbor in NeighborNodes)
-            if (neighbor.HasBuilding && neighbor.CanBeGatheredFrom && neighbor.GatheredResourceType == gatherableResource)
+            if (neighbor.HasBuilding && neighbor.CanBeGatheredFrom && neighbor.ResourceGatheredFromThisNode == gatherableResource)
                 dist = 1;
         return dist;
     }
@@ -71,4 +76,5 @@ public class AI_NodeState
         NumWorkers = nodeData.NumWorkers;
         OwnedBy = nodeData.OwnedBy;
     }
+
 }

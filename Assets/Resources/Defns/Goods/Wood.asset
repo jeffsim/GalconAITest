@@ -23,6 +23,6 @@ MonoBehaviour:
     SerializationNodes: []
   Id: Wood
   FriendlyName: Wood
+  GoodType: 1
   CraftingRequirements: []
-  SpriteToShowInTimer: {fileID: 0}
-  SpriteToShowInBuildingInfo: {fileID: 0}
+  Sprite: {fileID: 0}

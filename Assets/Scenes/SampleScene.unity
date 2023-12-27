@@ -1124,6 +1124,7 @@ MonoBehaviour:
   WorkersFolder: {fileID: 832437443}
   TestTownDefn: {fileID: 11400000, guid: 1f32a133a07344de39f0415363c78f0a, type: 2}
   TestWorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
+  MaxAISteps: 2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

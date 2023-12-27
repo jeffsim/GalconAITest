@@ -117,7 +117,7 @@ public partial class PlayerAI
         if (bestAction.Type == AIActionType.DoNothing)
             return; // no action to take
 
-        return;
+        // return;
         var actionToOutput = bestAction;
         int spaces = 0;
         while (actionToOutput.NextAction != null)

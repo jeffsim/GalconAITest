@@ -5,7 +5,7 @@ public partial class PlayerAI
     PlayerData player;
     AI_TownState aiTownState;
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
-    int maxDepth = 10;
+    int maxDepth;
     int steps;
 
     AIAction[] actionPool;
@@ -39,6 +39,8 @@ public partial class PlayerAI
 
     internal void Update(TownData townData)
     {
+        maxDepth = GameMgr.Instance.MaxAISteps;
+
         aiTownState.UpdateState(townData);
 
         // Determine the best action to take, and then take it
@@ -57,14 +59,19 @@ public partial class PlayerAI
         steps++;
         Debug.Assert(steps < 100000, "stuck in loop in RecursivelyDetermineBestAction");
 
-        // Keep track of the best action in this 'level' of the AI stack, and return it
-        // AIAction bestAction = new(); // todo. Pool?  Or just precreate a static list of 100000 of them and use + increment indexer (so no push/pop)? etc
+        // Determine the best action that can be taken given the current aiTownState and return that action, ensuring
+        // that aiTownState is fully restored to its original state before returning.
+
         AIAction bestAction = actionPool[actionPoolIndex++];
-        bestAction.Score = aiTownState.EvaluateScore();
+        float curStateScore = aiTownState.EvaluateScore();
 
         if (curDepth == maxDepth || aiTownState.IsGameOver())
+        {
+            bestAction.Type = AIActionType.DoNothing; // ???
+            bestAction.Score = curStateScore;
             return bestAction;
-
+        }
+        bestAction.Score = 0;
         for (int i = 0; i < aiTownState.NumNodes; i++)
         {
             var node = aiTownState.Nodes[i];
@@ -73,6 +80,7 @@ public partial class PlayerAI
             TrySendWorkersToEmptyNode(node, ref bestAction, curDepth);
             TryConstructBuildingInNode(node, ref bestAction, curDepth);
         }
+        bestAction.Score += curStateScore;
         return bestAction;
     }
 

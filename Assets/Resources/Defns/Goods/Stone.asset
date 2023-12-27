@@ -23,6 +23,6 @@ MonoBehaviour:
     SerializationNodes: []
   Id: Stone
   FriendlyName: Stone
+  GoodType: 2
   CraftingRequirements: []
-  SpriteToShowInTimer: {fileID: 0}
-  SpriteToShowInBuildingInfo: {fileID: 0}
+  Sprite: {fileID: 0}

@@ -28,6 +28,9 @@ MonoBehaviour:
   CanBeBuiltByPlayer: 1
   ConstructionRequirements: []
   CanGatherResources: 1
-  GatherableResource: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+  ResourceThisNodeCanGoGather: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d,
+    type: 2}
+  CanBeGatheredFrom: 0
+  ResourceGatheredFromThisNode: {fileID: 0}
   CanCraftGoods: 0
   CraftableGoods: []
