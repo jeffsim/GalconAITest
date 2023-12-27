@@ -5,13 +5,31 @@ public partial class PlayerAI
     PlayerData player;
     AI_TownState aiTownState;
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
-    int maxDepth = 8;
+    int maxDepth = 10;
     int steps;
+
+    AIAction[] actionPool;
+    int actionPoolIndex;
+    int maxPoolSize = 100000;
+
+    BuildingDefn[] buildingDefns;
+    int numBuildingDefns;
 
     public PlayerAI(PlayerData playerData)
     {
         player = playerData;
         aiTownState = new AI_TownState(player);
+
+        // Create pool of actions to avoid allocs
+        actionPool = new AIAction[maxPoolSize];
+        for (int i = 0; i < maxPoolSize; i++)
+            actionPool[i] = new AIAction();
+
+        // Convert dictionary to array for speed
+        buildingDefns = new BuildingDefn[GameDefns.Instance.BuildingDefns.Count];
+        numBuildingDefns = 0;
+        foreach (var buildingDefn in GameDefns.Instance.BuildingDefns.Values)
+            buildingDefns[numBuildingDefns++] = buildingDefn;
     }
 
     public void InitializeStaticData(TownData townData)
@@ -25,8 +43,9 @@ public partial class PlayerAI
 
         // Determine the best action to take, and then take it
         steps = 0;
+        actionPoolIndex = 0;
         var bestAction = RecursivelyDetermineBestAction();
-        Debug.Log(steps);
+        // Debug.Log(steps);
         performAction(bestAction);
     }
 
@@ -36,17 +55,19 @@ public partial class PlayerAI
     AIAction RecursivelyDetermineBestAction(int curDepth = 0)
     {
         steps++;
-        Debug.Assert(steps < 10000, "stuck in loop in RecursivelyDetermineBestAction");
+        Debug.Assert(steps < 100000, "stuck in loop in RecursivelyDetermineBestAction");
 
         // Keep track of the best action in this 'level' of the AI stack, and return it
-        AIAction bestAction = new(); // todo. Pool?  Or just precreate a static list of 100000 of them and use + increment indexer (so no push/pop)? etc
+        // AIAction bestAction = new(); // todo. Pool?  Or just precreate a static list of 100000 of them and use + increment indexer (so no push/pop)? etc
+        AIAction bestAction = actionPool[actionPoolIndex++];
         bestAction.Score = aiTownState.EvaluateScore();
 
         if (curDepth == maxDepth || aiTownState.IsGameOver())
             return bestAction;
 
-        foreach (var node in aiTownState.Nodes)
+        for (int i = 0; i < aiTownState.NumNodes; i++)
         {
+            var node = aiTownState.Nodes[i];
             if (node.OwnedBy != player) continue; // only process nodes that we own
 
             TrySendWorkersToEmptyNode(node, ref bestAction, curDepth);
@@ -62,15 +83,16 @@ public partial class PlayerAI
             return; // already has one
 
         // Only attempt to construct buildings that we have resources within 'reach' to build.
-        foreach (var buildingDefn in GameDefns.Instance.BuildingDefns.Values)
+        for (int i = 0; i < numBuildingDefns; i++)
         {
+            var buildingDefn = buildingDefns[i];
             if (!buildingDefn.CanBeBuiltByPlayer)
                 continue;
             if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(node, buildingDefn.ConstructionRequirements))
                 continue;
 
             // Update the townstate to reflect building the building, and consume the resources for it
-            aiTownState.BuildBuilding(node, buildingDefn, out GoodDefn resource1, out int resource1Amount, out GoodDefn resource2, out int resource2Amount);
+            aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
 
             // Recursively determine the value of this action
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
@@ -80,14 +102,14 @@ public partial class PlayerAI
                 bestAction.Score = actionScore.Score;
                 bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
                 bestAction.SourceNode = node;
-                bestAction.BuildingToConstruct = buildingDefn;
+                bestAction.BuildingToConstruct = buildingDefn.Id;
 #if DEBUG
                 bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
 #endif
             }
 
             // Undo the action
-            aiTownState.Undo_BuildBuilding(node, resource1, resource1Amount, resource2, resource2Amount);
+            aiTownState.Undo_BuildBuilding(node, res1Id, resource1Amount, res2Id, resource2Amount);
         }
     }
 
@@ -104,8 +126,10 @@ public partial class PlayerAI
         //   if (aiTownState.HaveSentWorkersToNode.ContainsKey(node.NodeId))
         //     return; // don't send workers from the same node twice in an AI stack, or from a node we sent workers to in the stack.
 
-        foreach (var toNode in fromNode.NeighborNodes)
+        var count = fromNode.NeighborNodes.Count;
+        for (int i = 0; i < count; i++)
         {
+            var toNode = fromNode.NeighborNodes[i];
             if (aiTownState.HaveSentWorkersToNode.ContainsKey(toNode.NodeId))
                 continue; // don't send workers to the same node twice in an AI stack.  This disallows some odd strategies but cleans up lots of odd stuff
 

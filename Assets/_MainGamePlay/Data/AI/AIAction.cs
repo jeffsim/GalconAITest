@@ -7,7 +7,7 @@ public class AIAction
     public int Count;
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
-    public BuildingDefn BuildingToConstruct;
+    public string BuildingToConstruct;
 
 #if DEBUG
     // Keep track of the optimal actions to perform after this one; only used for debugging

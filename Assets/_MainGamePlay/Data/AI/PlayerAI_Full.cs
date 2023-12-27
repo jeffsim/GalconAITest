@@ -117,6 +117,7 @@ public partial class PlayerAI
         if (bestAction.Type == AIActionType.DoNothing)
             return; // no action to take
 
+        return;
         var actionToOutput = bestAction;
         int spaces = 0;
         while (actionToOutput.NextAction != null)
@@ -132,7 +133,7 @@ public partial class PlayerAI
                     Debug.Log(str + "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId);
                     break;
                 case AIActionType.ConstructBuildingInOwnedNode:
-                    Debug.Log(str + "Construct " + actionToOutput.BuildingToConstruct.Name + " in " + actionToOutput.SourceNode.NodeId);
+                    Debug.Log(str + "Construct " + actionToOutput.BuildingToConstruct + " in " + actionToOutput.SourceNode.NodeId);
                     break;
                 case AIActionType.DoNothing:
                     Debug.Log(str + "Do nothing");
