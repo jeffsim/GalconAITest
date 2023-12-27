@@ -13,8 +13,8 @@ class AI_TownState
     int PlayerTownInventory_Stone;
     int PlayerTownInventory_StoneWoodPlank;
 
-    public Dictionary<int, bool> HaveSentWorkersToNode = new();
-    public Dictionary<int, bool> HaveSentWorkersFromNode = new();
+    // public Dictionary<int, bool> HaveSentWorkersToNode = new();
+    // public Dictionary<int, bool> HaveSentWorkersFromNode = new();
 
     public AI_TownState(PlayerData player)
     {
@@ -67,8 +67,8 @@ class AI_TownState
         for (int i = 0; i < NumNodes; i++)
             Nodes[i].Update();
 
-        HaveSentWorkersToNode.Clear();
-        HaveSentWorkersFromNode.Clear();
+        // HaveSentWorkersToNode.Clear();
+        // HaveSentWorkersFromNode.Clear();
     }
 
     internal float EvaluateScore()

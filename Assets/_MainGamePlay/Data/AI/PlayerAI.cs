@@ -138,14 +138,14 @@ public partial class PlayerAI
         for (int i = 0; i < count; i++)
         {
             var toNode = fromNode.NeighborNodes[i];
-            if (aiTownState.HaveSentWorkersToNode.ContainsKey(toNode.NodeId))
-                continue; // don't send workers to the same node twice in an AI stack.  This disallows some odd strategies but cleans up lots of odd stuff
+            // if (aiTownState.HaveSentWorkersToNode.ContainsKey(toNode.NodeId))
+            //     continue; // don't send workers to the same node twice in an AI stack.  This disallows some odd strategies but cleans up lots of odd stuff
 
-            if (toNode.HasBuilding)
-                continue; // Only sending to empty nodes here.  Buttressing nodes is handled in another action
+            // if (toNode.HasBuilding)
+            //     continue; // Only sending to empty nodes here.  Buttressing nodes is handled in another action
 
             if (toNode.OwnedBy != null)
-                continue; // Can't send workers to nodes owned
+                continue; // This task can't send workers to nodes owned by anyone (including this player).  Those are handled in other actions
 
             if (toNode.IsResourceNode)
                 continue; // Can't send to resource nodes
