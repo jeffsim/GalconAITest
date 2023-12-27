@@ -17,6 +17,8 @@ public class GameMgr : MonoBehaviour
     public WorkerDefn TestWorkerDefn;
 
     public int MaxAISteps = 8;
+    public bool DebugOutputStrategy = false;
+    
     public static GameMgr Instance;
 
     void OnEnable()

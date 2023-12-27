@@ -114,10 +114,11 @@ public partial class PlayerAI
 
     private void performAction(AIAction bestAction)
     {
+        if (!GameMgr.Instance.DebugOutputStrategy)
+            return;
         if (bestAction.Type == AIActionType.DoNothing)
             return; // no action to take
 
-        // return;
         var actionToOutput = bestAction;
         int spaces = 0;
         while (actionToOutput.NextAction != null)

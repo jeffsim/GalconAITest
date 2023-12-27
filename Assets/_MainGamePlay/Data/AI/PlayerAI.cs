@@ -144,12 +144,14 @@ public partial class PlayerAI
             if (toNode.HasBuilding)
                 continue; // Only sending to empty nodes here.  Buttressing nodes is handled in another action
 
-            if (toNode.OwnedBy != null && toNode.OwnedBy != player)
-                continue; // Can't send workers to nodes owned by other players (that's handled separately via Attack action)
+            if (toNode.OwnedBy != null)
+                continue; // Can't send workers to nodes owned
 
             if (toNode.IsResourceNode)
                 continue; // Can't send to resource nodes
 
+            Debug.Assert(toNode.NumWorkers == 0);
+            Debug.Assert(toNode.OwnedBy == null);
             aiTownState.SendWorkersToEmptyNode(fromNode, toNode, .5f, out int numSent);
 
             // Recursively determine the value of this action.
