@@ -43,6 +43,14 @@ public partial class PlayerAI
 
         aiTownState.UpdateState(townData);
 
+#if DEBUG
+        if (GameMgr.Instance.DebugOutputStrategy)
+        {
+            for (int i = 0; i < actionPool.Length; i++)
+                actionPool[i].Reset();
+        }
+#endif
+
         // Determine the best action to take, and then take it
         steps = -1;
         actionPoolIndex = 0;
@@ -64,28 +72,35 @@ public partial class PlayerAI
         Debug.Assert(steps < 100000, "stuck in loop in RecursivelyDetermineBestAction");
 
         AIAction bestAction = actionPool[actionPoolIndex++];
-#if DEBUG
-        if (GameMgr.Instance.DebugOutputStrategy)
-            bestAction.ScoreReasons.Reset();
         float curStateScore = aiTownState.EvaluateScore(bestAction.ScoreReasons);
-#else
-        float curStateScore = aiTownState.EvaluateScore();
-#endif
         if (curDepth == maxDepth || aiTownState.IsGameOver())
         {
             bestAction.Type = AIActionType.DoNothing; // ???
             bestAction.Score = curStateScore;
             return bestAction;
         }
+
         bestAction.Score = 0;
         for (int i = 0; i < aiTownState.NumNodes; i++)
         {
             var node = aiTownState.Nodes[i];
-            if (node.OwnedBy != player) continue; // only process nodes that we own
+            if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
 
             TrySendWorkersToEmptyNode(node, ref bestAction, curDepth);
             TryConstructBuildingInNode(node, ref bestAction, curDepth);
+            // TryUpgradeBuildingInNode(node, ref bestAction, curDepth);
+            // TryAttackNode(node, ref bestAction, curDepth);
+            // TryButtressNode(node, ref bestAction, curDepth);
         }
+
+        if (bestAction.Score <= curStateScore)
+        {
+            // couldn't find an action that resulted in a better state; do nothing
+            bestAction.Type = AIActionType.DoNothing; // ???
+            bestAction.Score = curStateScore;
+            return bestAction;
+        }
+
         bestAction.Score += curStateScore;
         return bestAction;
     }
@@ -96,7 +111,7 @@ public partial class PlayerAI
         if (node.HasBuilding)
             return; // already has one
 
-        // Only attempt to construct buildings that we have resources within 'reach' to build.
+        // TODO: Only attempt to construct buildings that we have resources within 'reach' to build.
         for (int i = 0; i < numBuildingDefns; i++)
         {
             var buildingDefn = buildingDefns[i];
@@ -121,6 +136,8 @@ public partial class PlayerAI
                 bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
                 bestAction.StepNum = steps;
                 bestAction.Depth = curDepth;
+                if (GameMgr.Instance.DebugOutputStrategy)
+                    bestAction.ScoreReasons.CopyFrom(actionScore.ScoreReasons);
 #endif
             }
 

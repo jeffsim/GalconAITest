@@ -72,5 +72,20 @@ public class AIAction
     public int StepNum; // for debug output purposes
     public int Depth; // for debug output purposes
     public AIAction NextAction; // Keep track of the optimal actions to perform after this one; only used for debugging
+
+    public void Reset()
+    {
+        Score = 0;
+        Count = 0;
+        BuildingToConstruct = null;
+        Type = AIActionType.DoNothing;
+        SourceNode = null;
+        DestNode = null;
+
+        ScoreReasons.Reset();
+        StepNum = -1;
+        Depth = -1;
+        NextAction = null;
+    }
 #endif
 }

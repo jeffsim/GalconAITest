@@ -73,7 +73,7 @@ MonoBehaviour:
     NumStartingWorkers: 4
   - WorldLoc: {x: -2.5, y: 0, z: 2.5}
     OwnedByPlayerId: 0
-    StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
+    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
     NumStartingWorkers: 0
   NodeConnections:
   - Nodes: {x: 4, y: 3}
