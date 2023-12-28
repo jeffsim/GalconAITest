@@ -18,6 +18,7 @@ public class GameMgr : MonoBehaviour
 
     public int MaxAISteps = 8;
     public bool DebugOutputStrategy = false;
+    public bool DebugOutputStrategyFull = false;
     
     public static GameMgr Instance;
 

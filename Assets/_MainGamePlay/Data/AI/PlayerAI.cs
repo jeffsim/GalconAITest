@@ -44,13 +44,17 @@ public partial class PlayerAI
         aiTownState.UpdateState(townData);
 
         // Determine the best action to take, and then take it
-        steps = 0;
+        steps = -1;
         actionPoolIndex = 0;
+
         var bestAction = RecursivelyDetermineBestAction();
-        // Debug.Log(steps);
+        if (GameMgr.Instance.DebugOutputStrategy)
+            Debug.Log(steps);
         performAction(bestAction);
     }
 
+    // Determine the best action that can be taken given the current aiTownState and return that action, ensuring
+    // that aiTownState is fully restored to its original state before returning.
     // Actions a player-owned Node can take:
     // 1. Send 50% of workers to a node that neighbors the node
     // 2. Construct a building in a node we own.
@@ -59,12 +63,14 @@ public partial class PlayerAI
         steps++;
         Debug.Assert(steps < 100000, "stuck in loop in RecursivelyDetermineBestAction");
 
-        // Determine the best action that can be taken given the current aiTownState and return that action, ensuring
-        // that aiTownState is fully restored to its original state before returning.
-
         AIAction bestAction = actionPool[actionPoolIndex++];
+#if DEBUG
+        if (GameMgr.Instance.DebugOutputStrategy)
+            bestAction.ScoreReasons.Reset();
+        float curStateScore = aiTownState.EvaluateScore(bestAction.ScoreReasons);
+#else
         float curStateScore = aiTownState.EvaluateScore();
-
+#endif
         if (curDepth == maxDepth || aiTownState.IsGameOver())
         {
             bestAction.Type = AIActionType.DoNothing; // ???
@@ -113,6 +119,8 @@ public partial class PlayerAI
                 bestAction.BuildingToConstruct = buildingDefn.Id;
 #if DEBUG
                 bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
+                bestAction.StepNum = steps;
+                bestAction.Depth = curDepth;
 #endif
             }
 
@@ -166,6 +174,11 @@ public partial class PlayerAI
                 bestAction.DestNode = toNode;
 #if DEBUG
                 bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
+                bestAction.StepNum = steps;
+                bestAction.Depth = curDepth;
+
+                if (GameMgr.Instance.DebugOutputStrategy)
+                    bestAction.ScoreReasons.CopyFrom(actionScore.ScoreReasons);
 #endif
             }
 

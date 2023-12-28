@@ -128,20 +128,27 @@ public partial class PlayerAI
             if (actionToOutput != bestAction)
                 str += "\u21B3";
 
+            str += actionToOutput.Score + " [" + actionToOutput.Depth + ": " + actionToOutput.StepNum + "] ";
             switch (actionToOutput.Type)
             {
                 case AIActionType.SendWorkersToNode:
-                    Debug.Log(str + "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId);
+                    str += "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId;
                     break;
                 case AIActionType.ConstructBuildingInOwnedNode:
-                    Debug.Log(str + "Construct " + actionToOutput.BuildingToConstruct + " in " + actionToOutput.SourceNode.NodeId);
+                    str += "Construct " + actionToOutput.BuildingToConstruct + " in " + actionToOutput.SourceNode.NodeId;
                     break;
                 case AIActionType.DoNothing:
-                    Debug.Log(str + "Do nothing");
+                    str += "Do nothing";
                     break;
                 default:
                     throw new Exception("Unhandled AIActionType: " + actionToOutput.Type);
             }
+
+            // add score reasons
+            str += "   ";
+            if (GameMgr.Instance.DebugOutputStrategyFull)
+                str += actionToOutput.ScoreReasons;
+            Debug.Log(str);
             spaces++;
             actionToOutput = actionToOutput.NextAction;
         }
