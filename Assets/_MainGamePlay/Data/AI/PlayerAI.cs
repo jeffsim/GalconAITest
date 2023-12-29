@@ -15,6 +15,10 @@ public partial class PlayerAI
     BuildingDefn[] buildingDefns;
     int numBuildingDefns;
 
+#if DEBUG
+    int lastMaxDepth = -1;
+#endif
+
     public PlayerAI(PlayerData playerData)
     {
         player = playerData;
@@ -39,11 +43,17 @@ public partial class PlayerAI
 
     internal void Update(TownData townData)
     {
-        maxDepth = GameMgr.Instance.MaxAISteps;
+        maxDepth = GameMgr.Instance.MaxAIDepth;
 
         aiTownState.UpdateState(townData);
 
 #if DEBUG
+        if (lastMaxDepth != GameMgr.Instance.MaxAIDepth)
+        {
+            lastMaxDepth = GameMgr.Instance.MaxAIDepth;
+            ConsoleClearer.ClearConsole();
+        }
+
         if (GameMgr.Instance.DebugOutputStrategy)
         {
             for (int i = 0; i < actionPool.Length; i++)
@@ -88,9 +98,6 @@ public partial class PlayerAI
 
             TrySendWorkersToEmptyNode(node, ref bestAction, curDepth);
             TryConstructBuildingInNode(node, ref bestAction, curDepth);
-            // TryUpgradeBuildingInNode(node, ref bestAction, curDepth);
-            // TryAttackNode(node, ref bestAction, curDepth);
-            // TryButtressNode(node, ref bestAction, curDepth);
         }
 
         if (bestAction.Score <= curStateScore)
@@ -105,48 +112,6 @@ public partial class PlayerAI
         return bestAction;
     }
 
-    // Try constructing a building in the specified node
-    private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth)
-    {
-        if (node.HasBuilding)
-            return; // already has one
-
-        // TODO: Only attempt to construct buildings that we have resources within 'reach' to build.
-        for (int i = 0; i < numBuildingDefns; i++)
-        {
-            var buildingDefn = buildingDefns[i];
-            if (!buildingDefn.CanBeBuiltByPlayer)
-                continue;
-            if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(node, buildingDefn.ConstructionRequirements))
-                continue;
-
-            // Update the townstate to reflect building the building, and consume the resources for it
-            aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
-
-            // Recursively determine the value of this action
-            var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
-            if (actionScore.Score > bestAction.Score)
-            {
-                // This is the best action so far; save the action so we can return it
-                bestAction.Score = actionScore.Score;
-                bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
-                bestAction.SourceNode = node;
-                bestAction.BuildingToConstruct = buildingDefn.Id;
-#if DEBUG
-                bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
-                bestAction.StepNum = steps;
-                bestAction.Depth = curDepth;
-                if (GameMgr.Instance.DebugOutputStrategy)
-                    bestAction.ScoreReasons.CopyFrom(actionScore.ScoreReasons);
-#endif
-            }
-
-            // Undo the action
-            aiTownState.Undo_BuildBuilding(node, res1Id, resource1Amount, res2Id, resource2Amount);
-        }
-    }
-
-    // Try expanding to neighboring empty nodes.
     private void TrySendWorkersToEmptyNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth)
     {
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
@@ -155,25 +120,12 @@ public partial class PlayerAI
         if (!fromNode.HasBuilding)
             return; // Must have a building in a node to send workers from it 
 
-        //  if (aiTownState.HaveSentWorkersFromNode.ContainsKey(node.NodeId))
-        //   if (aiTownState.HaveSentWorkersToNode.ContainsKey(node.NodeId))
-        //     return; // don't send workers from the same node twice in an AI stack, or from a node we sent workers to in the stack.
-
         var count = fromNode.NeighborNodes.Count;
         for (int i = 0; i < count; i++)
         {
             var toNode = fromNode.NeighborNodes[i];
-            // if (aiTownState.HaveSentWorkersToNode.ContainsKey(toNode.NodeId))
-            //     continue; // don't send workers to the same node twice in an AI stack.  This disallows some odd strategies but cleans up lots of odd stuff
-
-            // if (toNode.HasBuilding)
-            //     continue; // Only sending to empty nodes here.  Buttressing nodes is handled in another action
-
-            if (toNode.OwnedBy != null)
-                continue; // This task can't send workers to nodes owned by anyone (including this player).  Those are handled in other actions
-
-            if (toNode.IsResourceNode)
-                continue; // Can't send to resource nodes
+            if (toNode.OwnedBy != null) continue; // This task can't send workers to nodes owned by anyone (including this player).  Those are handled in other actions
+            if (toNode.IsResourceNode) continue; // Can't send to resource nodes
 
             Debug.Assert(toNode.NumWorkers == 0);
             Debug.Assert(toNode.OwnedBy == null);
@@ -201,6 +153,44 @@ public partial class PlayerAI
 
             // Undo the action
             aiTownState.Undo_SendWorkersToEmptyNode(fromNode, toNode, numSent);
+        }
+    }
+
+    private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth)
+    {
+        if (node.HasBuilding)
+            return; // already has one
+
+        // TODO: Only attempt to construct buildings that we have resources within 'reach' to build.
+        for (int i = 0; i < numBuildingDefns; i++)
+        {
+            var buildingDefn = buildingDefns[i];
+            if (!buildingDefn.CanBeBuiltByPlayer) continue;
+            if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(node, buildingDefn.ConstructionRequirements)) continue;
+
+            // Update the townstate to reflect building the building, and consume the resources for it
+            aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
+
+            // Recursively determine the value of this action
+            var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
+            if (actionScore.Score > bestAction.Score)
+            {
+                // This is the best action so far; save the action so we can return it
+                bestAction.Score = actionScore.Score;
+                bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
+                bestAction.SourceNode = node;
+                bestAction.BuildingToConstruct = buildingDefn.Id;
+#if DEBUG
+                bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
+                bestAction.StepNum = steps;
+                bestAction.Depth = curDepth;
+                if (GameMgr.Instance.DebugOutputStrategy)
+                    bestAction.ScoreReasons.CopyFrom(actionScore.ScoreReasons);
+#endif
+            }
+
+            // Undo the action
+            aiTownState.Undo_BuildBuilding(node, res1Id, resource1Amount, res2Id, resource2Amount);
         }
     }
 }

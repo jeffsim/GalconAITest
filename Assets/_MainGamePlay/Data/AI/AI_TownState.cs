@@ -8,13 +8,9 @@ public partial class AI_TownState
     public int NumNodes;
     PlayerData player;
 
-    // Dictionary<GoodDefn, int> PlayerTownInventory = new(100);
     int PlayerTownInventory_Wood;
     int PlayerTownInventory_Stone;
     int PlayerTownInventory_StoneWoodPlank;
-
-    // public Dictionary<int, bool> HaveSentWorkersToNode = new();
-    // public Dictionary<int, bool> HaveSentWorkersFromNode = new();
 
     public AI_TownState(PlayerData player)
     {
@@ -66,9 +62,6 @@ public partial class AI_TownState
 
         for (int i = 0; i < NumNodes; i++)
             Nodes[i].Update();
-
-        // HaveSentWorkersToNode.Clear();
-        // HaveSentWorkersFromNode.Clear();
     }
 
     internal int GetNumItem(GoodDefn good)
@@ -90,9 +83,6 @@ public partial class AI_TownState
         sourceNode.NumWorkers -= numSent;
         destNode.NumWorkers += numSent;
         destNode.OwnedBy = player;
-
-        // HaveSentWorkersFromNode[sourceNode.NodeId] = true;
-        // HaveSentWorkersToNode[destNode.NodeId] = true;
     }
 
     internal void Undo_SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)

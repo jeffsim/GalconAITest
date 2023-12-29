@@ -16,13 +16,21 @@ public class DebugAIStateReasons
     public override string ToString()
     {
         var str = "";
-        foreach (var reason in ScoresFrom_NodesOwned)
-            str += " | Node owned: " + reason.Node.NodeId + " (" + reason.ScoreValue + ")";
-        foreach (var reason in ScoresFrom_NumEmptyNodesOwned)
-            str += " | Empty Node owned: " + reason.Node.NodeId + " (" + reason.ScoreValue + ")";
-        foreach (var reason in ScoresFrom_ResourceGatherersCloseToResourceNodes)
-            str += " | Resource gatherer near resource: " + reason.Node.NodeId + " (" + reason.ScoreValue + ")";
+        if (ScoresFrom_NodesOwned.Count > 0) str += addReasonScoresString("Owned Nodes", ScoresFrom_NodesOwned);
+        if (ScoresFrom_NumEmptyNodesOwned.Count > 0) str += addReasonScoresString("Owned Empty Nodes",ScoresFrom_NumEmptyNodesOwned);
+        if (ScoresFrom_ResourceGatherersCloseToResourceNodes.Count > 0) str += addReasonScoresString("Owned Res Gatherers",ScoresFrom_ResourceGatherersCloseToResourceNodes);
         return str;
+    }
+
+    private string addReasonScoresString(string msg, List<DebugAIStateReason> reasons)
+    {
+        var str = " | " + msg + " (";
+        for (int i = 0; i < reasons.Count; i++)
+        {
+            if (i > 0) str += ", ";
+            str += reasons[i].Node.NodeId;
+        }
+        return str + ")=" + reasons[0].ScoreValue * reasons.Count;
     }
 
     internal void Reset()

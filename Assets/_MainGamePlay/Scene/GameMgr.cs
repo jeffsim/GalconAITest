@@ -16,7 +16,7 @@ public class GameMgr : MonoBehaviour
     public TownDefn TestTownDefn;
     public WorkerDefn TestWorkerDefn;
 
-    public int MaxAISteps = 8;
+    public int MaxAIDepth = 8;
     public bool DebugOutputStrategy = false;
     public bool DebugOutputStrategyFull = false;
     
@@ -82,7 +82,7 @@ public class GameMgr : MonoBehaviour
         lineRenderer.positionCount = points.Count;
         lineRenderer.SetPositions(points.ToArray());
         // lineRenderers.Add(lineRenderer);
-    }
+    } 
 
     void Update()
     {

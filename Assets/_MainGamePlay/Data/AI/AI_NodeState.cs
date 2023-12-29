@@ -11,7 +11,6 @@ public class AI_NodeState
     public int NodeId;
     internal bool IsResourceNode => HasBuilding && CanBeGatheredFrom;
 
-    // public Dictionary<string, int> DistanceToClosestResourceNode = new();
     public int DistanceToClosestResourceNode_Wood;
     public int DistanceToClosestResourceNode_Stone;
     public int DistanceToClosestResourceNode_StoneWoodPlank;
@@ -76,5 +75,4 @@ public class AI_NodeState
         NumWorkers = nodeData.NumWorkers;
         OwnedBy = nodeData.OwnedBy;
     }
-
 }
