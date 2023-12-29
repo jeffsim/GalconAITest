@@ -14,7 +14,7 @@ public partial class AI_TownState
                 // TODO: subtract score for each node owned by another player
                 score += 1;
 #if DEBUG
-                if (GameMgr.Instance.DebugOutputStrategy)
+                if (GameMgr.Instance.DebugOutputStrategyFull)
                     scoreReasons.ScoresFrom_NodesOwned.Add(new DebugAIStateReason() { Node = node, ScoreValue = 1f });
 #endif
 
@@ -23,7 +23,7 @@ public partial class AI_TownState
                 {
                     score += .1f; // some score for owning empty nodes.  Base this on AI personality's "desire to expand"
 #if DEBUG
-                    if (GameMgr.Instance.DebugOutputStrategy)
+                    if (GameMgr.Instance.DebugOutputStrategyFull)
                         scoreReasons.ScoresFrom_NumEmptyNodesOwned.Add(new DebugAIStateReason() { Node = node, ScoreValue = .1f });
 #endif
                 }
@@ -47,7 +47,7 @@ public partial class AI_TownState
                         {
                             score += 2f;
 #if DEBUG
-                            if (GameMgr.Instance.DebugOutputStrategy)
+                            if (GameMgr.Instance.DebugOutputStrategyFull)
                                 scoreReasons.ScoresFrom_ResourceGatherersCloseToResourceNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = 2f });
 #endif
                         }

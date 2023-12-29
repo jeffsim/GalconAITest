@@ -121,7 +121,7 @@ public partial class PlayerAI
 
         var actionToOutput = bestAction;
         // int spaces = 0;
-        while (actionToOutput.NextAction != null)
+        while (actionToOutput.DebugOutput_NextAction != null)
         {
             // create empty string with 'spaces' indentation
             string str = "";
@@ -129,9 +129,9 @@ public partial class PlayerAI
             // if (actionToOutput != bestAction)
             //     str += "\u21B3";
 
-            str += "Depth: " + actionToOutput.Depth;
-            str += " Score: " + actionToOutput.ScoreBeforeSubActions + "=>" + actionToOutput.Score;
-            // str += " Step: " + actionToOutput.StepNum;
+            str += "Depth: " + actionToOutput.DebugOutput_Depth;
+            str += " | Action: " + actionToOutput.DebugOutput_TriedActionNum;
+            str += " | Score: " + actionToOutput.ScoreBeforeSubActions + "=>" + actionToOutput.Score;
             str += " | Action: ";
             switch (actionToOutput.Type)
             {
@@ -152,11 +152,11 @@ public partial class PlayerAI
             if (GameMgr.Instance.DebugOutputStrategyFull)
             {
                 str += " | Score reasons: ";
-                str += actionToOutput.ScoreReasons;
+                str += actionToOutput.DebugOutput_ScoreReasons;
             }
             Debug.Log(str);
             // spaces++;
-            actionToOutput = actionToOutput.NextAction;
+            actionToOutput = actionToOutput.DebugOutput_NextAction;
         }
     }
 }

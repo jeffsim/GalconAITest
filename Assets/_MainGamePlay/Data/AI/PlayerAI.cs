@@ -6,7 +6,8 @@ public partial class PlayerAI
     AI_TownState aiTownState;
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
     int maxDepth;
-    int steps;
+    int debugOutput_ActionsTried;
+    int debugOutput_callsToRecursivelyDetermineBestAction;
 
     AIAction[] actionPool;
     int actionPoolIndex;
@@ -54,7 +55,7 @@ public partial class PlayerAI
             ConsoleClearer.ClearConsole();
         }
 
-        if (GameMgr.Instance.DebugOutputStrategy)
+        if (GameMgr.Instance.DebugOutputStrategyFull)
         {
             for (int i = 0; i < actionPool.Length; i++)
                 actionPool[i].Reset();
@@ -62,12 +63,13 @@ public partial class PlayerAI
 #endif
 
         // Determine the best action to take, and then take it
-        steps = -1;
+        debugOutput_ActionsTried = -1;
+        debugOutput_callsToRecursivelyDetermineBestAction = -1;
         actionPoolIndex = 0;
 
         var bestAction = RecursivelyDetermineBestAction();
-        if (GameMgr.Instance.DebugOutputStrategy)
-            Debug.Log(steps);
+        if (GameMgr.Instance.DebugOutputStrategyFull)
+            Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
         performAction(bestAction);
     }
 
@@ -78,11 +80,14 @@ public partial class PlayerAI
     // 2. Construct a building in a node we own.
     AIAction RecursivelyDetermineBestAction(int curDepth = 0)
     {
-        steps++;
-        Debug.Assert(steps < 100000, "stuck in loop in RecursivelyDetermineBestAction");
+        Debug.Assert(debugOutput_ActionsTried < 100000, "stuck in loop in RecursivelyDetermineBestAction");
+
+#if DEBUG
+        debugOutput_callsToRecursivelyDetermineBestAction++;
+#endif
 
         AIAction bestAction = actionPool[actionPoolIndex++];
-        float curStateScore = aiTownState.EvaluateScore(bestAction.ScoreReasons);
+        float curStateScore = aiTownState.EvaluateScore(bestAction.DebugOutput_ScoreReasons);
         bestAction.ScoreBeforeSubActions = curStateScore;
         if (curDepth == maxDepth || aiTownState.IsGameOver())
         {
@@ -106,15 +111,15 @@ public partial class PlayerAI
             // couldn't find an action that resulted in a better state; do nothing
             bestAction.Type = AIActionType.DoNothing; // ???
             bestAction.Score = curStateScore;
-            return bestAction;
         }
 
-        //  bestAction.Score += curStateScore;
         return bestAction;
     }
 
     private void TrySendWorkersToEmptyNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth)
     {
+        debugOutput_ActionsTried++;
+
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return; // not enough workers in node to send any out
 
@@ -133,34 +138,30 @@ public partial class PlayerAI
             aiTownState.SendWorkersToEmptyNode(fromNode, toNode, .5f, out int numSent);
 
 #if DEBUG
-            DebugAIStateReasons actionScoreReasons = null;
-            float actionScore1 = 0;
-            if (GameMgr.Instance.DebugOutputStrategy)
-            {
-                actionScoreReasons = new();
-                actionScore1 = aiTownState.EvaluateScore(actionScoreReasons);
-            }
+            DebugAIStateReasons debugOutput_actionScoreReasons = null;
+            if (GameMgr.Instance.DebugOutputStrategyFull)
+                debugOutput_actionScoreReasons = new();
 #endif
+            // TODO: Can I avoid this extra call to EvaluateScore()?
+            float actionScoreAfterOurActionButBeforeSubActions = aiTownState.EvaluateScore(debugOutput_actionScoreReasons);
+
             // Recursively determine the value of this action.
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
             if (actionScore.Score > bestAction.Score)
             {
                 // This is the best action so far in this 'level' of the AI stack; save the action so we can return it
-                bestAction.Score = actionScore.Score;
+                bestAction.Score = actionScoreAfterOurActionButBeforeSubActions;
                 bestAction.Type = AIActionType.SendWorkersToNode;
                 bestAction.Count = numSent;
                 bestAction.SourceNode = fromNode;
                 bestAction.DestNode = toNode;
 #if DEBUG
-                bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
-                bestAction.StepNum = steps;
-                bestAction.Depth = curDepth;
-
-                if (GameMgr.Instance.DebugOutputStrategy)
-                {
-                    bestAction.ScoreReasons = actionScoreReasons;
-                    bestAction.Score = actionScore1;
-                }
+                bestAction.DebugOutput_NextAction = actionScore;
+                bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
+                bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
+                bestAction.DebugOutput_Depth = curDepth;
+                if (GameMgr.Instance.DebugOutputStrategyFull)
+                    bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;
 #endif
             }
 
@@ -171,6 +172,8 @@ public partial class PlayerAI
 
     private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth)
     {
+        debugOutput_ActionsTried++;
+
         if (node.HasBuilding)
             return; // already has one
 
@@ -184,21 +187,30 @@ public partial class PlayerAI
             // Update the townstate to reflect building the building, and consume the resources for it
             aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
 
+#if DEBUG
+            DebugAIStateReasons debugOutput_actionScoreReasons = null;
+            if (GameMgr.Instance.DebugOutputStrategyFull)
+                debugOutput_actionScoreReasons = new();
+#endif
+            // TODO: Can I avoid this extra call to EvaluateScore()?
+            float actionScoreAfterOurActionButBeforeSubActions = aiTownState.EvaluateScore(debugOutput_actionScoreReasons);
+
             // Recursively determine the value of this action
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
             if (actionScore.Score > bestAction.Score)
             {
                 // This is the best action so far; save the action so we can return it
-                bestAction.Score = actionScore.Score;
+                bestAction.Score = actionScoreAfterOurActionButBeforeSubActions;
                 bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
                 bestAction.SourceNode = node;
                 bestAction.BuildingToConstruct = buildingDefn.Id;
 #if DEBUG
-                bestAction.NextAction = actionScore; // track so I can output the next N steps in the optimal strategy
-                bestAction.StepNum = steps;
-                bestAction.Depth = curDepth;
-                if (GameMgr.Instance.DebugOutputStrategy)
-                    bestAction.ScoreReasons.CopyFrom(actionScore.ScoreReasons);
+                bestAction.DebugOutput_NextAction = actionScore;
+                bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
+                bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
+                bestAction.DebugOutput_Depth = curDepth;
+                if (GameMgr.Instance.DebugOutputStrategyFull)
+                    bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;
 #endif
             }
 
