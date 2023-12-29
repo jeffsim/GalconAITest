@@ -131,7 +131,8 @@ public partial class PlayerAI
 
             str += "Depth: " + actionToOutput.DebugOutput_Depth;
             str += " | Action: " + actionToOutput.DebugOutput_TriedActionNum;
-            str += " | Score: " + actionToOutput.ScoreBeforeSubActions + "=>" + actionToOutput.Score;
+
+            str += " | Score: " + actionToOutput.ScoreBeforeSubActions.ToString("0.0") + "=>" + actionToOutput.Score.ToString("0.0");
             str += " | Action: ";
             switch (actionToOutput.Type)
             {
@@ -141,9 +142,9 @@ public partial class PlayerAI
                 case AIActionType.ConstructBuildingInOwnedNode:
                     str += "Construct " + actionToOutput.BuildingToConstruct.Id + " in " + actionToOutput.SourceNode.NodeId;
                     break;
-                case AIActionType.DoNothing:
-                    str += "Do nothing";
-                    break;
+                case AIActionType.DoNothing: str += "Do nothing (No beneficial action found)"; break;
+                case AIActionType.NoAction_MaxDepth: str += "Max depth reached"; break;
+                case AIActionType.NoAction_GameOver: str += "Game Over"; break;
                 default:
                     throw new Exception("Unhandled AIActionType: " + actionToOutput.Type);
             }

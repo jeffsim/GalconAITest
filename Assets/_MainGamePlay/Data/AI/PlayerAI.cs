@@ -11,7 +11,7 @@ public partial class PlayerAI
 
     AIAction[] actionPool;
     int actionPoolIndex;
-    int maxPoolSize = 100000;
+    int maxPoolSize = 250000;
 
     BuildingDefn[] buildableBuildingDefns;
     int numBuildingDefns;
@@ -78,21 +78,19 @@ public partial class PlayerAI
     // that aiTownState is fully restored to its original state before returning.
     // Actions a player-owned Node can take:
     // 1. Send 50% of workers to a node that neighbors the node
-    // 2. Construct a building in a node we own.
+    // 2. Construct a building in a node we own. 
     AIAction RecursivelyDetermineBestAction(int curDepth = 0)
     {
-        Debug.Assert(debugOutput_ActionsTried < 100000, "stuck in loop in RecursivelyDetermineBestAction");
-
 #if DEBUG
         debugOutput_callsToRecursivelyDetermineBestAction++;
 #endif
-
+        Debug.Assert(debugOutput_ActionsTried < maxPoolSize, "stuck in loop in RecursivelyDetermineBestAction");
         AIAction bestAction = actionPool[actionPoolIndex++];
         float curStateScore = aiTownState.EvaluateScore(bestAction.DebugOutput_ScoreReasons);
         bestAction.ScoreBeforeSubActions = curStateScore;
         if (curDepth == maxDepth || aiTownState.IsGameOver())
         {
-            bestAction.Type = AIActionType.DoNothing; // ???
+            bestAction.Type = curDepth == maxDepth ? AIActionType.NoAction_MaxDepth : AIActionType.NoAction_GameOver;
             bestAction.Score = curStateScore;
             return bestAction;
         }
@@ -119,7 +117,9 @@ public partial class PlayerAI
 
     private void TrySendWorkersToEmptyNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth)
     {
-        debugOutput_ActionsTried++;
+#if DEBUG
+        var thisActionNum = ++debugOutput_ActionsTried;
+#endif
 
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return; // not enough workers in node to send any out
@@ -160,7 +160,7 @@ public partial class PlayerAI
                 if (GameMgr.Instance.DebugOutputStrategy)
                 {
                     bestAction.DebugOutput_NextAction = actionScore;
-                    bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
+                    bestAction.DebugOutput_TriedActionNum = thisActionNum;
                     bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
                     bestAction.DebugOutput_Depth = curDepth;
                     if (GameMgr.Instance.DebugOutputStrategyFull)
@@ -176,7 +176,9 @@ public partial class PlayerAI
 
     private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth)
     {
-        debugOutput_ActionsTried++;
+#if DEBUG
+        var thisActionNum = ++debugOutput_ActionsTried;
+#endif
 
         if (node.HasBuilding)
             return; // already has one
@@ -211,7 +213,7 @@ public partial class PlayerAI
                 if (GameMgr.Instance.DebugOutputStrategy)
                 {
                     bestAction.DebugOutput_NextAction = actionScore;
-                    bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
+                    bestAction.DebugOutput_TriedActionNum = thisActionNum;
                     bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
                     bestAction.DebugOutput_Depth = curDepth;
                     if (GameMgr.Instance.DebugOutputStrategyFull)

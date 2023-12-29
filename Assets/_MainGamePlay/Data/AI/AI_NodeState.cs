@@ -11,9 +11,10 @@ public class AI_NodeState
     public int NodeId;
     internal bool IsResourceNode => HasBuilding && CanBeGatheredFrom;
 
-    public int DistanceToClosestResourceNode_Wood;
-    public int DistanceToClosestResourceNode_Stone;
-    public int DistanceToClosestResourceNode_StoneWoodPlank;
+    public int DistanceToClosestGatherableResourceNode;
+    // public int DistanceToClosestResourceNode_Wood;
+    // public int DistanceToClosestResourceNode_Stone;
+    // public int DistanceToClosestResourceNode_StoneWoodPlank;
 
     // Buildings
     public bool HasBuilding;
@@ -36,6 +37,7 @@ public class AI_NodeState
         CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
         if (CanBeGatheredFrom)
             ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
+        DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
     }
 
     public AI_NodeState(NodeData nodeData)
@@ -49,9 +51,11 @@ public class AI_NodeState
     internal void UpdateDistanceToResource()
     {
         // find the closest node for each gatherable resourcetype
-        DistanceToClosestResourceNode_Wood = findClosestResourceNode(GoodType.Wood);
-        DistanceToClosestResourceNode_Stone = findClosestResourceNode(GoodType.Stone);
-        DistanceToClosestResourceNode_StoneWoodPlank = findClosestResourceNode(GoodType.StoneWoodPlank);
+        // DistanceToClosestResourceNode_Wood = findClosestResourceNode(GoodType.Wood);
+        // DistanceToClosestResourceNode_Stone = findClosestResourceNode(GoodType.Stone);
+        // DistanceToClosestResourceNode_StoneWoodPlank = findClosestResourceNode(GoodType.StoneWoodPlank);
+
+        DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
     }
 
     private int findClosestResourceNode(GoodType gatherableResource)

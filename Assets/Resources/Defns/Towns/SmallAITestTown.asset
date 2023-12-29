@@ -23,55 +23,68 @@ MonoBehaviour:
     SerializationNodes: []
   Id: 
   Nodes:
-  - WorldLoc: {x: 0, y: 0, z: 0}
+  - NodeId: 0
+    WorldLoc: {x: 0, y: 0, z: 0}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
+    NumStartingWorkers: 0
+  - NodeId: 1
+    WorldLoc: {x: 5, y: 0, z: 5}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
-  - WorldLoc: {x: 5, y: 0, z: 5}
+  - NodeId: 2
+    WorldLoc: {x: 5, y: 0, z: 0}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
-  - WorldLoc: {x: 5, y: 0, z: 0}
+  - NodeId: 3
+    WorldLoc: {x: 0, y: 0, z: -3}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
-  - WorldLoc: {x: 0, y: 0, z: -3}
+  - NodeId: 4
+    WorldLoc: {x: 5, y: 0, z: -3}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
-  - WorldLoc: {x: 5, y: 0, z: -3}
-    OwnedByPlayerId: 0
-    StartingBuilding: {fileID: 0}
-    NumStartingWorkers: 0
-  - WorldLoc: {x: -4, y: 0, z: -4}
+  - NodeId: 5
+    WorldLoc: {x: -4, y: 0, z: -4}
     OwnedByPlayerId: 2
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
-    NumStartingWorkers: 16
-  - WorldLoc: {x: -5, y: 0, z: 0}
+    NumStartingWorkers: 64
+  - NodeId: 6
+    WorldLoc: {x: -5, y: 0, z: 0}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
-  - WorldLoc: {x: 5, y: 0, z: -6}
+  - NodeId: 7
+    WorldLoc: {x: 5, y: 0, z: -6}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
-  - WorldLoc: {x: 8, y: 0, z: 0}
+  - NodeId: 8
+    WorldLoc: {x: 8, y: 0, z: 0}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
+    NumStartingWorkers: 0
+  - NodeId: 9
+    WorldLoc: {x: 0, y: 0, z: -7}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
-  - WorldLoc: {x: 0, y: 0, z: -7}
-    OwnedByPlayerId: 0
-    StartingBuilding: {fileID: 0}
-    NumStartingWorkers: 0
-  - WorldLoc: {x: 8, y: 0, z: -4}
+  - NodeId: 10
+    WorldLoc: {x: 8, y: 0, z: -4}
     OwnedByPlayerId: 1
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
     NumStartingWorkers: 2
-  - WorldLoc: {x: 0, y: 0, z: 6}
+  - NodeId: 11
+    WorldLoc: {x: 0, y: 0, z: 6}
     OwnedByPlayerId: 3
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
     NumStartingWorkers: 4
-  - WorldLoc: {x: -2.5, y: 0, z: 2.5}
+  - NodeId: 12
+    WorldLoc: {x: -2.5, y: 0, z: 2.5}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
     NumStartingWorkers: 0

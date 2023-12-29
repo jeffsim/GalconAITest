@@ -35,14 +35,7 @@ public partial class AI_TownState
                     if (node.CanGoGatherResources)
                     {
                         // Dictionaries are slow, and this is the innermost loop, so...
-                        //  int dist = node.DistanceToClosestResourceNode[node.GatherableResourceDefnId];
-                        int dist = int.MaxValue;
-                        switch (node.ResourceThisNodeCanGoGather)
-                        {
-                            case GoodType.Wood: dist = node.DistanceToClosestResourceNode_Wood; break;
-                            case GoodType.Stone: dist = node.DistanceToClosestResourceNode_Stone; break;
-                            case GoodType.StoneWoodPlank: dist = node.DistanceToClosestResourceNode_StoneWoodPlank; break;
-                        }
+                        int dist = node.DistanceToClosestGatherableResourceNode;
                         if (dist == 1)
                         {
                             score += 2f;

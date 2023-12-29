@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
-using Mono.Cecil;
 
-public enum AIActionType { DoNothing, SendWorkersToNode, ConstructBuildingInOwnedNode };
+public enum AIActionType { DoNothing, SendWorkersToNode, ConstructBuildingInOwnedNode, NoAction_GameOver, NoAction_MaxDepth };
 
 #if DEBUG
 public class DebugAIStateReason
@@ -93,7 +91,6 @@ public class AIAction
         Type = AIActionType.DoNothing;
         SourceNode = null;
         DestNode = null;
-
         DebugOutput_ScoreReasons.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;
