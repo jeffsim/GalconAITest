@@ -13,7 +13,7 @@ public partial class PlayerAI
     int actionPoolIndex;
     int maxPoolSize = 100000;
 
-    BuildingDefn[] buildingDefns;
+    BuildingDefn[] buildableBuildingDefns;
     int numBuildingDefns;
 
 #if DEBUG
@@ -31,10 +31,11 @@ public partial class PlayerAI
             actionPool[i] = new AIAction();
 
         // Convert dictionary to array for speed
-        buildingDefns = new BuildingDefn[GameDefns.Instance.BuildingDefns.Count];
+        buildableBuildingDefns = new BuildingDefn[GameDefns.Instance.BuildingDefns.Count];
         numBuildingDefns = 0;
         foreach (var buildingDefn in GameDefns.Instance.BuildingDefns.Values)
-            buildingDefns[numBuildingDefns++] = buildingDefn;
+            if (buildingDefn.CanBeBuiltByPlayer)
+                buildableBuildingDefns[numBuildingDefns++] = buildingDefn;
     }
 
     public void InitializeStaticData(TownData townData)
@@ -183,8 +184,7 @@ public partial class PlayerAI
         // TODO: Only attempt to construct buildings that we have resources within 'reach' to build.
         for (int i = 0; i < numBuildingDefns; i++)
         {
-            var buildingDefn = buildingDefns[i];
-            if (!buildingDefn.CanBeBuiltByPlayer) continue;
+            var buildingDefn = buildableBuildingDefns[i];
             if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(node, buildingDefn.ConstructionRequirements)) continue;
 
             // Update the townstate to reflect building the building, and consume the resources for it
@@ -206,7 +206,7 @@ public partial class PlayerAI
                 bestAction.Score = actionScoreAfterOurActionButBeforeSubActions;
                 bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
                 bestAction.SourceNode = node;
-                bestAction.BuildingToConstruct = buildingDefn.Id;
+                bestAction.BuildingToConstruct = buildingDefn;
 #if DEBUG
                 if (GameMgr.Instance.DebugOutputStrategy)
                 {

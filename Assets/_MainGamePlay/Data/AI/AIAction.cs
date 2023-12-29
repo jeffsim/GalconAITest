@@ -75,7 +75,7 @@ public class AIAction
     public int Count;
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
-    public string BuildingToConstruct;
+    public BuildingDefn BuildingToConstruct;
 
 #if DEBUG
     public DebugAIStateReasons DebugOutput_ScoreReasons = new();

@@ -139,7 +139,7 @@ public partial class PlayerAI
                     str += "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId;
                     break;
                 case AIActionType.ConstructBuildingInOwnedNode:
-                    str += "Construct " + actionToOutput.BuildingToConstruct + " in " + actionToOutput.SourceNode.NodeId;
+                    str += "Construct " + actionToOutput.BuildingToConstruct.Id + " in " + actionToOutput.SourceNode.NodeId;
                     break;
                 case AIActionType.DoNothing:
                     str += "Do nothing";
