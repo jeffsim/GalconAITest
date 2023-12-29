@@ -6,6 +6,11 @@ public class GameMgr : MonoBehaviour
     public TownData Town;
     public NodeGO NodePrefab;
     public Worker WorkerPrefab;
+    
+    public int MaxAIDepth = 8;
+    public bool DebugOutputStrategy = false;
+    public bool DebugOutputStrategyFull = false;
+    
     public List<NodeGO> Nodes = new();
     public List<Worker> Workers = new();
     public Material NodeConnectionMat;
@@ -16,10 +21,6 @@ public class GameMgr : MonoBehaviour
     public TownDefn TestTownDefn;
     public WorkerDefn TestWorkerDefn;
 
-    public int MaxAIDepth = 8;
-    public bool DebugOutputStrategy = false;
-    public bool DebugOutputStrategyFull = false;
-    
     public static GameMgr Instance;
 
     void OnEnable()
