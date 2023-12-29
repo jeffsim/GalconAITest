@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Assertions.Must;
 
 public partial class PlayerAI
 {
@@ -10,7 +11,7 @@ public partial class PlayerAI
     AIAction RecursivelyDetermineBestAction(int curDepth = 0)
     {
 #if DEBUG
-        debugOutput_callsToRecursivelyDetermineBestAction++;
+      var recurseCount = ++debugOutput_callsToRecursivelyDetermineBestAction;
 #endif
         Debug.Assert(debugOutput_ActionsTried < maxPoolSize, "stuck in loop in RecursivelyDetermineBestAction");
         AIAction bestAction = actionPool[actionPoolIndex++];
@@ -29,21 +30,22 @@ public partial class PlayerAI
             var node = aiTownState.Nodes[i];
             if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
 
-            TrySendWorkersToEmptyNode(node, ref bestAction, curDepth);
-            TryConstructBuildingInNode(node, ref bestAction, curDepth);
+            TrySendWorkersToEmptyNode(node, ref bestAction, curDepth, recurseCount);
+            TryConstructBuildingInNode(node, ref bestAction, curDepth, recurseCount);
         }
 
         if (bestAction.Score <= curStateScore)
         {
             // couldn't find an action that resulted in a better state; do nothing
             bestAction.Type = AIActionType.DoNothing; // ???
+            bestAction.DebugOutput_NextAction = null;
             bestAction.Score = curStateScore;
         }
 
         return bestAction;
     }
 
-    private void TrySendWorkersToEmptyNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth)
+    private void TrySendWorkersToEmptyNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount)
     {
 #if DEBUG
         var thisActionNum = ++debugOutput_ActionsTried;
@@ -89,7 +91,7 @@ public partial class PlayerAI
                 {
                     bestAction.DebugOutput_NextAction = actionScore;
                     bestAction.DebugOutput_TriedActionNum = thisActionNum;
-                    bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
+                    bestAction.DebugOutput_RecursionNum = recurseCount;
                     bestAction.DebugOutput_Depth = curDepth;
                     if (GameMgr.Instance.DebugOutputStrategyFull)
                         bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;
@@ -102,7 +104,7 @@ public partial class PlayerAI
         }
     }
 
-    private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth)
+    private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth, int recurseCount)
     {
 #if DEBUG
         var thisActionNum = ++debugOutput_ActionsTried;
@@ -142,7 +144,7 @@ public partial class PlayerAI
                 {
                     bestAction.DebugOutput_NextAction = actionScore;
                     bestAction.DebugOutput_TriedActionNum = thisActionNum;
-                    bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
+                    bestAction.DebugOutput_RecursionNum = recurseCount;
                     bestAction.DebugOutput_Depth = curDepth;
                     if (GameMgr.Instance.DebugOutputStrategyFull)
                         bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;

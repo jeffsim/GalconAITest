@@ -52,13 +52,13 @@ public class GameMgr : MonoBehaviour
                 addLineRenderer(conn.Start, conn.End);
 
         // Workers
-        foreach (var workerData in Town.Workers)
-        {
-            var workerGO = Instantiate(WorkerPrefab);
-            workerGO.transform.SetParent(WorkersFolder.transform);
-            workerGO.InitializeForData(workerData);
-            Workers.Add(workerGO);
-        }
+        // foreach (var workerData in Town.Workers)
+        // {
+        //     var workerGO = Instantiate(WorkerPrefab);
+        //     workerGO.transform.SetParent(WorkersFolder.transform);
+        //     workerGO.InitializeForData(workerData);
+        //     Workers.Add(workerGO);
+        // }
 
         //   Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
         //     Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
