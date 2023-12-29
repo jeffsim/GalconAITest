@@ -126,7 +126,7 @@ public partial class PlayerAI
         if (!fromNode.HasBuilding)
             return; // Must have a building in a node to send workers from it 
 
-        var count = fromNode.NeighborNodes.Count;
+        var count = fromNode.NumNeighbors;
         for (int i = 0; i < count; i++)
         {
             var toNode = fromNode.NeighborNodes[i];
@@ -156,12 +156,15 @@ public partial class PlayerAI
                 bestAction.SourceNode = fromNode;
                 bestAction.DestNode = toNode;
 #if DEBUG
-                bestAction.DebugOutput_NextAction = actionScore;
-                bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
-                bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
-                bestAction.DebugOutput_Depth = curDepth;
-                if (GameMgr.Instance.DebugOutputStrategyFull)
-                    bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;
+                if (GameMgr.Instance.DebugOutputStrategy)
+                {
+                    bestAction.DebugOutput_NextAction = actionScore;
+                    bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
+                    bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
+                    bestAction.DebugOutput_Depth = curDepth;
+                    if (GameMgr.Instance.DebugOutputStrategyFull)
+                        bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;
+                }
 #endif
             }
 
@@ -205,12 +208,15 @@ public partial class PlayerAI
                 bestAction.SourceNode = node;
                 bestAction.BuildingToConstruct = buildingDefn.Id;
 #if DEBUG
-                bestAction.DebugOutput_NextAction = actionScore;
-                bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
-                bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
-                bestAction.DebugOutput_Depth = curDepth;
-                if (GameMgr.Instance.DebugOutputStrategyFull)
-                    bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;
+                if (GameMgr.Instance.DebugOutputStrategy)
+                {
+                    bestAction.DebugOutput_NextAction = actionScore;
+                    bestAction.DebugOutput_TriedActionNum = debugOutput_ActionsTried;
+                    bestAction.DebugOutput_RecursionNum = debugOutput_callsToRecursivelyDetermineBestAction;
+                    bestAction.DebugOutput_Depth = curDepth;
+                    if (GameMgr.Instance.DebugOutputStrategyFull)
+                        bestAction.DebugOutput_ScoreReasons = debugOutput_actionScoreReasons;
+                }
 #endif
             }
 

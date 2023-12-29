@@ -1,10 +1,10 @@
-using System;
 using System.Collections.Generic;
 
 public class AI_NodeState
 {
     private NodeData nodeData;
     public List<AI_NodeState> NeighborNodes = new();
+    public int NumNeighbors;
     public int NumWorkers;
 
     public PlayerData OwnedBy;
