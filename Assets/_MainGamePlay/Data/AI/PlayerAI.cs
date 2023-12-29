@@ -83,6 +83,7 @@ public partial class PlayerAI
 
         AIAction bestAction = actionPool[actionPoolIndex++];
         float curStateScore = aiTownState.EvaluateScore(bestAction.ScoreReasons);
+        bestAction.ScoreBeforeSubActions = curStateScore;
         if (curDepth == maxDepth || aiTownState.IsGameOver())
         {
             bestAction.Type = AIActionType.DoNothing; // ???
@@ -108,7 +109,7 @@ public partial class PlayerAI
             return bestAction;
         }
 
-        bestAction.Score += curStateScore;
+        //  bestAction.Score += curStateScore;
         return bestAction;
     }
 
@@ -131,6 +132,15 @@ public partial class PlayerAI
             Debug.Assert(toNode.OwnedBy == null);
             aiTownState.SendWorkersToEmptyNode(fromNode, toNode, .5f, out int numSent);
 
+#if DEBUG
+            DebugAIStateReasons actionScoreReasons = null;
+            float actionScore1 = 0;
+            if (GameMgr.Instance.DebugOutputStrategy)
+            {
+                actionScoreReasons = new();
+                actionScore1 = aiTownState.EvaluateScore(actionScoreReasons);
+            }
+#endif
             // Recursively determine the value of this action.
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
             if (actionScore.Score > bestAction.Score)
@@ -147,7 +157,10 @@ public partial class PlayerAI
                 bestAction.Depth = curDepth;
 
                 if (GameMgr.Instance.DebugOutputStrategy)
-                    bestAction.ScoreReasons.CopyFrom(actionScore.ScoreReasons);
+                {
+                    bestAction.ScoreReasons = actionScoreReasons;
+                    bestAction.Score = actionScore1;
+                }
 #endif
             }
 

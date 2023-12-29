@@ -120,15 +120,19 @@ public partial class PlayerAI
             return; // no action to take
 
         var actionToOutput = bestAction;
-        int spaces = 0;
+        // int spaces = 0;
         while (actionToOutput.NextAction != null)
         {
             // create empty string with 'spaces' indentation
-            string str = new string(' ', Math.Max(0, spaces - 1) * 4);
-            if (actionToOutput != bestAction)
-                str += "\u21B3";
+            string str = "";
+            // str += new string(' ', Math.Max(0, spaces - 1) * 4);
+            // if (actionToOutput != bestAction)
+            //     str += "\u21B3";
 
-            str += actionToOutput.Score + " [" + actionToOutput.Depth + ": " + actionToOutput.StepNum + "] ";
+            str += "Depth: " + actionToOutput.Depth;
+            str += " Score: " + actionToOutput.ScoreBeforeSubActions + "=>" + actionToOutput.Score;
+            // str += " Step: " + actionToOutput.StepNum;
+            str += " | Action: ";
             switch (actionToOutput.Type)
             {
                 case AIActionType.SendWorkersToNode:
@@ -145,11 +149,13 @@ public partial class PlayerAI
             }
 
             // add score reasons
-            str += "   ";
             if (GameMgr.Instance.DebugOutputStrategyFull)
+            {
+                str += " | Score reasons: ";
                 str += actionToOutput.ScoreReasons;
+            }
             Debug.Log(str);
-            spaces++;
+            // spaces++;
             actionToOutput = actionToOutput.NextAction;
         }
     }

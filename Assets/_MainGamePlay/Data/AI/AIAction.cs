@@ -17,14 +17,14 @@ public class DebugAIStateReasons
     {
         var str = "";
         if (ScoresFrom_NodesOwned.Count > 0) str += addReasonScoresString("Owned Nodes", ScoresFrom_NodesOwned);
-        if (ScoresFrom_NumEmptyNodesOwned.Count > 0) str += addReasonScoresString("Owned Empty Nodes",ScoresFrom_NumEmptyNodesOwned);
-        if (ScoresFrom_ResourceGatherersCloseToResourceNodes.Count > 0) str += addReasonScoresString("Owned Res Gatherers",ScoresFrom_ResourceGatherersCloseToResourceNodes);
+        if (ScoresFrom_NumEmptyNodesOwned.Count > 0) str += " | " + addReasonScoresString("Owned Empty Nodes", ScoresFrom_NumEmptyNodesOwned);
+        if (ScoresFrom_ResourceGatherersCloseToResourceNodes.Count > 0) str += " | " + addReasonScoresString("Owned Res Gatherers", ScoresFrom_ResourceGatherersCloseToResourceNodes);
         return str;
     }
 
     private string addReasonScoresString(string msg, List<DebugAIStateReason> reasons)
     {
-        var str = " | " + msg + " (";
+        var str = msg + " (";
         for (int i = 0; i < reasons.Count; i++)
         {
             if (i > 0) str += ", ";
@@ -69,6 +69,8 @@ public class DebugAIStateReasons
 public class AIAction
 {
     public float Score;
+    public float ScoreBeforeSubActions;
+
     public AIActionType Type = AIActionType.DoNothing;
     public int Count;
     public AI_NodeState SourceNode;
@@ -84,6 +86,7 @@ public class AIAction
     public void Reset()
     {
         Score = 0;
+        ScoreBeforeSubActions = 0;
         Count = 0;
         BuildingToConstruct = null;
         Type = AIActionType.DoNothing;
