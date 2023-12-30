@@ -68,7 +68,7 @@ public partial class PlayerAI
         debugOutput_callsToRecursivelyDetermineBestAction = -1;
         actionPoolIndex = 0;
 
-        var bestAction = RecursivelyDetermineBestAction();
+        var bestAction = RecursivelyDetermineBestAction(0, 0);
         if (GameMgr.Instance.DebugOutputStrategyFull)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
         performAction(bestAction);
