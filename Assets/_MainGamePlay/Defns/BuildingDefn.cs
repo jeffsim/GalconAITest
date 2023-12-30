@@ -32,4 +32,10 @@ public class BuildingDefn : BaseDefn
     public bool CanCraftGoods = false;
     [ShowIf("CanCraftGoods")]
     public List<GoodDefn> CraftableGoods = new();
+    
+    // Generating workers
+    [Header("CanGenerateWorkers"), Space(10)]
+    public bool CanGenerateWorkers = false;
+    [ShowIf("CanGenerateWorkers")]
+    public WorkerDefn GeneratableWorker;
 }

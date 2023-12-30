@@ -13,8 +13,8 @@ public partial class PlayerAI
         var recurseCount = ++debugOutput_callsToRecursivelyDetermineBestAction;
         if (debugOutput_ActionsTried >= maxPoolSize)
         {
-            Debug.Assert(debugOutput_ActionsTried < maxPoolSize, "stuck in loop in RecursivelyDetermineBestAction");
-            return null; ;
+            Debug.Assert(debugOutput_ActionsTried < maxPoolSize, "stuck in loop in RecursivelyDetermineBestAction ");
+            return new AIAction() { Type = AIActionType.ERROR_StuckInLoop, Score = scoreOnEntry };
         }
 #endif
 

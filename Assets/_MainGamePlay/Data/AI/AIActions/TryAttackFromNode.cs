@@ -20,7 +20,7 @@ public partial class PlayerAI
 
             // Perform the action and get the score of the state after the action is performed
             aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner);
-            aiTownState.EvaluateScore(out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
+            aiTownState.EvaluateScore(curDepth, maxDepth,out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
             // Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);

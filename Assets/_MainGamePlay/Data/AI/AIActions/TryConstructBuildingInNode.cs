@@ -10,14 +10,22 @@ public partial class PlayerAI
         {
             var buildingDefn = buildableBuildingDefns[i];
 
-            // Verify we can perform the action
+            // ==== Verify we can perform the action
             if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(node, buildingDefn.ConstructionRequirements)) continue;
 
-            // Perform the action and get the score of the state after the action is performed
-            aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
-            aiTownState.EvaluateScore(out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
+            // Don't build resource gatherers if there are no resource nodes within reach.  
+            // NOTE: This assumes that resource gatherers are single purpose; e.g. can't also generate workers 
+            // TODO: Hardcoded max distance
+         //   if (buildingDefn.CanGatherResources && node.DistanceToClosestGatherableResourceNode > 1) continue;
 
-            // Recursively determine what the best action is after this action is performed
+            // Don't build barracks unless enemy is in neighboring node. NOTE: should instead check if enemy is within X nodes
+            if (buildingDefn.CanGenerateWorkers && node.DistanceToClosestEnemyNode > 1) continue;
+
+            // ==== Perform the action and get the score of the state after the action is performed
+            aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
+            aiTownState.EvaluateScore(curDepth, maxDepth,out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
+
+            // ==== Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
             if (actionScore.Score > bestAction.Score)
             {
@@ -31,7 +39,7 @@ public partial class PlayerAI
 #endif
             }
 
-            // Undo the action
+            // ==== Undo the action
             aiTownState.Undo_BuildBuilding(node, res1Id, resource1Amount, res2Id, resource2Amount);
         }
     }

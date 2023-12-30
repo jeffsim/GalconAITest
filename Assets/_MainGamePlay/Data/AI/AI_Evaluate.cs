@@ -1,7 +1,7 @@
 public partial class AI_TownState
 {
     // TODO: Add weights based on AI's personality
-    internal void EvaluateScore(out float score, out DebugAIStateReasons scoreReasons)
+    internal void EvaluateScore(int stateDepth, int maxStateDepth, out float score, out DebugAIStateReasons scoreReasons)
     {
         score = 0;
 
@@ -50,6 +50,14 @@ public partial class AI_TownState
                     }
 
                     // Defensive buildings are useful if...
+                    if (node.CanGenerateWorkers)
+                    {
+                        score += .25f;
+#if DEBUG
+                        scoreReasons?.ScoresFrom_BuildingsThatGenerateWorkers.Add(new DebugAIStateReason() { Node = node, ScoreValue = .25f });
+#endif
+                    }
+
                     // Storage buildings are useful if...
                     // Crafting buildings are useful if...
                 }
@@ -57,8 +65,18 @@ public partial class AI_TownState
             else if (node.OwnedBy != null)
             {
                 // Subtract score for each node owned by another player
-                score -= 1;
+                score -= .9f; // todo: weight this based on player's personality
+#if DEBUG
+                scoreReasons?.ScoresFrom_EnemyOwnedNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = -.9f });
+#endif
             }
         }
+
+        // Weight the score based on how deep we are in the state tree; the deeper we are, the less we care about the score
+        // stateDepth of 1 means we are at the top of the tree, so we care about the score fully
+        // stateDepth of maxStateDepth means we are at the bottom of the tree, so we care less; however we still care.  at bottom we only care .99f
+        //float weight = 1 - stateDepth / maxStateDepth * 0.01f;
+      //  score *= weight;
+
     }
 }

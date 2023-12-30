@@ -1,6 +1,15 @@
 using System.Collections.Generic;
 
-public enum AIActionType { DoNothing, SendWorkersToNode, ConstructBuildingInOwnedNode, AttackFromNode, NoAction_GameOver, NoAction_MaxDepth };
+public enum AIActionType
+{
+    ERROR_StuckInLoop,
+    DoNothing,
+    SendWorkersToNode,
+    ConstructBuildingInOwnedNode,
+    AttackFromNode,
+    NoAction_GameOver,
+    NoAction_MaxDepth
+};
 
 #if DEBUG
 public class DebugAIStateReason
@@ -14,9 +23,11 @@ public class DebugAIStateReasons
     public override string ToString()
     {
         var str = "";
-        if (ScoresFrom_NodesOwned.Count > 0) str += addReasonScoresString("Owned Nodes", ScoresFrom_NodesOwned);
-        if (ScoresFrom_NumEmptyNodesOwned.Count > 0) str += " | " + addReasonScoresString("Owned Empty Nodes", ScoresFrom_NumEmptyNodesOwned);
-        if (ScoresFrom_ResourceGatherersCloseToResourceNodes.Count > 0) str += " | " + addReasonScoresString("Owned Res Gatherers", ScoresFrom_ResourceGatherersCloseToResourceNodes);
+        if (ScoresFrom_NodesOwned.Count > 0) str += addReasonScoresString("Nodes", ScoresFrom_NodesOwned);
+        if (ScoresFrom_NumEmptyNodesOwned.Count > 0) str += " | " + addReasonScoresString("Empty Nodes", ScoresFrom_NumEmptyNodesOwned);
+        if (ScoresFrom_ResourceGatherersCloseToResourceNodes.Count > 0) str += " | " + addReasonScoresString("Res Gatherers", ScoresFrom_ResourceGatherersCloseToResourceNodes);
+        if (ScoresFrom_BuildingsThatGenerateWorkers.Count > 0) str += " | " + addReasonScoresString("Worker Gens", ScoresFrom_BuildingsThatGenerateWorkers);
+        if (ScoresFrom_EnemyOwnedNodes.Count > 0) str += " | " + addReasonScoresString("Enemy Nodes", ScoresFrom_EnemyOwnedNodes);
         return str;
     }
 
@@ -36,19 +47,16 @@ public class DebugAIStateReasons
         ScoresFrom_NodesOwned.Clear();
         ScoresFrom_NumEmptyNodesOwned.Clear();
         ScoresFrom_ResourceGatherersCloseToResourceNodes.Clear();
-    }
-
-    internal void CopyFrom(DebugAIStateReasons source)
-    {
-        Reset();
-        ScoresFrom_NodesOwned.AddRange(source.ScoresFrom_NodesOwned);
-        ScoresFrom_NumEmptyNodesOwned.AddRange(source.ScoresFrom_NumEmptyNodesOwned);
-        ScoresFrom_ResourceGatherersCloseToResourceNodes.AddRange(source.ScoresFrom_ResourceGatherersCloseToResourceNodes);
+        ScoresFrom_BuildingsThatGenerateWorkers.Clear();
+        ScoresFrom_EnemyOwnedNodes.Clear();
     }
 
     public List<DebugAIStateReason> ScoresFrom_NodesOwned = new();
     public List<DebugAIStateReason> ScoresFrom_NumEmptyNodesOwned = new();
     public List<DebugAIStateReason> ScoresFrom_ResourceGatherersCloseToResourceNodes = new();
+    public List<DebugAIStateReason> ScoresFrom_BuildingsThatGenerateWorkers = new();
+    public List<DebugAIStateReason> ScoresFrom_EnemyOwnedNodes = new();
+
     public float TotalScore
     {
         get
@@ -57,6 +65,8 @@ public class DebugAIStateReasons
             foreach (var reason in ScoresFrom_NodesOwned) score += reason.ScoreValue;
             foreach (var reason in ScoresFrom_NumEmptyNodesOwned) score += reason.ScoreValue;
             foreach (var reason in ScoresFrom_ResourceGatherersCloseToResourceNodes) score += reason.ScoreValue;
+            foreach (var reason in ScoresFrom_BuildingsThatGenerateWorkers) score += reason.ScoreValue;
+            foreach (var reason in ScoresFrom_EnemyOwnedNodes) score += reason.ScoreValue;
             return score;
         }
     }
