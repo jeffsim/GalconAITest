@@ -5,7 +5,7 @@ public partial class PlayerAI
     private void TryAttackFromNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
         // Attack from nodes that have at least 1 worker and a building, and at least 1 neighbor that is owned by another player
-        // TODO: Attack farther away nodes too
+        // TODO: Attack farther away nodes too (as long as we have buildings in interim nodes)
         if (!fromNode.HasBuilding || fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return;
 
@@ -19,10 +19,6 @@ public partial class PlayerAI
             if (toNode.OwnedBy == null || toNode.OwnedBy == player) continue;
 
             // Perform the action and get the score of the state after the action is performed
-
-            // delete this
-            aiTownState.EvaluateScore(out float orgScore, out DebugAIStateReasons orig);
-
             aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner);
             aiTownState.EvaluateScore(out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
@@ -34,7 +30,7 @@ public partial class PlayerAI
                 bestAction.Score = actionScore.ScoreBeforeSubActions;
                 bestAction.Type = AIActionType.AttackFromNode;
                 bestAction.AttackResult = attackResult;
-                // bestAction.Count = numSent;
+                bestAction.Count = numSent;
                 bestAction.SourceNode = fromNode;
                 bestAction.DestNode = toNode;
 #if DEBUG
