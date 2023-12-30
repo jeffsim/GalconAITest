@@ -7,9 +7,9 @@ public class GameMgr : MonoBehaviour
     public NodeGO NodePrefab;
     public Worker WorkerPrefab;
     
-    public int MaxAIDepth = 8;
-    public bool DebugOutputStrategy = false;
-    public bool DebugOutputStrategyFull = false;
+    public int MaxAIDepth = 7;
+    public bool DebugOutputStrategy = true;
+    public bool DebugOutputStrategyFull = true;
     
     public List<NodeGO> Nodes = new();
     public List<Worker> Workers = new();
