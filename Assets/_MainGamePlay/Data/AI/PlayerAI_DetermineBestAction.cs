@@ -73,15 +73,12 @@ public partial class PlayerAI
             if (GameMgr.Instance.DebugOutputStrategyFull)
                 debugOutput_actionScoreReasons = new();
 #endif
-            // TODO: Can I avoid this extra call to EvaluateScore()?
-            float actionScoreAfterOurActionButBeforeSubActions = aiTownState.EvaluateScore(debugOutput_actionScoreReasons);
-
             // Recursively determine the value of this action.
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
             if (actionScore.Score > bestAction.Score)
             {
                 // This is the best action so far in this 'level' of the AI stack; save the action so we can return it
-                bestAction.Score = actionScoreAfterOurActionButBeforeSubActions;
+                bestAction.Score = actionScore.ScoreBeforeSubActions;
                 bestAction.Type = AIActionType.SendWorkersToNode;
                 bestAction.Count = numSent;
                 bestAction.SourceNode = fromNode;
@@ -127,15 +124,12 @@ public partial class PlayerAI
             if (GameMgr.Instance.DebugOutputStrategyFull)
                 debugOutput_actionScoreReasons = new();
 #endif
-            // TODO: Can I avoid this extra call to EvaluateScore()?
-            float actionScoreAfterOurActionButBeforeSubActions = aiTownState.EvaluateScore(debugOutput_actionScoreReasons);
-
             // Recursively determine the value of this action
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1);
             if (actionScore.Score > bestAction.Score)
             {
                 // This is the best action so far; save the action so we can return it
-                bestAction.Score = actionScoreAfterOurActionButBeforeSubActions;
+                bestAction.Score = actionScore.ScoreBeforeSubActions;// actionScoreAfterOurActionButBeforeSubActions;
                 bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
                 bestAction.SourceNode = node;
                 bestAction.BuildingToConstruct = buildingDefn;
