@@ -56,21 +56,16 @@ public partial class PlayerAI
         for (int i = 0; i < count; i++)
         {
             var toNode = fromNode.NeighborNodes[i];
+
+            // Verify we can perform the action
             if (toNode.OwnedBy != null) continue; // This task can't send workers to nodes owned by anyone (including this player).  Those are handled in other actions
             if (toNode.IsResourceNode) continue; // Can't send to resource nodes
 
-            Debug.Assert(toNode.NumWorkers == 0);
-            Debug.Assert(toNode.OwnedBy == null);
+            // Perform the action and get the score of the state after the action is performed
             aiTownState.SendWorkersToEmptyNode(fromNode, toNode, .5f, out int numSent);
+            var debugOutput_actionScoreReasons = aiTownState.EvaluateScore(out float scoreAfterActionAndBeforeSubActions);
 
-#if DEBUG
-            DebugAIStateReasons debugOutput_actionScoreReasons = GameMgr.Instance.DebugOutputStrategyFull ? new() : null;
-            var scoreAfterActionAndBeforeSubActions = aiTownState.EvaluateScore(debugOutput_actionScoreReasons);
-#else
-            var scoreAfterActionAndBeforeSubActions = aiTownState.EvaluateScore();
-#endif
-
-            // Recursively determine the value of this action.
+            // Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
             if (actionScore.Score > bestAction.Score)
             {
@@ -94,24 +89,21 @@ public partial class PlayerAI
     private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
         if (node.HasBuilding)
-            return; // already has one
+            return; // Node already has a building
 
         // TODO: Only attempt to construct buildings that we have resources within 'reach' to build.
         for (int i = 0; i < numBuildingDefns; i++)
         {
             var buildingDefn = buildableBuildingDefns[i];
+
+            // Verify we can perform the action
             if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(node, buildingDefn.ConstructionRequirements)) continue;
 
-            // Update the townstate to reflect building the building, and consume the resources for it
+            // Perform the action and get the score of the state after the action is performed
             aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
+            var debugOutput_actionScoreReasons = aiTownState.EvaluateScore(out float scoreAfterActionAndBeforeSubActions);
 
-#if DEBUG
-            DebugAIStateReasons debugOutput_actionScoreReasons = GameMgr.Instance.DebugOutputStrategyFull ? new() : null;
-            var scoreAfterActionAndBeforeSubActions = aiTownState.EvaluateScore(debugOutput_actionScoreReasons);
-#else
-            var scoreAfterActionAndBeforeSubActions = aiTownState.EvaluateScore();
-#endif
-            // Recursively determine the value of this action.
+            // Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
             if (actionScore.Score > bestAction.Score)
             {
@@ -143,20 +135,15 @@ public partial class PlayerAI
         for (int i = 0; i < count; i++)
         {
             var toNode = fromNode.NeighborNodes[i];
+
+            // Verify we can perform the action
             if (toNode.OwnedBy == null || toNode.OwnedBy == player) continue;
 
-            // Update the townstate to reflect attacking from this node to the neighbor
+            // Perform the action and get the score of the state after the action is performed
             // aiTownState.AttackFromNode(fromNode, toNode, out int numSent);
+            var debugOutput_actionScoreReasons = aiTownState.EvaluateScore(out float scoreAfterActionAndBeforeSubActions);
 
-#if DEBUG
-            // DebugAIStateReasons debugOutput_actionScoreReasons = aiTownState.EvaluateScore(out float scoreAfterActionAndBeforeSubActions);
-
-            DebugAIStateReasons debugOutput_actionScoreReasons = GameMgr.Instance.DebugOutputStrategyFull ? new() : null;
-            var scoreAfterActionAndBeforeSubActions = aiTownState.EvaluateScore(debugOutput_actionScoreReasons);
-#else
-            var scoreAfterActionAndBeforeSubActions = aiTownState.EvaluateScore();
-#endif
-            // Recursively determine the value of this action.
+            // Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
             if (actionScore.Score > bestAction.Score)
             {
