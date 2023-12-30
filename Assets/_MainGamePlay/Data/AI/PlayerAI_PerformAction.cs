@@ -45,7 +45,7 @@ public partial class PlayerAI
             if (GameMgr.Instance.DebugOutputStrategyFull)
             {
                 str += " | Score reasons: ";
-                str += actionToOutput.DebugOutput_ScoreReasons;
+                str += actionToOutput.DebugOutput_ScoreReasonsBeforeSubActions;
             }
             Debug.Log(str);
             // spaces++;

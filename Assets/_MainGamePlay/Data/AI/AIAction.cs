@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-public enum AIActionType { DoNothing, SendWorkersToNode, ConstructBuildingInOwnedNode, NoAction_GameOver, NoAction_MaxDepth };
+public enum AIActionType { DoNothing, SendWorkersToNode, ConstructBuildingInOwnedNode, AttackFromNode, NoAction_GameOver, NoAction_MaxDepth };
 
 #if DEBUG
 public class DebugAIStateReason
@@ -76,7 +76,7 @@ public class AIAction
     public BuildingDefn BuildingToConstruct;
 
 #if DEBUG
-    public DebugAIStateReasons DebugOutput_ScoreReasons = new();
+    public DebugAIStateReasons DebugOutput_ScoreReasonsBeforeSubActions = new();
     public int DebugOutput_TriedActionNum; // for debug output purposes
     public int DebugOutput_RecursionNum; // for debug output purposes
     public int DebugOutput_Depth; // for debug output purposes
@@ -91,10 +91,20 @@ public class AIAction
         Type = AIActionType.DoNothing;
         SourceNode = null;
         DestNode = null;
-        DebugOutput_ScoreReasons.Reset();
+        DebugOutput_ScoreReasonsBeforeSubActions.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;
         DebugOutput_NextAction = null;
+    }
+
+    public void TrackStrategyDebugInfoInAction(AIAction actionScore, DebugAIStateReasons debugOutput_actionScoreReasons, int thisActionNum, int recurseCount, int curDepth)
+    {
+        DebugOutput_NextAction = actionScore;
+        DebugOutput_TriedActionNum = thisActionNum;
+        DebugOutput_RecursionNum = recurseCount;
+        DebugOutput_Depth = curDepth;
+        if (GameMgr.Instance.DebugOutputStrategyFull)
+            DebugOutput_ScoreReasonsBeforeSubActions = debugOutput_actionScoreReasons;
     }
 #endif
 }
