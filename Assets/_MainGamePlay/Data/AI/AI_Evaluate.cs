@@ -1,11 +1,11 @@
 public partial class AI_TownState
 {
     // TODO: Add weights based on AI's personality
-    internal DebugAIStateReasons EvaluateScore(out float score)
+    internal void EvaluateScore(out float score, out DebugAIStateReasons scoreReasons)
     {
         score = 0;
 
-        DebugAIStateReasons scoreReasons = null;
+        scoreReasons = null;
 #if DEBUG
         if (GameMgr.Instance.DebugOutputStrategyFull)
             scoreReasons = new();
@@ -54,8 +54,11 @@ public partial class AI_TownState
                     // Crafting buildings are useful if...
                 }
             }
+            else if (node.OwnedBy != null)
+            {
+                // Subtract score for each node owned by another player
+                score -= 1;
+            }
         }
-
-        return scoreReasons;
     }
 }

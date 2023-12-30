@@ -73,7 +73,12 @@ public class AIAction
     public int Count;
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
+
+    // Build building
     public BuildingDefn BuildingToConstruct;
+
+    // Attacking
+    public AttackResult AttackResult;
 
 #if DEBUG
     public DebugAIStateReasons DebugOutput_ScoreReasonsBeforeSubActions = new();
@@ -99,6 +104,9 @@ public class AIAction
 
     public void TrackStrategyDebugInfoInAction(AIAction actionScore, DebugAIStateReasons debugOutput_actionScoreReasons, int thisActionNum, int recurseCount, int curDepth)
     {
+        if (!GameMgr.Instance.DebugOutputStrategy)
+            return;
+
         DebugOutput_NextAction = actionScore;
         DebugOutput_TriedActionNum = thisActionNum;
         DebugOutput_RecursionNum = recurseCount;

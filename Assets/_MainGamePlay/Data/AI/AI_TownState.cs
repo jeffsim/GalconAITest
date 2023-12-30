@@ -202,10 +202,43 @@ public partial class AI_TownState
         if (resource2 == GoodType.Wood) PlayerTownInventory_Wood = resource2Amount;
         else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone = resource2Amount;
         else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource2Amount;
-        // if (resource1 != null)
-        //     PlayerTownInventory[resource1] = resource1Amount;
-        // if (resource2 != null)
-        //     PlayerTownInventory[resource2] = resource2Amount;
+    }
+
+    internal void AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner)
+    {
+        origNumInSourceNode = fromNode.NumWorkers;
+        origNumInDestNode = toNode.NumWorkers;
+        origToNodeOwner = toNode.OwnedBy;
+
+        // For now, assume 1:1 attack.  In the future support e.g. stronger attackers, defensive bonus, etc.
+        numSent = Math.Max(1, (int)(fromNode.NumWorkers * .5f));
+        fromNode.NumWorkers -= numSent;
+        toNode.NumWorkers -= numSent;
+
+        if (toNode.NumWorkers == 0)
+        {
+            // attackers and defenders both died
+            toNode.OwnedBy = null;
+            attackResult = AttackResult.BothSidesDied;
+        }
+        else if (toNode.NumWorkers < 0)
+        {
+            // we captured the node
+            toNode.OwnedBy = player;
+            toNode.NumWorkers = -toNode.NumWorkers;
+            attackResult = AttackResult.AttackerWon;
+        }
+        else
+        {
+            attackResult = AttackResult.DefenderWon;
+        }
+    }
+
+    internal void Undo_AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int origNumInSourceNode, int origNumInDestNode, int numSent, PlayerData origToNodeOwner)
+    {
+        fromNode.NumWorkers = origNumInSourceNode;
+        toNode.OwnedBy = origToNodeOwner;
+        toNode.NumWorkers = origNumInDestNode;
     }
 
     internal bool IsGameOver()

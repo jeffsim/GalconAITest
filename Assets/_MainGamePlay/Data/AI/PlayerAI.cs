@@ -11,7 +11,7 @@ public partial class PlayerAI
 
     AIAction[] actionPool;
     int actionPoolIndex;
-    int maxPoolSize = 250000;
+    int maxPoolSize = 500000;
 
     BuildingDefn[] buildableBuildingDefns;
     int numBuildingDefns;
