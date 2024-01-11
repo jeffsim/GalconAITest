@@ -1117,6 +1117,9 @@ MonoBehaviour:
     type: 3}
   WorkerPrefab: {fileID: 3359988370769335741, guid: ecdc90618d4784fdcba6b5525b3b2871,
     type: 3}
+  MaxAIDepth: 4
+  DebugOutputStrategy: 1
+  DebugOutputStrategyFull: 0
   Nodes: []
   Workers: []
   NodeConnectionMat: {fileID: 2100000, guid: 0b54f4a54e29c46c187e50d301af5163, type: 2}
@@ -1124,9 +1127,6 @@ MonoBehaviour:
   WorkersFolder: {fileID: 832437443}
   TestTownDefn: {fileID: 11400000, guid: 1f32a133a07344de39f0415363c78f0a, type: 2}
   TestWorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
-  MaxAIDepth: 8
-  DebugOutputStrategy: 0
-  DebugOutputStrategyFull: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
