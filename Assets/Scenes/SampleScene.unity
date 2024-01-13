@@ -1125,7 +1125,7 @@ MonoBehaviour:
   NodeConnectionMat: {fileID: 2100000, guid: 0b54f4a54e29c46c187e50d301af5163, type: 2}
   NodesFolder: {fileID: 1732459448}
   WorkersFolder: {fileID: 832437443}
-  TestTownDefn: {fileID: 11400000, guid: 1f32a133a07344de39f0415363c78f0a, type: 2}
+  TestTownDefn: {fileID: 11400000, guid: 4e88d645ae7144063b3083640fda78ea, type: 2}
   TestWorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
