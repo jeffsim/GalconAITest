@@ -1610,7 +1610,7 @@ MonoBehaviour:
     type: 3}
   WorkerPrefab: {fileID: 3359988370769335741, guid: ecdc90618d4784fdcba6b5525b3b2871,
     type: 3}
-  MaxAIDepth: 3
+  MaxAIDepth: 2
   DebugOutputStrategy: 1
   DebugOutputStrategyFull: 0
   Nodes: []

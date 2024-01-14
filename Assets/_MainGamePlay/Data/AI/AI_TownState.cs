@@ -148,6 +148,7 @@ public partial class AI_TownState
         numSent = Math.Max(1, (int)(sendFromNode.NumWorkers * percentToSend));
         sendFromNode.NumWorkers -= numSent;
         buildInNode.NumWorkers += numSent;
+        buildInNode.OwnedBy = player;
 
         // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
         // Debug.Assert(!node.HasBuilding, "can only build in empty nodes.");
@@ -198,7 +199,9 @@ public partial class AI_TownState
     {
         buildInNode.NumWorkers -= numSent;
         sendFromNode.NumWorkers += numSent;
-        
+        buildInNode.OwnedBy = null;
+        buildInNode.ClearBuilding();
+
         // Undo Consume resources
         if (resource1 == GoodType.Wood) PlayerTownInventory_Wood = resource1Amount;
         else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone = resource1Amount;
