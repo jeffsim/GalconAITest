@@ -12,79 +12,55 @@ public static class AIDebugger
         AIDebuggerEntryData.ResetPool();
     }
 
-    internal static void TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
+    internal static AIDebuggerEntryData TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return;
-
-        // PushPerformedAction(new AIDebuggerEntryData()
-        // {
-        //     ActionType = AIActionType.ConstructBuildingInEmptyNode,
-        //     FromNode = fromNode,
-        //     ToNode = toNode,
-        //     NumSent = numSent,
-        //     BuildingDefn = buildingDefn,
-        //     Score = scoreAfterActionAndBeforeSubActions,
-        //     ActionNumber = actionNum,
-        //     RecurseDepth = curDepth,
-        //     ParentEntry = curEntry
-        // });
-
-        PushPerformedAction(AIDebuggerEntryData.GetFromPool(
-                AIActionType.ConstructBuildingInEmptyNode,
-                fromNode,
-                toNode,
-                numSent,
-                buildingDefn,
-                scoreAfterActionAndBeforeSubActions,
-                actionNum,
-                curDepth,
-                curEntry
-        ));
+        if (!GameMgr.Instance.ShowDebuggerAI) return null;
+        return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
+                   AIActionType.ConstructBuildingInEmptyNode,
+                   fromNode,
+                   toNode,
+                   numSent,
+                   buildingDefn,
+                   scoreAfterActionAndBeforeSubActions,
+                   actionNum,
+                   curDepth,
+                   curEntry
+           ));
     }
 
-    internal static void TrackPerformAction_Attack(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
+    internal static AIDebuggerEntryData TrackPerformAction_Attack(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return;
-
-        // PushPerformedAction(new AIDebuggerEntryData()
-        // {
-        //     ActionType = AIActionType.AttackFromNode,
-        //     FromNode = fromNode,
-        //     ToNode = toNode,
-        //     NumSent = numSent,
-        //     Score = scoreAfterActionAndBeforeSubActions,
-        //     ActionNumber = actionNum,
-        //     RecurseDepth = curDepth,
-        //     ParentEntry = curEntry
-        // });
-
-        PushPerformedAction(AIDebuggerEntryData.GetFromPool(
-                AIActionType.AttackFromNode,
-                fromNode,
-                toNode,
-                numSent,
-                null,
-                scoreAfterActionAndBeforeSubActions,
-                actionNum,
-                curDepth,
-                curEntry
-        ));
+        if (!GameMgr.Instance.ShowDebuggerAI) return null;
+        return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
+                  AIActionType.AttackFromNode,
+                  fromNode,
+                  toNode,
+                  numSent,
+                  null,
+                  scoreAfterActionAndBeforeSubActions,
+                  actionNum,
+                  curDepth,
+                  curEntry
+          ));
     }
 
-    private static void PushPerformedAction(AIDebuggerEntryData aIDebuggerEntryData)
+    private static AIDebuggerEntryData PushPerformedAction(AIDebuggerEntryData aIDebuggerEntryData)
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return;
+        if (!GameMgr.Instance.ShowDebuggerAI) return null;
 
         aIDebuggerEntryData.DebugOutput();
         curEntry.ChildEntries.Add(aIDebuggerEntryData);
+
+        var prev = curEntry;
         curEntry = aIDebuggerEntryData;
+        return prev;
     }
 
-    internal static void PopPerformedAction()
+    internal static void PopPerformedAction(AIDebuggerEntryData prevEntry)
     {
         if (!GameMgr.Instance.ShowDebuggerAI) return;
 
-        curEntry = curEntry.ParentEntry;
+        curEntry = prevEntry;// curEntry.ParentEntry;
     }
 
     // internal static void TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState toNode, AI_NodeState toNode1, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions)

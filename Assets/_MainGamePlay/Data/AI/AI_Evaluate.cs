@@ -39,7 +39,7 @@ public partial class AI_TownState
                     if (node.CanGoGatherResources)
                     {
                         // Dictionaries are slow, and this is the innermost loop, so...
-                        int dist = node.DistanceToClosestGatherableResourceNode;
+                        int dist = node.DistanceToClosestGatherableResourceNode(node.ResourceThisNodeCanGoGather);
                         if (dist == 1)
                         {
                             score += 2f;
@@ -76,7 +76,7 @@ public partial class AI_TownState
         // stateDepth of 1 means we are at the top of the tree, so we care about the score fully
         // stateDepth of maxStateDepth means we are at the bottom of the tree, so we care less; however we still care.  at bottom we only care .99f
         //float weight = 1 - stateDepth / maxStateDepth * 0.01f;
-      //  score *= weight;
+        //  score *= weight;
 
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 public class AI_NodeState
@@ -11,22 +12,9 @@ public class AI_NodeState
     public int NodeId;
     internal bool IsResourceNode => HasBuilding && CanBeGatheredFrom;
 
-    public int DistanceToClosestGatherableResourceNode;
-    public int DistanceToClosestEnemyNode
-    {
-        // TODO: cache; but: need to update on various actions
-        get
-        {
-            // TODO: Only looks at neighbors, not neighbors of neighbors, etc
-            for (int i = 0; i < NumNeighbors; i++)
-            {
-                var neighbor = NeighborNodes[i];
-                if (neighbor.OwnedBy != null && neighbor.OwnedBy != OwnedBy)
-                    return 1;
-            }
-            return int.MaxValue;
-        }
-    }
+    //  public int DistanceToClosestGatherableResourceNode;
+    public int DistanceToGatherableResource_Wood;
+    public int DistanceToGatherableResource_Stone;
 
     // Buildings
     public bool HasBuilding;
@@ -52,7 +40,7 @@ public class AI_NodeState
         CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
         if (CanBeGatheredFrom)
             ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
-        DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
+        // DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
 
         CanGenerateWorkers = buildingDefn.CanGenerateWorkers;
         if (CanGenerateWorkers)
@@ -67,10 +55,12 @@ public class AI_NodeState
         Update();
     }
 
-    // internal void UpdateDistanceToResource()
-    // {
-    //     DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
-    // }
+    internal void SetDistanceToResources()
+    {
+        //   DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
+        DistanceToGatherableResource_Wood = findClosestResourceNode(GoodType.Wood);
+        DistanceToGatherableResource_Stone = findClosestResourceNode(GoodType.Stone);
+    }
 
     private int findClosestResourceNode(GoodType gatherableResource)
     {
@@ -94,4 +84,45 @@ public class AI_NodeState
         NumWorkers = nodeData.NumWorkers;
         OwnedBy = nodeData.OwnedBy;
     }
+
+    internal int DistanceToClosestEnemyNode(PlayerData player)
+    {
+        // TODO: cache; but: need to update on various actions
+        for (int i = 0; i < NumNeighbors; i++)
+        {
+            var neighbor = NeighborNodes[i];
+            // if neighbor is owned by someone other than player, then return 1
+            if (neighbor.OwnedBy != null && neighbor.OwnedBy != player)
+                return 1;
+        }
+        return int.MaxValue;
+    }
+
+    internal int DistanceToClosestGatherableResourceNode(GoodType goodType)
+    {
+        switch (goodType)
+        {
+            case GoodType.Wood: return DistanceToGatherableResource_Wood;
+            case GoodType.Stone: return DistanceToGatherableResource_Stone;
+            default:
+                throw new NotImplementedException();
+        }
+    }
 }
+
+// public int DistanceToClosestEnemyNode
+//     {
+//         // TODO: cache; but: need to update on various actions
+//         get
+//         {
+//             // TODO: Only looks at neighbors, not neighbors of neighbors, etc
+//             for (int i = 0; i < NumNeighbors; i++)
+//             {
+//                 var neighbor = NeighborNodes[i];
+//                 // if neighbor isn't owned, or is owned by someone other than OwnedBy, then return 1
+//                 if (neighbor.OwnedBy == null || neighbor.OwnedBy != OwnedBy)
+//                     return 1;
+//             }
+//             return int.MaxValue;
+//         }
+//     }

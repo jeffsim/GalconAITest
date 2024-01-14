@@ -26,7 +26,7 @@ public partial class PlayerAI
             aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
 #if DEBUG
-            AIDebugger.TrackPerformAction_Attack(fromNode, toNode, attackResult, numSent, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried, curDepth, recurseCount);
+            var prevEntry = AIDebugger.TrackPerformAction_Attack(fromNode, toNode, attackResult, numSent, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried, curDepth, recurseCount);
 #endif
 
             // Recursively determine what the best action is after this action is performed
@@ -45,6 +45,9 @@ public partial class PlayerAI
 #endif
             }
 
+#if DEBUG
+            AIDebugger.PopPerformedAction(prevEntry);
+#endif
             // Undo the action
             aiTownState.Undo_AttackFromNode(fromNode, toNode, attackResult, origNumInSourceNode, origNumInDestNode, numSent, origToNodeOwner);
         }

@@ -40,7 +40,7 @@ public partial class AI_TownState
         for (int i = 0; i < NumNodes; i++)
         {
             Nodes[i].NumNeighbors = Nodes[i].NeighborNodes.Count;
-            // Nodes[i].UpdateDistanceToResource();
+            Nodes[i].SetDistanceToResources();
         }
     }
 
