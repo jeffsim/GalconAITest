@@ -47,7 +47,7 @@ public class AIDebuggerPanel : MonoBehaviour
             entryObj.GetComponent<AIDebuggerEntry>().ShowForEntry(child, this);
             entryObj.transform.SetParent(List.transform);
 
-            if (ForceExpandAll || ExpandedEntries[child.ActionNumber])
+            if (ExpandedEntries[child.ActionNumber])
                 AddChildEntries(child.ChildEntries);
         }
     }
