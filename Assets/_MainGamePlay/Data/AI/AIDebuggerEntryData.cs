@@ -21,6 +21,8 @@ public class AIDebuggerEntryData
 
     public List<AIDebuggerEntryData> ChildEntries = new();
 
+    public bool IsBestOption;
+
     public void DebugOutput()
     {
         switch (ActionType)

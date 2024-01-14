@@ -11,10 +11,12 @@ public class AIDebuggerPanel : MonoBehaviour
     public AIDebuggerEntry EntryPrefab;
     public Dictionary<int, bool> ExpandedEntries = new();
     public bool ForceExpandAll = false;
-
+    public bool ShowBestOnStart = true;
+    
     void Start()
     {
         ForceExpandAll = false;
+        ShowBestOnStart = true;
     }
 
     public void Refresh()
@@ -24,6 +26,12 @@ public class AIDebuggerPanel : MonoBehaviour
         List.RemoveAllChildren();
 
         initializeExpandedEntries(AIDebugger.topEntry);
+
+        if (ShowBestOnStart)
+        {
+            expandOnlyBestEntry(AIDebugger.topEntry);
+            ShowBestOnStart = false;
+        }
 
         AddChildEntries(AIDebugger.topEntry.ChildEntries);
     }
@@ -59,6 +67,29 @@ public class AIDebuggerPanel : MonoBehaviour
 #if DEBUG
         town.OnAIDebuggerUpdate += Refresh;
 #endif
+    }
+
+    public void ShowBest()
+    {
+        expandOnlyBestEntry(AIDebugger.topEntry);
+        Refresh();
+    }
+
+    private void expandOnlyBestEntry(AIDebuggerEntryData curEntry)
+    {
+        if (curEntry.ChildEntries.Count == 0) return;
+        var bestEntry = curEntry.ChildEntries[0];
+        foreach (var childEntry in curEntry.ChildEntries)
+        {
+            if (childEntry.Score > bestEntry.Score)
+                bestEntry = childEntry;
+        }
+        foreach (var childEntry in curEntry.ChildEntries)
+        {
+            ExpandedEntries[childEntry.ActionNumber] = childEntry == bestEntry;
+            childEntry.IsBestOption = childEntry == bestEntry;
+            expandOnlyBestEntry(childEntry);
+        }
     }
 
     public void ExpandAllToggled()

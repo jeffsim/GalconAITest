@@ -11,6 +11,7 @@ public class AIDebuggerEntry : MonoBehaviour
     public Button ThisButton;
     AIDebuggerEntryData entry;
     AIDebuggerPanel panel;
+
     public void ShowForEntry(AIDebuggerEntryData entry, AIDebuggerPanel panel)
     {
         this.panel = panel;
@@ -43,6 +44,17 @@ public class AIDebuggerEntry : MonoBehaviour
         // Indent
         var rt = ThisButton.GetComponent<RectTransform>();
         rt.offsetMin = new Vector2(20 * entry.RecurseDepth, rt.offsetMin.y);
+
+        if (entry.IsBestOption)
+        {
+            var colors = ThisButton.colors;
+            colors.normalColor = new Color(0, 0.13f, .46f);
+            colors.highlightedColor = new Color(0, 0.32f, .63f);
+            ThisButton.colors = colors;
+
+            Information.color = Color.yellow;
+            Score.color = Color.yellow;
+        }
     }
 
     public void OnClicked()
