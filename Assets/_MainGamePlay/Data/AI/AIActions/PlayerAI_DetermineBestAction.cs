@@ -11,11 +11,11 @@ public partial class PlayerAI
     {
 #if DEBUG
         var recurseCount = ++debugOutput_callsToRecursivelyDetermineBestAction;
-        if (debugOutput_ActionsTried >= maxPoolSize)
-        {
-            Debug.Assert(debugOutput_ActionsTried < maxPoolSize, "stuck in loop in RecursivelyDetermineBestAction ");
-            return new AIAction() { Type = AIActionType.ERROR_StuckInLoop, Score = scoreOnEntry };
-        }
+        // if (debugOutput_ActionsTried >= maxPoolSize)
+        // {
+        //     Debug.Assert(debugOutput_ActionsTried < maxPoolSize, "stuck in loop in RecursivelyDetermineBestAction ");
+        //     return new AIAction() { Type = AIActionType.ERROR_StuckInLoop, Score = scoreOnEntry };
+        // }
 #endif
 
         if (actionPoolIndex >= maxPoolSize)
@@ -43,8 +43,8 @@ public partial class PlayerAI
             if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
 
             TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
+            TryAttackFromNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
             //      TrySendWorkersToOwnedNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
-            // TryAttackFromNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
 
             // different approach; identify N tactical options based on current state and weigh each option.  sort of goap/utility?
             // tactic: enable gathering of more resources (wood, etc)

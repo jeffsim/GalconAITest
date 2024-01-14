@@ -62,7 +62,7 @@ public partial class PlayerAI
             triggerAIDebuggerUpdate = true;
         }
 
-        if (GameMgr.Instance.DebugOutputStrategyFull)
+        if (GameMgr.Instance.DebugOutputStrategyReasons)
         {
             for (int i = 0; i < actionPool.Length; i++)
                 actionPool[i].Reset();
@@ -78,7 +78,7 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
         var bestAction = RecursivelyDetermineBestAction(0, 0);
-        if (GameMgr.Instance.DebugOutputStrategy)
+        if (GameMgr.Instance.DebugOutputStrategyToConsole)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
         performAction(bestAction);
 

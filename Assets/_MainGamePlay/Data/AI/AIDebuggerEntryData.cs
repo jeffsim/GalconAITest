@@ -19,13 +19,60 @@ public class AIDebuggerEntryData
     public float Score;
     public AIDebuggerEntryData ParentEntry;
 
-    public List<AIDebuggerEntryData> ChildEntries = new();
+    public List<AIDebuggerEntryData> ChildEntries = new(10);
 
     public bool IsBestOption;
 
+    static int curPoolIndex;
+    static int MaxPoolSize = 100000;
+    static AIDebuggerEntryData[] Pool;
+
+    public static void InitializePool()
+    {
+        Pool = new AIDebuggerEntryData[MaxPoolSize];
+        for (int i = 0; i < Pool.Length; i++)
+            Pool[i] = new AIDebuggerEntryData();
+        curPoolIndex = 0;
+    }
+
+    public static void ResetPool()
+    {
+        curPoolIndex = 0;
+    }
+
+    internal static AIDebuggerEntryData GetFromPool(AIActionType actionType, AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
+    {
+        if (Pool == null)
+            InitializePool();
+        if (curPoolIndex >= MaxPoolSize)
+        {
+            // resize pool.  TODO: More performant way?  Only for debugging scenarios so :shrug:
+            MaxPoolSize *= 2;
+            var newPool = new AIDebuggerEntryData[MaxPoolSize];
+            for (int i = 0; i < Pool.Length; i++)
+                newPool[i] = Pool[i];
+            for (int i = Pool.Length; i < newPool.Length; i++)
+                newPool[i] = new AIDebuggerEntryData();
+            Pool = newPool;
+        }
+
+        var entry = Pool[curPoolIndex++];
+        entry.ActionType = actionType;
+        entry.FromNode = fromNode;
+        entry.ToNode = toNode;
+        entry.NumSent = numSent;
+        entry.BuildingDefn = buildingDefn;
+        entry.Score = scoreAfterActionAndBeforeSubActions;
+        entry.ActionNumber = actionNum;
+        entry.RecurseDepth = curDepth;
+        entry.ParentEntry = curEntry;
+        entry.ChildEntries.Clear();
+        return entry;
+    }
+
     public void DebugOutput()
     {
-        return;
+        if (!GameMgr.Instance.DebugOutputStrategyToConsole) return;
         switch (ActionType)
         {
             case AIActionType.ConstructBuildingInEmptyNode:

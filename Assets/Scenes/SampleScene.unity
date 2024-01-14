@@ -1880,9 +1880,10 @@ MonoBehaviour:
     type: 3}
   WorkerPrefab: {fileID: 3359988370769335741, guid: ecdc90618d4784fdcba6b5525b3b2871,
     type: 3}
-  MaxAIDepth: 4
-  DebugOutputStrategy: 1
-  DebugOutputStrategyFull: 0
+  MaxAIDepth: 2
+  ShowDebuggerAI: 1
+  DebugOutputStrategyToConsole: 0
+  DebugOutputStrategyReasons: 0
   Nodes: []
   Workers: []
   NodeConnectionMat: {fileID: 2100000, guid: 0b54f4a54e29c46c187e50d301af5163, type: 2}

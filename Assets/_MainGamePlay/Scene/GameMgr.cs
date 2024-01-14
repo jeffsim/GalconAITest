@@ -8,8 +8,9 @@ public class GameMgr : MonoBehaviour
     public Worker WorkerPrefab;
 
     public int MaxAIDepth = 7;
-    public bool DebugOutputStrategy = true;
-    public bool DebugOutputStrategyFull = true;
+    public bool ShowDebuggerAI = true;
+    public bool DebugOutputStrategyToConsole = false;
+    public bool DebugOutputStrategyReasons = false;
 
     public List<NodeGO> Nodes = new();
     public List<Worker> Workers = new();
@@ -21,7 +22,11 @@ public class GameMgr : MonoBehaviour
     public TownDefn TestTownDefn;
     public WorkerDefn TestWorkerDefn;
 
+#if DEBUG
+    // Debugger panel
+    bool lastShowDebuggerAI;
     public AIDebuggerPanel AIDebuggerPanel;
+#endif
 
     public static GameMgr Instance;
 
@@ -66,6 +71,8 @@ public class GameMgr : MonoBehaviour
         //   Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
         //     Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
 
+        lastShowDebuggerAI = ShowDebuggerAI;
+
         AIDebuggerPanel.InitializeForTown(Town);
     }
 
@@ -92,5 +99,15 @@ public class GameMgr : MonoBehaviour
     void Update()
     {
         Town.Update();
+
+#if DEBUG
+        if (lastShowDebuggerAI != GameMgr.Instance.ShowDebuggerAI)
+        {
+            lastShowDebuggerAI = GameMgr.Instance.ShowDebuggerAI;
+            AIDebuggerPanel.gameObject.SetActive(lastShowDebuggerAI);
+            if (lastShowDebuggerAI)
+                AIDebuggerPanel.Refresh();
+        }
     }
+#endif
 }

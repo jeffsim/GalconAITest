@@ -1,9 +1,5 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.Analytics;
 
 public class AIDebuggerPanel : MonoBehaviour
 {
@@ -12,7 +8,7 @@ public class AIDebuggerPanel : MonoBehaviour
     public Dictionary<int, bool> ExpandedEntries = new();
     public bool ForceExpandAll = false;
     public bool ShowBestOnStart = true;
-    
+
     void Start()
     {
         ForceExpandAll = false;
@@ -21,7 +17,7 @@ public class AIDebuggerPanel : MonoBehaviour
 
     public void Refresh()
     {
-        if (!GameMgr.Instance.DebugOutputStrategy) return;
+        if (!GameMgr.Instance.ShowDebuggerAI) return;
 
         List.RemoveAllChildren();
 
