@@ -39,6 +39,9 @@ public static class AIDebugger
 
     internal static void TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
     {
+
+        if (!GameMgr.Instance.DebugOutputStrategy) return;
+
         PushPerformedAction(new AIDebuggerEntryData()
         {
             FromNode = fromNode,
@@ -48,13 +51,15 @@ public static class AIDebugger
             BuildingDefn = buildingDefn,
             Score = scoreAfterActionAndBeforeSubActions,
             ActionNumber = actionNum,
-            RecurseDepth = recurseCount,
+            RecurseDepth = curDepth,
             ParentEntry = curEntry
         });
     }
 
     private static void PushPerformedAction(AIDebuggerEntryData aIDebuggerEntryData)
     {
+        if (!GameMgr.Instance.DebugOutputStrategy) return;
+        
         aIDebuggerEntryData.DebugOutput();
         curEntry.ChildEntries.Add(aIDebuggerEntryData);
         curEntry = aIDebuggerEntryData;
@@ -62,6 +67,8 @@ public static class AIDebugger
 
     internal static void PopPerformedAction()
     {
+        if (!GameMgr.Instance.DebugOutputStrategy) return;
+       
         curEntry = curEntry.ParentEntry;
     }
 

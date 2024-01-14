@@ -19,6 +19,8 @@ public class AIDebuggerPanel : MonoBehaviour
 
     public void Refresh()
     {
+        if (!GameMgr.Instance.DebugOutputStrategy) return;
+
         List.RemoveAllChildren();
 
         initializeExpandedEntries(AIDebugger.topEntry);
