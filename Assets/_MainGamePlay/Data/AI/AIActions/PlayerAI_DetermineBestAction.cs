@@ -33,6 +33,20 @@ public partial class PlayerAI
             var node = aiTownState.Nodes[i];
             if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
 
+            // TryConstructBuildingInEmptyNeighboringNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
+            // TrySendWorkersToOwnedNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
+            // TryAttackFromNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
+
+            // different approach; identify N tactical options based on current state and weigh each option.  sort of goap/utility?
+            // tactic: enable gathering of more resources (wood, etc)
+            //    valuable if: we can 'see' a resource node that we don't own and we have workers that can reach it and we don't have a building that can gather that resource
+            //                 AND we need the resource.  Resource need is determined by ...
+            // tactic: enable generation of more crafted items (planks, etc) - enables generation of buildings
+            // tactic: attack enemy node
+            // tactic: defend node by sending workers to it
+            // 
+
+
             TrySendWorkersToEmptyNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
             TryConstructBuildingInNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
             TryAttackFromNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);

@@ -6,11 +6,11 @@ public class GameMgr : MonoBehaviour
     public TownData Town;
     public NodeGO NodePrefab;
     public Worker WorkerPrefab;
-    
+
     public int MaxAIDepth = 7;
     public bool DebugOutputStrategy = true;
     public bool DebugOutputStrategyFull = true;
-    
+
     public List<NodeGO> Nodes = new();
     public List<Worker> Workers = new();
     public Material NodeConnectionMat;
@@ -20,6 +20,8 @@ public class GameMgr : MonoBehaviour
 
     public TownDefn TestTownDefn;
     public WorkerDefn TestWorkerDefn;
+
+    public AIDebuggerPanel AIDebuggerPanel;
 
     public static GameMgr Instance;
 
@@ -63,6 +65,8 @@ public class GameMgr : MonoBehaviour
 
         //   Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
         //     Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
+
+        AIDebuggerPanel.InitializeForTown(Town);
     }
 
     public void OnResetClicked()
@@ -83,7 +87,7 @@ public class GameMgr : MonoBehaviour
         lineRenderer.positionCount = points.Count;
         lineRenderer.SetPositions(points.ToArray());
         // lineRenderers.Add(lineRenderer);
-    } 
+    }
 
     void Update()
     {

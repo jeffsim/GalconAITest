@@ -10,6 +10,7 @@ public partial class PlayerAI
         if (bestAction.Type == AIActionType.DoNothing)
             return; // no action to take
 
+        Debug.Log("----------------------");
         var actionToOutput = bestAction;
         // int spaces = 0;
         while (actionToOutput.DebugOutput_NextAction != null)

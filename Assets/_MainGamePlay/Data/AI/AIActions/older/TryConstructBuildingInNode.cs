@@ -2,6 +2,9 @@ public partial class PlayerAI
 {
     private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
+#if DEBUG
+        AIDebugger.PushTryActionStart(thisActionNum, AIActionType.ConstructBuildingInOwnedNode, node, curDepth, recurseCount);
+#endif
         if (node.HasBuilding)
             return; // Node already has a building
 
@@ -25,6 +28,9 @@ public partial class PlayerAI
             aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
             aiTownState.EvaluateScore(curDepth, maxDepth,out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
+#if DEBUG
+                AIDebugger.TrackPerformAction_ConstructBuilding(node, buildingDefn, scoreAfterActionAndBeforeSubActions);
+#endif
             // ==== Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
             if (actionScore.Score > bestAction.Score)
@@ -42,5 +48,8 @@ public partial class PlayerAI
             // ==== Undo the action
             aiTownState.Undo_BuildBuilding(node, res1Id, resource1Amount, res2Id, resource2Amount);
         }
+#if DEBUG
+        AIDebugger.PopTryActionStart();
+#endif
     }
 }

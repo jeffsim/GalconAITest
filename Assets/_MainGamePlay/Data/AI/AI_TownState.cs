@@ -96,10 +96,11 @@ public partial class AI_TownState
         destNode.OwnedBy = null;
     }
 
-    internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend)
+    internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
     {
-        sourceNode.NumWorkers -= numToSend;
-        destNode.NumWorkers += numToSend;
+        numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
+        sourceNode.NumWorkers -= numSent;
+        destNode.NumWorkers += numSent;
     }
 
     internal void Undo_SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)

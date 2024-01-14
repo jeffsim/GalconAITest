@@ -50,10 +50,13 @@ public partial class PlayerAI
         aiTownState.UpdateState(townData);
 
 #if DEBUG
+        bool triggerAIDebuggerUpdate = false;
         if (lastMaxDepth != GameMgr.Instance.MaxAIDepth)
         {
             lastMaxDepth = GameMgr.Instance.MaxAIDepth;
             ConsoleClearer.ClearConsole();
+
+            triggerAIDebuggerUpdate = true;
         }
 
         if (GameMgr.Instance.DebugOutputStrategyFull)
@@ -68,9 +71,20 @@ public partial class PlayerAI
         debugOutput_callsToRecursivelyDetermineBestAction = -1;
         actionPoolIndex = 0;
 
+#if DEBUG
+        AIDebugger.Clear();
+#endif
         var bestAction = RecursivelyDetermineBestAction(0, 0);
         if (GameMgr.Instance.DebugOutputStrategy)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
         performAction(bestAction);
+
+#if DEBUG
+        if (triggerAIDebuggerUpdate)
+        {
+            townData.OnAIDebuggerUpdate?.Invoke();
+            triggerAIDebuggerUpdate = false;
+        }
+#endif
     }
 }

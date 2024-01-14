@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,6 +8,8 @@ public class TownData
     public List<PlayerData> Players = new();
     public List<NodeData> Nodes = new();
     public List<WorkerData> Workers = new();
+
+    public Action OnAIDebuggerUpdate { get; internal set; }
 
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
     {
