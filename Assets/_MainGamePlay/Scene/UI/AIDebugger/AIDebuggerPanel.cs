@@ -6,6 +6,8 @@ public class AIDebuggerPanel : MonoBehaviour
     public GameObject List;
     public AIDebuggerEntry EntryPrefab;
 
+    public bool ForceExpandAll = true;
+
     void Start()
     {
     }
@@ -30,5 +32,13 @@ public class AIDebuggerPanel : MonoBehaviour
 #if DEBUG
         town.OnAIDebuggerUpdate += Refresh;
 #endif
+    }
+
+    public void ExpandAllToggled()
+    {
+        ForceExpandAll = !ForceExpandAll;
+
+        // if ForceExpandAll is true, then we want to forcibly expand all entries now
+        // if ForceExpandAll is false, then we want to forcibly collapse all entries now
     }
 }

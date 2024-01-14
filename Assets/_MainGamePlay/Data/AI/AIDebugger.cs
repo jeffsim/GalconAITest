@@ -15,19 +15,20 @@ public class AIDebuggerEntryData
     public AttackResult AttackResult;
     public int NumSent;
     public BuildingDefn BuildingDefn;
+    public float Score;
+
+    public List<AIDebuggerEntryData> ChildEntries = new();
 
     public string InformationString()
     {
         switch (ActionType)
         {
-            case AIActionType.AttackFromNode:
-                return "Attack result: " + AttackResult + "; numSent: " + NumSent;
-            case AIActionType.ConstructBuildingInOwnedNode:
-                return BuildingDefn.Id + " in node " + ToNode.NodeId;
-            case AIActionType.SendWorkersToNode:
-                return NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
-            default:
-                return "TODO: " + ActionType + "";
+            case AIActionType.AttackFromNode: return "Attack result: " + AttackResult + "; numSent: " + NumSent;
+            case AIActionType.ConstructBuildingInOwnedEmptyNode: return BuildingDefn.Id + " in owned node " + ToNode.NodeId;
+            case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
+            case AIActionType.SendWorkersToOwnedNode: return NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
+            case AIActionType.SendWorkersToEmptyNode: return NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
+            default: return "TODO: " + ActionType + "";
         }
     }
 }
@@ -40,7 +41,7 @@ public static class AIDebugger
     static int RecurseDepth;
     static AI_NodeState ActionFromNode;
 
-    public static List<AIDebuggerEntryData> Entries = new List<AIDebuggerEntryData>();
+    public static List<AIDebuggerEntryData> Entries = new();
 
     public static void Clear()
     {
@@ -52,7 +53,7 @@ public static class AIDebugger
 
     internal static void PushTryActionStart(int thisActionNum, AIActionType actionType, AI_NodeState fromNode, int curDepth, int recurseCount)
     {
-        // Debug.Log(CurSpacing + thisActionNum + ": from node " + fromNode.NodeId + ": " + actionType);// + " (depth " + curDepth + ", recurse " + recurseCount + ")");
+        Debug.Log(CurSpacing + thisActionNum + ": from node " + fromNode.NodeId + ": " + actionType);// + " (depth " + curDepth + ", recurse " + recurseCount + ")");
         CurActionNum = thisActionNum;
         RecurseDepth = Indent;
         ActionFromNode = fromNode;
@@ -63,27 +64,102 @@ public static class AIDebugger
     internal static void PopTryActionStart()
     {
         Indent--;
+        RecurseDepth = Indent;
+    }
+
+    internal static void TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState toNode, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions)
+    {
+        Debug.Log(CurSpacing + "Construct building " + buildingDefn.Id + " in node " + toNode.NodeId + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
+        Entries.Add(new AIDebuggerEntryData()
+        {
+            ActionNumber = CurActionNum,
+            RecurseDepth = RecurseDepth,
+            FromNode = ActionFromNode,
+            ActionType = AIActionType.ConstructBuildingInEmptyNode,
+            ToNode = toNode,
+            BuildingDefn = buildingDefn,
+            Score = scoreAfterActionAndBeforeSubActions
+        });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    internal static void TrackPerformAction_ConstructBuildingInOwnedEmptyNode(AI_NodeState toNode, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions)
+    {
+        Debug.Log(CurSpacing + "Construct building " + buildingDefn.Id + " in node " + toNode.NodeId + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
+        Entries.Add(new AIDebuggerEntryData()
+        {
+            ActionNumber = CurActionNum,
+            RecurseDepth = RecurseDepth,
+            FromNode = ActionFromNode,
+            ActionType = AIActionType.ConstructBuildingInOwnedEmptyNode,
+            ToNode = toNode,
+            BuildingDefn = buildingDefn,
+            Score = scoreAfterActionAndBeforeSubActions
+        });
     }
 
     internal static void TrackPerformAction_Attack(AI_NodeState toNode, AttackResult attackResult, int numSent, float scoreAfterActionAndBeforeSubActions)
     {
-        // Debug.Log(CurSpacing + "Attack on node " + toNode.NodeId + " result: " + attackResult + "; numSent: " + numSent + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
-        Entries.Add(new AIDebuggerEntryData() { ActionNumber = CurActionNum, RecurseDepth = RecurseDepth, FromNode = ActionFromNode, 
-                                                ActionType = AIActionType.AttackFromNode, ToNode = toNode, AttackResult = attackResult, NumSent = numSent });
+        Debug.Log(CurSpacing + "Attack on node " + toNode.NodeId + " result: " + attackResult + "; numSent: " + numSent + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
+        Entries.Add(new AIDebuggerEntryData()
+        {
+            ActionNumber = CurActionNum,
+            RecurseDepth = RecurseDepth,
+            FromNode = ActionFromNode,
+            ActionType = AIActionType.AttackFromNode,
+            ToNode = toNode,
+            AttackResult = attackResult,
+            NumSent = numSent,
+            Score = scoreAfterActionAndBeforeSubActions
+        });
     }
 
-    internal static void TrackPerformAction_ConstructBuilding(AI_NodeState toNode, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions)
-    {
-        // Debug.Log(CurSpacing + "Construct building " + buildingDefn.Id + " in node " + toNode.NodeId + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
-        Entries.Add(new AIDebuggerEntryData() { ActionNumber = CurActionNum, RecurseDepth = RecurseDepth, FromNode = ActionFromNode, 
-                                                ActionType = AIActionType.ConstructBuildingInOwnedNode, ToNode = toNode, BuildingDefn = buildingDefn });
-    }
 
     internal static void TrackPerformAction_SendWorkersToOwnedNode(AI_NodeState toNode, int numSent, float scoreAfterActionAndBeforeSubActions)
     {
-        // Debug.Log(CurSpacing + "Send " + numSent + " workers to node " + toNode.NodeId + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
-        Entries.Add(new AIDebuggerEntryData() { ActionNumber = CurActionNum, RecurseDepth = RecurseDepth, FromNode = ActionFromNode, 
-                                                ActionType = AIActionType.SendWorkersToNode, ToNode = toNode, NumSent = numSent });
+        Debug.Log(CurSpacing + "Send " + numSent + " workers to node " + toNode.NodeId + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
+        Entries.Add(new AIDebuggerEntryData()
+        {
+            ActionNumber = CurActionNum,
+            RecurseDepth = RecurseDepth,
+            FromNode = ActionFromNode,
+            ActionType = AIActionType.SendWorkersToOwnedNode,
+            ToNode = toNode,
+            NumSent = numSent,
+            Score = scoreAfterActionAndBeforeSubActions
+        });
+    }
+
+    internal static void TrackPerformAction_SendWorkersToEmptyNode(AI_NodeState toNode, int numSent, float scoreAfterActionAndBeforeSubActions)
+    {
+        Debug.Log(CurSpacing + "Send " + numSent + " workers to node " + toNode.NodeId + "; scoreAfterActionAndBeforeSubActions: " + scoreAfterActionAndBeforeSubActions.ToString("0.0"));
+        Entries.Add(new AIDebuggerEntryData()
+        {
+            ActionNumber = CurActionNum,
+            RecurseDepth = RecurseDepth,
+            FromNode = ActionFromNode,
+            ActionType = AIActionType.SendWorkersToEmptyNode,
+            ToNode = toNode,
+            NumSent = numSent,
+            Score = scoreAfterActionAndBeforeSubActions
+        });
     }
 }
 #endif

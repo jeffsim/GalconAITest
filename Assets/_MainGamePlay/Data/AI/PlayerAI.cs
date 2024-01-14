@@ -9,9 +9,9 @@ public partial class PlayerAI
     int debugOutput_ActionsTried;
     int debugOutput_callsToRecursivelyDetermineBestAction;
 
-    AIAction[] actionPool;
+    static AIAction[] actionPool;
     int actionPoolIndex;
-    int maxPoolSize = 500000;
+    int maxPoolSize = 25000;
 
     BuildingDefn[] buildableBuildingDefns;
     int numBuildingDefns;
@@ -25,10 +25,13 @@ public partial class PlayerAI
         player = playerData;
         aiTownState = new AI_TownState(player);
 
-        // Create pool of actions to avoid allocs
-        actionPool = new AIAction[maxPoolSize];
-        for (int i = 0; i < maxPoolSize; i++)
-            actionPool[i] = new AIAction();
+        // Create pool of actions to avoid allocs.  Can do this statically because it's only used by one player at a time.
+        if (actionPool == null)
+        {
+            actionPool = new AIAction[maxPoolSize];
+            for (int i = 0; i < maxPoolSize; i++)
+                actionPool[i] = new AIAction();
+        }
 
         // Convert dictionary to array for speed
         buildableBuildingDefns = new BuildingDefn[GameDefns.Instance.BuildingDefns.Count];

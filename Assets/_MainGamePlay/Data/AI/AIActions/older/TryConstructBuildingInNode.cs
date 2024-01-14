@@ -1,9 +1,9 @@
 public partial class PlayerAI
 {
-    private void TryConstructBuildingInNode(AI_NodeState node, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
+    private void TryConstructBuildingInOwnedEmptyNode(AI_NodeState node, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
 #if DEBUG
-        AIDebugger.PushTryActionStart(thisActionNum, AIActionType.ConstructBuildingInOwnedNode, node, curDepth, recurseCount);
+        AIDebugger.PushTryActionStart(thisActionNum, AIActionType.ConstructBuildingInOwnedEmptyNode, node, curDepth, recurseCount);
 #endif
         if (node.HasBuilding)
             return; // Node already has a building
@@ -19,17 +19,17 @@ public partial class PlayerAI
             // Don't build resource gatherers if there are no resource nodes within reach.  
             // NOTE: This assumes that resource gatherers are single purpose; e.g. can't also generate workers 
             // TODO: Hardcoded max distance
-         //   if (buildingDefn.CanGatherResources && node.DistanceToClosestGatherableResourceNode > 1) continue;
+            //   if (buildingDefn.CanGatherResources && node.DistanceToClosestGatherableResourceNode > 1) continue;
 
             // Don't build barracks unless enemy is in neighboring node. NOTE: should instead check if enemy is within X nodes
             if (buildingDefn.CanGenerateWorkers && node.DistanceToClosestEnemyNode > 1) continue;
 
             // ==== Perform the action and get the score of the state after the action is performed
             aiTownState.BuildBuilding(node, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount);
-            aiTownState.EvaluateScore(curDepth, maxDepth,out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
+            aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
 #if DEBUG
-                AIDebugger.TrackPerformAction_ConstructBuilding(node, buildingDefn, scoreAfterActionAndBeforeSubActions);
+            AIDebugger.TrackPerformAction_ConstructBuildingInOwnedEmptyNode(node, buildingDefn, scoreAfterActionAndBeforeSubActions);
 #endif
             // ==== Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
@@ -37,7 +37,7 @@ public partial class PlayerAI
             {
                 // This is the best action so far; save the action so we can return it
                 bestAction.Score = actionScore.ScoreBeforeSubActions;
-                bestAction.Type = AIActionType.ConstructBuildingInOwnedNode;
+                bestAction.Type = AIActionType.ConstructBuildingInOwnedEmptyNode;
                 bestAction.SourceNode = node;
                 bestAction.BuildingToConstruct = buildingDefn;
 #if DEBUG

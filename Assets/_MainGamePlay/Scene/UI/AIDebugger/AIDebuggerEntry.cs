@@ -7,6 +7,7 @@ public class AIDebuggerEntry : MonoBehaviour
     public TextMeshProUGUI ActionNumber;
     public TextMeshProUGUI ActionType;
     public TextMeshProUGUI Information;
+    public TextMeshProUGUI Score;
     public Button ThisButton;
 
     public void ShowForEntry(AIDebuggerEntryData entry)
@@ -17,10 +18,16 @@ public class AIDebuggerEntry : MonoBehaviour
             case AIActionType.AttackFromNode:
                 ActionType.text = "Attack";
                 break;
-            case AIActionType.ConstructBuildingInOwnedNode:
+            case AIActionType.ConstructBuildingInOwnedEmptyNode:
                 ActionType.text = "Construct";
                 break;
-            case AIActionType.SendWorkersToNode:
+            case AIActionType.ConstructBuildingInEmptyNode:
+                ActionType.text = "Construct";
+                break;
+            case AIActionType.SendWorkersToOwnedNode:
+                ActionType.text = "Send";
+                break;
+            case AIActionType.SendWorkersToEmptyNode:
                 ActionType.text = "Send";
                 break;
             default:
@@ -28,9 +35,15 @@ public class AIDebuggerEntry : MonoBehaviour
                 break;
         }
         Information.text = entry.InformationString();
+        Score.text = entry.Score.ToString("0.0");
         
-        // Set ThisButton's Left rect transform to be 10 * entry.RecurseDepth
+        // Indent
         var rt = ThisButton.GetComponent<RectTransform>();
         rt.offsetMin = new Vector2(20 * entry.RecurseDepth, rt.offsetMin.y);
+    }
+
+    public void OnClicked()
+    {
+        Debug.Log("Clicked " + ActionNumber.text);
     }
 }

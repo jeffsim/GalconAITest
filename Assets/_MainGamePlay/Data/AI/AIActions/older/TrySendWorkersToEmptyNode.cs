@@ -3,7 +3,7 @@ public partial class PlayerAI
     private void TrySendWorkersToEmptyNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
 #if DEBUG
-        AIDebugger.PushTryActionStart(thisActionNum, AIActionType.SendWorkersToNode, fromNode, curDepth, recurseCount);
+        AIDebugger.PushTryActionStart(thisActionNum, AIActionType.SendWorkersToEmptyNode, fromNode, curDepth, recurseCount);
 #endif
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return; // not enough workers in node to send any out
@@ -33,7 +33,7 @@ public partial class PlayerAI
             {
                 // This is the best action so far in this 'level' of the AI stack; save the action so we can return it
                 bestAction.Score = actionScore.ScoreBeforeSubActions;
-                bestAction.Type = AIActionType.SendWorkersToNode;
+                bestAction.Type = AIActionType.SendWorkersToEmptyNode;
                 bestAction.Count = numSent;
                 bestAction.SourceNode = fromNode;
                 bestAction.DestNode = toNode;
