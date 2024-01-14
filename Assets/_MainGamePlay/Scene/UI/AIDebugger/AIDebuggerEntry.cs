@@ -9,9 +9,12 @@ public class AIDebuggerEntry : MonoBehaviour
     public TextMeshProUGUI Information;
     public TextMeshProUGUI Score;
     public Button ThisButton;
-
-    public void ShowForEntry(AIDebuggerEntryData entry)
+    AIDebuggerEntryData entry;
+    AIDebuggerPanel panel;
+    public void ShowForEntry(AIDebuggerEntryData entry, AIDebuggerPanel panel)
     {
+        this.panel = panel;
+        this.entry = entry;
         ActionNumber.text = entry.ActionNumber.ToString();
         switch (entry.ActionType)
         {
@@ -36,7 +39,7 @@ public class AIDebuggerEntry : MonoBehaviour
         }
         Information.text = entry.InformationString();
         Score.text = entry.Score.ToString("0.0");
-        
+
         // Indent
         var rt = ThisButton.GetComponent<RectTransform>();
         rt.offsetMin = new Vector2(20 * entry.RecurseDepth, rt.offsetMin.y);
@@ -44,6 +47,7 @@ public class AIDebuggerEntry : MonoBehaviour
 
     public void OnClicked()
     {
-        Debug.Log("Clicked " + ActionNumber.text);
+        panel.ExpandedEntries[entry.ActionNumber] = !panel.ExpandedEntries[entry.ActionNumber];
+        panel.Refresh();
     }
 }

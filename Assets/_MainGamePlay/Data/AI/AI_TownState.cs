@@ -143,6 +143,72 @@ public partial class AI_TownState
         destNode.OwnedBy = originalOwner;
     }
 
+    internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, float percentToSend, out int numSent)
+    {
+        numSent = Math.Max(1, (int)(sendFromNode.NumWorkers * percentToSend));
+        sendFromNode.NumWorkers -= numSent;
+        buildInNode.NumWorkers += numSent;
+
+        // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
+        // Debug.Assert(!node.HasBuilding, "can only build in empty nodes.");
+        buildInNode.SetBuilding(buildingDefn);
+
+        // Consume resources
+        var reqs = buildingDefn.ConstructionRequirements;
+        // Debug.Assert(reqs.Count <= 2, "only support buildings with 1 or 2 construction requirements for now.");
+
+        // == resource 1
+        if (reqs.Count > 0)
+        {
+            resource1 = reqs[0].Good.GoodType;
+            resource1Amount = reqs[0].Amount;
+
+            // TODO: Need to consume from particular nodes, not just the town inventory
+            // PlayerTownInventory[resource1] -= resource1Amount;
+            if (resource1 == GoodType.Wood) PlayerTownInventory_Wood -= resource1Amount;
+            else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone -= resource1Amount;
+            else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource1Amount;
+        }
+        else
+        {
+            resource1 = GoodType.Unset;
+            resource1Amount = 0;
+        }
+
+        // == resource 2
+        if (reqs.Count > 1)
+        {
+            resource2 = reqs[1].Good.GoodType;
+            resource2Amount = reqs[1].Amount;
+
+            // TODO: Need to consume from particular nodes, not just the town inventory
+            // PlayerTownInventory[resource2] -= resource2Amount;
+            if (resource2 == GoodType.Wood) PlayerTownInventory_Wood -= resource2Amount;
+            else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone -= resource2Amount;
+            else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource2Amount;
+        }
+        else
+        {
+            resource2 = GoodType.Unset;
+            resource2Amount = 0;
+        }
+    }
+
+    internal void Undo_SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, GoodType resource1, int resource1Amount, GoodType resource2, int resource2Amount, int numSent)
+    {
+        buildInNode.NumWorkers -= numSent;
+        sendFromNode.NumWorkers += numSent;
+        
+        // Undo Consume resources
+        if (resource1 == GoodType.Wood) PlayerTownInventory_Wood = resource1Amount;
+        else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone = resource1Amount;
+        else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource1Amount;
+
+        if (resource2 == GoodType.Wood) PlayerTownInventory_Wood = resource2Amount;
+        else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone = resource2Amount;
+        else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource2Amount;
+    }
+
     internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount)
     {
         // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
