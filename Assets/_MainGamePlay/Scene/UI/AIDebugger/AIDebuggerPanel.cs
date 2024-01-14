@@ -65,7 +65,7 @@ public class AIDebuggerPanel : MonoBehaviour
     internal void InitializeForTown(TownData town)
     {
 #if DEBUG
-        town.OnAIDebuggerUpdate += Refresh;
+        town.OnAIDebuggerUpdate += ShowBest;
 #endif
     }
 

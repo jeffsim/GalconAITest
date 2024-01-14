@@ -5,9 +5,6 @@ public partial class PlayerAI
     // used to e.g. buttress buildings that are near enemy nodes
     private void TrySendWorkersToOwnedNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
-#if DEBUG
-        AIDebugger.PushTryActionStart(thisActionNum, AIActionType.SendWorkersToOwnedNode, fromNode, curDepth, recurseCount);
-#endif
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return; // not enough workers in node to send any out
 
@@ -47,9 +44,5 @@ public partial class PlayerAI
             // Undo the action
             aiTownState.Undo_SendWorkersToEmptyNode(fromNode, toNode, numSent);
         }
-
-#if DEBUG
-        AIDebugger.PopTryActionStart();
-#endif
     }
 }

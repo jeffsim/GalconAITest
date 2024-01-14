@@ -4,10 +4,6 @@ public partial class PlayerAI
 {
     private void TrySendWorkersToConstructBuildingInEmptyNeighboringNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
-#if DEBUG
-        // AIDebugger.PushTryActionStart(thisActionNum, AIActionType.ConstructBuildingInEmptyNode, fromNode, curDepth, recurseCount);
-#endif
-
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return; // not enough workers in node to send any out
 
@@ -67,8 +63,5 @@ public partial class PlayerAI
                 aiTownState.Undo_SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, res1Id, resource1Amount, res2Id, resource2Amount, numSent);
             }
         }
-#if DEBUG
-        AIDebugger.PopTryActionStart();
-#endif
     }
 }

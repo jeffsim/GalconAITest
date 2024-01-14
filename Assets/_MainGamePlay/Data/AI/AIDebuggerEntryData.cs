@@ -25,6 +25,7 @@ public class AIDebuggerEntryData
 
     public void DebugOutput()
     {
+        return;
         switch (ActionType)
         {
             case AIActionType.ConstructBuildingInEmptyNode:

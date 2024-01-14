@@ -40,8 +40,8 @@ MonoBehaviour:
     NumStartingWorkers: 0
   - NodeId: 3
     WorldLoc: {x: 0, y: 0, z: -3}
-    OwnedByPlayerId: 1
-    StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
   - NodeId: 4
     WorldLoc: {x: 5, y: 0, z: -3}

@@ -2,9 +2,6 @@ public partial class PlayerAI
 {
     private void TryConstructBuildingInOwnedEmptyNode(AI_NodeState node, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
     {
-#if DEBUG
-        AIDebugger.PushTryActionStart(thisActionNum, AIActionType.ConstructBuildingInOwnedEmptyNode, node, curDepth, recurseCount);
-#endif
         if (node.HasBuilding)
             return; // Node already has a building
 
@@ -48,8 +45,5 @@ public partial class PlayerAI
             // ==== Undo the action
             aiTownState.Undo_BuildBuilding(node, res1Id, resource1Amount, res2Id, resource2Amount);
         }
-#if DEBUG
-        AIDebugger.PopTryActionStart();
-#endif
     }
 }
