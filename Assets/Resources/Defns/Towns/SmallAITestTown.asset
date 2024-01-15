@@ -130,14 +130,26 @@ MonoBehaviour:
       exported_Values: 
   NodeConnections:
   - Nodes: {x: 4, y: 3}
+    IsBidirectional: 1
   - Nodes: {x: 3, y: 5}
-  - Nodes: {x: 5, y: 6}
+    IsBidirectional: 1
+  - Nodes: {x: 6, y: 5}
+    IsBidirectional: 1
   - Nodes: {x: 3, y: 0}
+    IsBidirectional: 1
   - Nodes: {x: 1, y: 2}
+    IsBidirectional: 1
   - Nodes: {x: 2, y: 4}
+    IsBidirectional: 1
   - Nodes: {x: 7, y: 4}
+    IsBidirectional: 1
   - Nodes: {x: 8, y: 2}
+    IsBidirectional: 1
   - Nodes: {x: 9, y: 3}
+    IsBidirectional: 1
   - Nodes: {x: 10, y: 4}
+    IsBidirectional: 1
   - Nodes: {x: 11, y: 1}
+    IsBidirectional: 1
   - Nodes: {x: 6, y: 12}
+    IsBidirectional: 1

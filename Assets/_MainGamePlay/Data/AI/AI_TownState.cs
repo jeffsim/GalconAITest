@@ -33,7 +33,7 @@ public partial class AI_TownState
                 var endIndex = townData.Nodes.IndexOf(nodeConn.End);
                 var endNode = Nodes[endIndex];
                 Nodes[i].NeighborNodes.Add(endNode);
-                if (nodeConn.IsTwoWay)
+                if (nodeConn.IsBidirectional)
                     endNode.NeighborNodes.Add(Nodes[i]);
             }
         }

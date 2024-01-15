@@ -19,6 +19,7 @@ public class NodeDefn
 public class NodeConnectionDefn
 {
     public Vector2Int Nodes;
+    public bool IsBidirectional = true;
 }
 
 [CreateAssetMenu()]

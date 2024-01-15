@@ -27,7 +27,11 @@ public class TownData
 
         // Create Node Connections
         foreach (var nodeConnectionDefn in townDefn.NodeConnections)
-            Nodes[nodeConnectionDefn.Nodes.x].NodeConnections.Add(new NodeConnection() { Start = Nodes[nodeConnectionDefn.Nodes.x], End = Nodes[nodeConnectionDefn.Nodes.y], TravelCost = 1 });
+        {
+            var fromNode = GetNodeById(nodeConnectionDefn.Nodes.x);
+            var toNode = GetNodeById(nodeConnectionDefn.Nodes.y);
+            fromNode.NodeConnections.Add(new NodeConnection() { Start = fromNode, End = toNode, TravelCost = 1, IsBidirectional = nodeConnectionDefn.IsBidirectional });
+        }
 
         // Create Workers
         foreach (var node in Nodes)
@@ -36,6 +40,15 @@ public class TownData
 
         foreach (var player in Players)
             player?.InitializeStaticData(this);
+    }
+
+    private NodeData GetNodeById(int nodeId)
+    {
+        // TODO: Dictionary.  However: only used (currently) in TownData ctor, so not a big deal.
+        foreach (var node in Nodes)
+            if (node.NodeId == nodeId)
+                return node;
+        return null;
     }
 
     public void Update()

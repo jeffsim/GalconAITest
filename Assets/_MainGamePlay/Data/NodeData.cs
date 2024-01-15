@@ -7,7 +7,7 @@ public class NodeConnection
     public NodeData Start;
     public NodeData End;
     public float TravelCost;
-    public bool IsTwoWay = true;
+    public bool IsBidirectional = true;
 }
 
 public class NodeData
