@@ -10,6 +10,7 @@ public class GameDefnsMgr
     [SerializeReference] public Dictionary<string, WorkerDefn> WorkerDefns = new();
     [SerializeReference] public Dictionary<string, BuildingDefn> BuildingDefns = new();
     [SerializeReference] public Dictionary<string, GoodDefn> GoodDefns = new();
+    [SerializeReference] public Dictionary<string, GameSettingsDefn> GameSettingsDefns = new();
 
     public void RefreshDefns()
     {
@@ -20,6 +21,7 @@ public class GameDefnsMgr
         loadDefns("Workers", WorkerDefns);
         loadDefns("Buildings", BuildingDefns);
         loadDefns("Goods", GoodDefns);
+        loadDefns("GameSettings", GameSettingsDefns);
     }
 
     private void loadDefns<T>(string folderName, Dictionary<string, T> defnDict) where T : BaseDefn
@@ -40,6 +42,7 @@ public class GameDefns : SerializedMonoBehaviour
     public Dictionary<string, WorkerDefn> WorkerDefns => GameDefnsMgr.WorkerDefns;
     public Dictionary<string, BuildingDefn> BuildingDefns => GameDefnsMgr.BuildingDefns;
     public Dictionary<string, GoodDefn> GoodDefns => GameDefnsMgr.GoodDefns;
+    public Dictionary<string, GameSettingsDefn> GameSettingsDefns => GameDefnsMgr.GameSettingsDefns;
 
     void Awake()
     {
