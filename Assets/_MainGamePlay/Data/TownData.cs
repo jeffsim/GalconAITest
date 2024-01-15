@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PlasticPipe.PlasticProtocol.Messages;
 using UnityEngine;
 
 public class TownData
@@ -66,10 +67,10 @@ public class TownData
         foreach (var node in Nodes)
         {
             if (node.Building == null || !node.Building.Defn.CanGatherResources) continue;
-            
+
             // TODO: assume a resource node is nearby and not depleted
-            if (node.Inventory.ContainsKey(node.Building.Defn.ResourceThisNodeCanGoGather))
-                node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather] += 1; // TODO: node.Building.Defn.ResourceProducedPerTurn;
+            if (node.Inventory.ContainsKey(node.Building.Defn.ResourceThisNodeCanGoGather.GoodType))
+                node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += 1; // TODO: node.Building.Defn.ResourceProducedPerTurn;
         }
 
         // not how this will normally be done, but fine for testing purposes
@@ -93,7 +94,7 @@ public class TownData
                     if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) continue;
 
                     // Is target node still capturabl?
-                    if (moveToMake.DestNode.OwnedBy != null) continue;
+                    if (toNode.OwnedBy != null) continue;
 
                     // Does player still have the necessary resources to build the building?
                     // TODO: Assume so for now
@@ -102,14 +103,44 @@ public class TownData
                     fromNode.NumWorkers -= moveToMake.Count;
                     toNode.OwnedBy = player;
                     toNode.NumWorkers = moveToMake.Count;
-                    
+
                     var building = new BuildingData(moveToMake.BuildingToConstruct);
                     toNode.ConstructBuilding(building);
+
+                    // consume resources needed to construct the building
+                    foreach (var req in moveToMake.BuildingToConstruct.ConstructionRequirements)
+                    {
+                        // hack
+                        var remainingNeeded = req.Amount;
+                        while (remainingNeeded > 0)
+                        {
+                            var node = getClosestNodeWithResource(player, toNode, req.Good.GoodType);
+                            if (node == null)
+                            {
+                                // shouldn't get here; should get caught by necessary-resource validationa bove
+                                Debug.LogError("Error: couldn't find node with resource " + req.Good.GoodType);
+                                break;
+                            }
+                            var amountToTake = Math.Min(remainingNeeded, node.Inventory[req.Good.GoodType]);
+                            node.Inventory[req.Good.GoodType] -= amountToTake;
+                            remainingNeeded -= amountToTake;
+                        }
+                    }
+
                     break;
 
                 case AIActionType.SendWorkersToOwnedNode:
                     break;
             }
         }
+    }
+
+    private NodeData getClosestNodeWithResource(PlayerData player, NodeData startNode, GoodType goodType)
+    {
+        // for now, just find any node that the player owns and has > 0 of the resource
+        foreach (var node in Nodes)
+            if (node.OwnedBy == player && node.Inventory[goodType] > 0)
+                return node;
+        return null;
     }
 }

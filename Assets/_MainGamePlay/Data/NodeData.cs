@@ -22,8 +22,7 @@ public class NodeData
     public BuildingData Building;
     public int NumWorkers;
 
-    // TODO: DON'T PERSIST THIS!
-    public Dictionary<GoodDefn, int> Inventory = new();
+    public SerializedDictionary<GoodType, int> Inventory = new();
 
     public NodeData(NodeDefn nodeDefn, int nodeId, PlayerData player)
     {
@@ -38,8 +37,11 @@ public class NodeData
         // foreach (var value in GameDefns.Instance.GoodDefns.Values)
         //     Inventory[value] = 0;
 
+        Inventory[GoodType.Wood] = 0;
+        Inventory[GoodType.Stone] = 0;
+
         foreach (var kvp in nodeDefn.StartingInventory)
-            Inventory[kvp.Key] = kvp.Value;
+            Inventory[kvp.Key.GoodType] = kvp.Value;
     }
 
     public void ConstructBuilding(BuildingData building)

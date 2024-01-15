@@ -16,7 +16,7 @@ public class AIDebuggerPanel : MonoBehaviour
     {
         ForceExpandAll = false;
         ShowBestOnStart = true;
-        EventSystem.current.SetSelectedGameObject(PlayerSelectButtons[GameMgr.Instance.ShowDebuggerAI_PlayerId - 1].gameObject); // harcoded. fuck it.
+        EventSystem.current.SetSelectedGameObject(PlayerSelectButtons[GameMgr.Instance.DebugPlayerToViewDetailsOn.Id - 1].gameObject); // harcoded. fuck it.
     }
 
     public void Refresh()
@@ -70,11 +70,11 @@ public class AIDebuggerPanel : MonoBehaviour
 #endif
     }
 
-    public void ShowBestClicked() => ShowBest(GameMgr.Instance.ShowDebuggerAI_PlayerId);
+    public void ShowBestClicked() => ShowBest(GameMgr.Instance.DebugPlayerToViewDetailsOn.Id);
 
     public void ShowBest(int playerId)
     {
-        if (playerId != GameMgr.Instance.ShowDebuggerAI_PlayerId) return;
+        if (playerId != GameMgr.Instance.DebugPlayerToViewDetailsOn.Id) return;
         //     recursivelyIdentifyHighestScoreAmongPeers(AIDebugger.topEntry);
         clearBestStrategyPaths(AIDebugger.topEntry);
         identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
@@ -83,7 +83,7 @@ public class AIDebuggerPanel : MonoBehaviour
 
     public void OnShowForPlayerIdClicked(int playerId)
     {
-        GameMgr.Instance.ShowDebuggerAI_PlayerId = playerId;
+        GameMgr.Instance.DebugPlayerToViewDetailsOn = GameMgr.Instance.Town.Players[playerId];
         GameMgr.Instance.Town.Update(); // force an update to get latest AI
 
         // hardcode because FUCK IT

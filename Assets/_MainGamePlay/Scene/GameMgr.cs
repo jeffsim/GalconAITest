@@ -18,10 +18,11 @@ public class GameMgr : MonoBehaviour
     [FoldoutGroup("Workers", false)] public WorkerDefn TestWorkerDefn;
 
 #if DEBUG
+    public PlayerData DebugPlayerToViewDetailsOn;
+   
     // Debugger panel
     public AIDebuggerPanel AIDebuggerPanel;
     public int MaxAIDepth = 7;
-    public int ShowDebuggerAI_PlayerId = 2;
     public bool ShowDebuggerAI = true;
     bool lastShowDebuggerAI;
     public bool DebugOutputStrategyToConsole = false;
@@ -68,8 +69,7 @@ public class GameMgr : MonoBehaviour
         //     Workers.Add(workerGO);
         // }
 
-        //   Camera.main.transform.position = new Vector3(1.3f, 14, -3.6f);
-        //     Camera.main.transform.rotation = Quaternion.Euler(80, 0, 0);
+        DebugPlayerToViewDetailsOn = Town.Players[2];
 
         lastShowDebuggerAI = ShowDebuggerAI;
 

@@ -110,16 +110,18 @@ MonoBehaviour:
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
     NumStartingWorkers: 32
     StartingInventory:
-      exported_Keys: []
-      exported_Values: 
+      exported_Keys:
+      - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+      exported_Values: 06000000
   - NodeId: 11
     WorldLoc: {x: 0, y: 0, z: 6}
     OwnedByPlayerId: 3
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
     NumStartingWorkers: 64
     StartingInventory:
-      exported_Keys: []
-      exported_Values: 
+      exported_Keys:
+      - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+      exported_Values: 08000000
   - NodeId: 12
     WorldLoc: {x: -2.5, y: 0, z: 2.5}
     OwnedByPlayerId: 0

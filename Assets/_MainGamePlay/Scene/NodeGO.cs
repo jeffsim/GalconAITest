@@ -36,5 +36,6 @@ public class NodeGO : MonoBehaviour
 
     void Update()
     {
+        NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + ")";
     }
 }

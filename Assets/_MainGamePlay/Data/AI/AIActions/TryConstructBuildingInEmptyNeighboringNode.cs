@@ -49,6 +49,7 @@ public partial class PlayerAI
                     bestAction.Score = actionScore.ScoreBeforeSubActions;
                     bestAction.Type = AIActionType.ConstructBuildingInEmptyNode;
                     bestAction.SourceNode = fromNode;
+                    bestAction.Count = numSent;
                     bestAction.DestNode = toNode;
                     bestAction.BuildingToConstruct = buildingDefn;
 #if DEBUG

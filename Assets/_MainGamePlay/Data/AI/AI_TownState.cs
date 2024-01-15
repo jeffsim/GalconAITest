@@ -56,8 +56,11 @@ public partial class AI_TownState
         for (int i = 0; i < NumNodes; i++)
         {
             var node = townData.Nodes[i];
-            foreach (var invItem in node.Inventory)
-                PlayerTownInventory[invItem.Key.GoodType] = invItem.Value;
+            if (node.OwnedBy == player)
+            {
+                foreach (var invItem in node.Inventory)
+                    PlayerTownInventory[invItem.Key] = invItem.Value;
+            }
         }
 
         for (int i = 0; i < NumNodes; i++)

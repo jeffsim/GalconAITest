@@ -76,11 +76,11 @@ public partial class PlayerAI
         actionPoolIndex = 0;
 
 #if DEBUG
-        AIDebugger.TrackForCurrentPlayer = player.Id == GameMgr.Instance.ShowDebuggerAI_PlayerId;
+        AIDebugger.TrackForCurrentPlayer = player == GameMgr.Instance.DebugPlayerToViewDetailsOn;
         AIDebugger.Clear();
 #endif
         BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
-        if (GameMgr.Instance.DebugOutputStrategyToConsole)
+        if (GameMgr.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
         // performAction(BestNextActionToTake);
 
