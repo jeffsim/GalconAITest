@@ -23,18 +23,18 @@ public class AIDebuggerEntry : MonoBehaviour
             case AIActionType.AttackFromNode:
                 ActionType.text = "Attack";
                 break;
-            case AIActionType.ConstructBuildingInOwnedEmptyNode:
-                ActionType.text = "Construct";
-                break;
+            // case AIActionType.ConstructBuildingInOwnedEmptyNode:
+            //     ActionType.text = "Construct";
+            //     break;
             case AIActionType.ConstructBuildingInEmptyNode:
                 ActionType.text = "Construct";
                 break;
             case AIActionType.SendWorkersToOwnedNode:
                 ActionType.text = "Send";
                 break;
-            case AIActionType.SendWorkersToEmptyNode:
-                ActionType.text = "Send";
-                break;
+            // case AIActionType.SendWorkersToEmptyNode:
+            //     ActionType.text = "Send";
+            //     break;
             default:
                 ActionType.text = "TODO: " + entry.ActionType + "";
                 break;

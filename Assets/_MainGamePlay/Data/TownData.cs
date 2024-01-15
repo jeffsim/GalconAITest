@@ -53,9 +53,63 @@ public class TownData
 
     public void Update()
     {
-        // testing one player for now
-        Players[2].Update(this);
-        // foreach (var player in Players)
-            // player?.Update(this);
+        foreach (var player in Players)
+            player?.Update(this);
+
+        // or test just one player:
+        // Players[2].Update(this);
+    }
+
+    internal void Debug_WorldTurn()
+    {
+        // Update resource gathering nodes
+        foreach (var node in Nodes)
+        {
+            if (node.Building == null || !node.Building.Defn.CanGatherResources) continue;
+            
+            // TODO: assume a resource node is nearby and not depleted
+            if (node.Inventory.ContainsKey(node.Building.Defn.ResourceThisNodeCanGoGather))
+                node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather] += 1; // TODO: node.Building.Defn.ResourceProducedPerTurn;
+        }
+
+        // not how this will normally be done, but fine for testing purposes
+        foreach (var player in Players)
+        {
+            if (player == null) continue;
+            var moveToMake = player.AI.BestNextActionToTake;
+
+            // Convert from ai node data to real node data
+            var fromNode = moveToMake.SourceNode.RealNode;
+            var toNode = moveToMake.DestNode.RealNode;
+            switch (moveToMake.Type)
+            {
+                case AIActionType.AttackFromNode:
+                    break;
+
+                case AIActionType.ConstructBuildingInEmptyNode:
+                    // First verify that the action is still valid; e.g. another player hasn't captured the target node, the source node still has workers and is owned by player, etc
+
+                    // Can player still send enough workers from source node?
+                    if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) continue;
+
+                    // Is target node still capturabl?
+                    if (moveToMake.DestNode.OwnedBy != null) continue;
+
+                    // Does player still have the necessary resources to build the building?
+                    // TODO: Assume so for now
+
+                    // Construct the building, move workers, etc
+                    fromNode.NumWorkers -= moveToMake.Count;
+                    toNode.OwnedBy = player;
+                    toNode.NumWorkers = moveToMake.Count;
+                    
+                    var building = new BuildingData(moveToMake.BuildingToConstruct);
+                    toNode.ConstructBuilding(building);
+                    break;
+
+                case AIActionType.SendWorkersToOwnedNode:
+                    break;
+            }
+        }
     }
 }

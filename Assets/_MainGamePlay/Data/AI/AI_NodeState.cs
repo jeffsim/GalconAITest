@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 public class AI_NodeState
 {
-    private NodeData nodeData;
+    public NodeData RealNode;
     public List<AI_NodeState> NeighborNodes = new();
     public int NumNeighbors;
     public int NumWorkers;
@@ -52,7 +52,7 @@ public class AI_NodeState
     public AI_NodeState(NodeData nodeData)
     {
         // set static fields
-        this.nodeData = nodeData;
+        this.RealNode = nodeData;
         NodeId = nodeData.NodeId;
         Update();
     }
@@ -79,12 +79,12 @@ public class AI_NodeState
     public void Update()
     {
         //set properties that change
-        if (nodeData.Building == null)
+        if (RealNode.Building == null)
             ClearBuilding();
         else
-            SetBuilding(nodeData.Building.Defn, 0);
-        NumWorkers = nodeData.NumWorkers;
-        OwnedBy = nodeData.OwnedBy;
+            SetBuilding(RealNode.Building.Defn, 0);
+        NumWorkers = RealNode.NumWorkers;
+        OwnedBy = RealNode.OwnedBy;
     }
 
     internal int DistanceToClosestEnemyNode(PlayerData player)

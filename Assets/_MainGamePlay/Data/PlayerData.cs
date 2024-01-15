@@ -8,7 +8,7 @@ public class PlayerData
     public int Id;
     public Color Color = Color.white;
     public bool ControlledByAI;
-    PlayerAI AI;
+    public PlayerAI AI;
 
     public PlayerData()
     {

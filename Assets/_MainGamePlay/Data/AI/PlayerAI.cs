@@ -9,9 +9,10 @@ public partial class PlayerAI
     int debugOutput_ActionsTried;
     int debugOutput_callsToRecursivelyDetermineBestAction;
 
+    public AIAction BestNextActionToTake = new();
     static AIAction[] actionPool;
-    int actionPoolIndex;
-    int maxPoolSize = 25000;
+    static int actionPoolIndex;
+    static int maxPoolSize = 25000;
 
     BuildingDefn[] buildableBuildingDefns;
     int numBuildingDefns;
@@ -78,10 +79,10 @@ public partial class PlayerAI
         AIDebugger.TrackForCurrentPlayer = player.Id == GameMgr.Instance.ShowDebuggerAI_PlayerId;
         AIDebugger.Clear();
 #endif
-        var bestAction = RecursivelyDetermineBestAction(0, 0);
+        BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
         if (GameMgr.Instance.DebugOutputStrategyToConsole)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
-        performAction(bestAction);
+        // performAction(BestNextActionToTake);
 
 #if DEBUG
 

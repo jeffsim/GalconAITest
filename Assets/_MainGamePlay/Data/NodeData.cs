@@ -16,9 +16,13 @@ public class NodeData
     public int NodeId;
     public Vector3 WorldLoc;
 
+    public Action OnBuildingConstructed;
+
     public List<NodeConnection> NodeConnections = new();
     public BuildingData Building;
     public int NumWorkers;
+
+    // TODO: DON'T PERSIST THIS!
     public Dictionary<GoodDefn, int> Inventory = new();
 
     public NodeData(NodeDefn nodeDefn, int nodeId, PlayerData player)
@@ -30,8 +34,17 @@ public class NodeData
         if (nodeDefn.StartingBuilding != null)
             Building = new BuildingData(nodeDefn.StartingBuilding);
 
-        // Populate starting inventory
+        // Populate starting inventory. force keys to exist
+        // foreach (var value in GameDefns.Instance.GoodDefns.Values)
+        //     Inventory[value] = 0;
+
         foreach (var kvp in nodeDefn.StartingInventory)
             Inventory[kvp.Key] = kvp.Value;
+    }
+
+    public void ConstructBuilding(BuildingData building)
+    {
+        Building = building;
+        OnBuildingConstructed?.Invoke();
     }
 }

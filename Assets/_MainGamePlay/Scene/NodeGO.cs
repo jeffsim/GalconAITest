@@ -23,6 +23,15 @@ public class NodeGO : MonoBehaviour
             BaseObject.material.color = data.OwnedBy.Color;
         BuildingObject.material.color = data.Building?.Defn.Color ?? Color.gray;
         BuildingObject.gameObject.SetActive(data.Building != null);
+
+        data.OnBuildingConstructed += () =>
+        {
+            BuildingText.text = data.Building?.Defn.Name ?? "";
+            BuildingObject.material.color = data.Building?.Defn.Color ?? Color.gray;
+            BuildingObject.gameObject.SetActive(data.Building != null);
+            if (data.OwnedBy != null)
+                BaseObject.material.color = data.OwnedBy.Color;
+        };
     }
 
     void Update()

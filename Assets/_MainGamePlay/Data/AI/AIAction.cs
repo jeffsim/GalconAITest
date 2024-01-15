@@ -1,13 +1,14 @@
+using System;
 using System.Collections.Generic;
 
 public enum AIActionType
 {
     ERROR_StuckInLoop,
     DoNothing,
-    SendWorkersToEmptyNode,
+    // SendWorkersToEmptyNode,
     SendWorkersToOwnedNode,
     ConstructBuildingInEmptyNode,
-    ConstructBuildingInOwnedEmptyNode,
+    // ConstructBuildingInOwnedEmptyNode,
     AttackFromNode,
     NoAction_GameOver,
     NoAction_MaxDepth
@@ -124,6 +125,22 @@ public class AIAction
         DebugOutput_Depth = curDepth;
         if (GameMgr.Instance.DebugOutputStrategyReasons)
             DebugOutput_ScoreReasonsBeforeSubActions = debugOutput_actionScoreReasons;
+    }
+
+    internal void CopyFrom(AIAction sourceAction)
+    {
+        Score = sourceAction.Score;
+        ScoreBeforeSubActions = sourceAction.ScoreBeforeSubActions;
+        Count = sourceAction.Count;
+        BuildingToConstruct = sourceAction.BuildingToConstruct;
+        Type = sourceAction.Type;
+        SourceNode = sourceAction.SourceNode;
+        DestNode = sourceAction.DestNode;
+        DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
+        DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
+        DebugOutput_RecursionNum = sourceAction.DebugOutput_RecursionNum;
+        DebugOutput_Depth = sourceAction.DebugOutput_Depth;
+        DebugOutput_NextAction = sourceAction.DebugOutput_NextAction;
     }
 #endif
 }

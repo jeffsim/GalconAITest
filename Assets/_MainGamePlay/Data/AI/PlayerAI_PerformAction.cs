@@ -32,15 +32,15 @@ public partial class PlayerAI
                 case AIActionType.SendWorkersToOwnedNode:
                     str += "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId;
                     break;
-                case AIActionType.SendWorkersToEmptyNode:
-                    str += "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId;
-                    break;
+                // case AIActionType.SendWorkersToEmptyNode:
+                //     str += "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId;
+                //     break;
                 case AIActionType.AttackFromNode:
                     str += "Attack with " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId + " and capture it";
                     break;
-                case AIActionType.ConstructBuildingInOwnedEmptyNode:
-                    str += "Construct " + actionToOutput.BuildingToConstruct.Id + " in " + actionToOutput.SourceNode.NodeId;
-                    break;
+                // case AIActionType.ConstructBuildingInOwnedEmptyNode:
+                //     str += "Construct " + actionToOutput.BuildingToConstruct.Id + " in " + actionToOutput.SourceNode.NodeId;
+                //     break;
                 case AIActionType.ConstructBuildingInEmptyNode:
                     str +=  "Send " + actionToOutput.Count + " workers from " + actionToOutput.SourceNode.NodeId + " to " + actionToOutput.DestNode.NodeId + " to build " + actionToOutput.BuildingToConstruct.Id;
                     break;

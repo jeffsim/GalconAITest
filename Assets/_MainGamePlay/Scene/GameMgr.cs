@@ -7,7 +7,6 @@ public class GameMgr : MonoBehaviour
     public TownData Town;
     public TownDefn TestTownDefn;
 
-
     [FoldoutGroup("Nodes", false)] public NodeGO NodePrefab;
     [FoldoutGroup("Nodes", false)] public List<NodeGO> Nodes = new();
     [FoldoutGroup("Nodes", false)] public Material NodeConnectionMat;
@@ -17,7 +16,6 @@ public class GameMgr : MonoBehaviour
     [FoldoutGroup("Workers", false)] public List<Worker> Workers = new();
     [FoldoutGroup("Workers", false)] public GameObject WorkersFolder;
     [FoldoutGroup("Workers", false)] public WorkerDefn TestWorkerDefn;
-
 
 #if DEBUG
     // Debugger panel
@@ -86,7 +84,9 @@ public class GameMgr : MonoBehaviour
     public void OnStepClicked()
     {
         // move the world forward one turn
-        Debug.Log("OnStepClicked");
+        Town.Debug_WorldTurn();
+        GameMgr.Instance.Town.Update(); // force an update to get latest AI
+        AIDebuggerPanel.ShowBestClicked();
     }
 
     private void addLineRenderer(NodeData startNode, NodeData endNode)
