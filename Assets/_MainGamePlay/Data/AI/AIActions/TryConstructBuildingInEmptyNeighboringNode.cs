@@ -52,6 +52,8 @@ public partial class PlayerAI
                     bestAction.DestNode = toNode;
                     bestAction.BuildingToConstruct = buildingDefn;
 #if DEBUG
+                    bestAction.DebugOutput_NextAction = actionScore;
+                    if (GameMgr.Instance.ShowDebuggerAI) prevEntry.BestNextAction = AIDebugger.curEntry;
                     bestAction.TrackStrategyDebugInfoInAction(actionScore, debugOutput_actionScoreReasons, actionNumberOnEntry, recurseCount, curDepth);
 #endif
                 }

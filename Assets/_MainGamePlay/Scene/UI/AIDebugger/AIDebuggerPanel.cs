@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,7 +26,8 @@ public class AIDebuggerPanel : MonoBehaviour
 
         if (ShowBestOnStart)
         {
-            expandOnlyBestEntry(AIDebugger.topEntry);
+            clearBestStrategyPaths(AIDebugger.topEntry);
+            identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
             ShowBestOnStart = false;
         }
 
@@ -67,24 +69,43 @@ public class AIDebuggerPanel : MonoBehaviour
 
     public void ShowBest()
     {
-        expandOnlyBestEntry(AIDebugger.topEntry);
+        //     recursivelyIdentifyHighestScoreAmongPeers(AIDebugger.topEntry);
+        clearBestStrategyPaths(AIDebugger.topEntry);
+        identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
         Refresh();
     }
 
-    private void expandOnlyBestEntry(AIDebuggerEntryData curEntry)
+    private void clearBestStrategyPaths(AIDebuggerEntryData curEntry)
+    {
+        curEntry.IsInBestStrategyPath = false;
+        ExpandedEntries[curEntry.ActionNumber] = false;
+        foreach (var childEntry in curEntry.ChildEntries)
+            clearBestStrategyPaths(childEntry);
+    }
+
+    private void identifyBestStrategyPath(AIDebuggerEntryData curEntry)
+    {
+        if (curEntry == null)
+            return;
+        curEntry.IsInBestStrategyPath = true;
+        ExpandedEntries[curEntry.ActionNumber] = true;
+        identifyBestStrategyPath(curEntry.BestNextAction);
+    }
+
+    private void recursivelyIdentifyHighestScoreAmongPeers(AIDebuggerEntryData curEntry)
     {
         if (curEntry.ChildEntries.Count == 0) return;
-        var bestEntry = curEntry.ChildEntries[0];
+        var highestEntry = curEntry.ChildEntries[0];
         foreach (var childEntry in curEntry.ChildEntries)
         {
-            if (childEntry.Score > bestEntry.Score)
-                bestEntry = childEntry;
+            if (childEntry.Score > highestEntry.Score)
+                highestEntry = childEntry;
         }
         foreach (var childEntry in curEntry.ChildEntries)
         {
-            ExpandedEntries[childEntry.ActionNumber] = childEntry == bestEntry;
-            childEntry.IsBestOption = childEntry == bestEntry;
-            expandOnlyBestEntry(childEntry);
+            ExpandedEntries[childEntry.ActionNumber] = childEntry == highestEntry;
+            childEntry.IsHighestOptionOfPeers = childEntry == highestEntry;
+            recursivelyIdentifyHighestScoreAmongPeers(childEntry);
         }
     }
 

@@ -22,12 +22,14 @@ public class AIDebuggerEntryData
     public List<AIDebuggerEntryData> ChildEntries = new(10);
     public int AllChildEntriesCount;
 
-    public bool IsBestOption;
+    public bool IsHighestOptionOfPeers;
 
     static int curPoolIndex;
     static int MaxPoolSize = 100000;
     static AIDebuggerEntryData[] Pool;
-
+    public AIDebuggerEntryData BestNextAction;
+    public bool IsInBestStrategyPath;
+    
     public static void InitializePool()
     {
         Pool = new AIDebuggerEntryData[MaxPoolSize];
