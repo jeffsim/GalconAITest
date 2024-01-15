@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class AIDebuggerPanel : MonoBehaviour
 {
@@ -9,11 +11,13 @@ public class AIDebuggerPanel : MonoBehaviour
     public Dictionary<int, bool> ExpandedEntries = new();
     public bool ForceExpandAll = false;
     public bool ShowBestOnStart = true;
+    public Button[] PlayerSelectButtons;
 
     void Start()
     {
         ForceExpandAll = false;
         ShowBestOnStart = true;
+        EventSystem.current.SetSelectedGameObject(PlayerSelectButtons[GameMgr.Instance.ShowDebuggerAI_PlayerId - 1].gameObject); // harcoded. fuck it.
     }
 
     public void Refresh()
@@ -67,6 +71,8 @@ public class AIDebuggerPanel : MonoBehaviour
 #endif
     }
 
+    public void ShowBestClicked() => ShowBest(GameMgr.Instance.ShowDebuggerAI_PlayerId);
+
     public void ShowBest(int playerId)
     {
         if (playerId != GameMgr.Instance.ShowDebuggerAI_PlayerId) return;
@@ -80,6 +86,9 @@ public class AIDebuggerPanel : MonoBehaviour
     {
         GameMgr.Instance.ShowDebuggerAI_PlayerId = playerId;
         GameMgr.Instance.Town.Update(); // force an update to get latest AI
+
+        // hardcode because FUCK IT
+        EventSystem.current.SetSelectedGameObject(PlayerSelectButtons[playerId - 1].gameObject);
         ShowBest(playerId);
     }
 
