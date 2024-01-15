@@ -12,9 +12,7 @@ public class AI_NodeState
     public int NodeId;
     internal bool IsResourceNode => HasBuilding && CanBeGatheredFrom;
 
-    //  public int DistanceToClosestGatherableResourceNode;
-    public int DistanceToGatherableResource_Wood;
-    public int DistanceToGatherableResource_Stone;
+    public Dictionary<GoodType, int> DistanceToGatherableResource = new();
 
     // Buildings
     public bool HasBuilding;
@@ -62,8 +60,8 @@ public class AI_NodeState
     internal void SetDistanceToResources()
     {
         //   DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
-        DistanceToGatherableResource_Wood = findClosestResourceNode(GoodType.Wood);
-        DistanceToGatherableResource_Stone = findClosestResourceNode(GoodType.Stone);
+        DistanceToGatherableResource[GoodType.Wood] = findClosestResourceNode(GoodType.Wood);
+        DistanceToGatherableResource[GoodType.Stone] = findClosestResourceNode(GoodType.Stone);
     }
 
     private int findClosestResourceNode(GoodType gatherableResource)
@@ -102,15 +100,7 @@ public class AI_NodeState
         return int.MaxValue;
     }
 
-    internal int DistanceToClosestGatherableResourceNode(GoodType goodType)
-    {
-        return goodType switch
-        {
-            GoodType.Wood => DistanceToGatherableResource_Wood,
-            GoodType.Stone => DistanceToGatherableResource_Stone,
-            _ => throw new NotImplementedException(),
-        };
-    }
+    internal int DistanceToClosestGatherableResourceNode(GoodType goodType) => DistanceToGatherableResource[goodType];
 }
 
 // public int DistanceToClosestEnemyNode

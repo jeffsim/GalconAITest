@@ -27,19 +27,11 @@ public partial class PlayerAI
         }
 
         // Update inventory counts
-        int prevWood = aiTownState.PlayerTownInventory_Wood;
-        int prevStone = aiTownState.PlayerTownInventory_Stone;
-        int prevStoneWoodPlank = aiTownState.PlayerTownInventory_StoneWoodPlank;
+        int prevWood = aiTownState.PlayerTownInventory[GoodType.Wood];
+        int prevStone = aiTownState.PlayerTownInventory[GoodType.Stone];
         foreach (var node in aiTownState.Nodes)
-        {
             if (node.CanGoGatherResources && node.OwnedBy == player)
-            {
-                if (node.ResourceThisNodeCanGoGather == GoodType.Wood)
-                    aiTownState.PlayerTownInventory_Wood++; // simple for now
-                if (node.ResourceThisNodeCanGoGather == GoodType.Stone)
-                    aiTownState.PlayerTownInventory_Stone++; // simple for now
-            }
-        }
+                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather]++; // simple for now
 
         bestAction.Score = 0;
         for (int i = 0; i < aiTownState.NumNodes; i++)
@@ -66,9 +58,8 @@ public partial class PlayerAI
         }
 
         // Restore inventory counts
-        aiTownState.PlayerTownInventory_Wood = prevWood;
-        aiTownState.PlayerTownInventory_Stone = prevStone;
-        aiTownState.PlayerTownInventory_StoneWoodPlank = prevStoneWoodPlank;
+        aiTownState.PlayerTownInventory[GoodType.Wood] = prevWood;
+        aiTownState.PlayerTownInventory[GoodType.Stone] = prevStone;
 
         return bestAction;
     }

@@ -2,15 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+
 public partial class AI_TownState
 {
     public AI_NodeState[] Nodes;
     public int NumNodes;
     PlayerData player;
 
-    public int PlayerTownInventory_Wood;
-    public int PlayerTownInventory_Stone;
-    public int PlayerTownInventory_StoneWoodPlank;
+    public Dictionary<GoodType, int> PlayerTownInventory = new();
 
     public AI_TownState(PlayerData player)
     {
@@ -50,51 +49,22 @@ public partial class AI_TownState
 
         // Accessing scriptableobjects is slower than shit.  create 'cached versions'
 
-        // Initialize inventory
+        // Initialize inventory. start with 0 for all item types o ensure keys exist
+        foreach (var key in GameDefns.Instance.GoodDefns.Values)
+            PlayerTownInventory[key.GoodType] = 0;
+
         for (int i = 0; i < NumNodes; i++)
         {
             var node = townData.Nodes[i];
             foreach (var invItem in node.Inventory)
-            {
-                // PlayerTownInventory[invItem.Key] = invItem.Value;
-                if (invItem.Key.GoodType == GoodType.Wood) PlayerTownInventory_Wood = invItem.Value;
-                else if (invItem.Key.GoodType == GoodType.Stone) PlayerTownInventory_Stone = invItem.Value;
-                else if (invItem.Key.GoodType == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = invItem.Value;
-            }
+                PlayerTownInventory[invItem.Key.GoodType] = invItem.Value;
         }
 
         for (int i = 0; i < NumNodes; i++)
             Nodes[i].Update();
     }
 
-    internal int GetNumItem(GoodDefn good)
-    {
-        if (good.GoodType == GoodType.Wood) return PlayerTownInventory_Wood;
-        else if (good.GoodType == GoodType.Stone) return PlayerTownInventory_Stone;
-        else if (good.GoodType == GoodType.StoneWoodPlank) return PlayerTownInventory_StoneWoodPlank;
-        Debug.Assert(false, "unhandled good type " + good.Id);
-        // if (PlayerTownInventory.TryGetValue(good, out int num))
-        // return num;
-        return 0;
-    }
-
-    // internal void SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
-    // {
-    //     numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
-
-    //     // We are capturing a new node; need to update lists (e.g. PlayerOwnedNodes)
-    //     sourceNode.NumWorkers -= numSent;
-    //     destNode.NumWorkers += numSent;
-    //     destNode.OwnedBy = player;
-    // }
-
-    // internal void Undo_SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)
-    // {
-    //     // We are undo'ing capture of a new node; need to restore lists (e.g. PlayerOwnedNodes)
-    //     sourceNode.NumWorkers += numSent;
-    //     destNode.NumWorkers -= numSent;
-    //     destNode.OwnedBy = null;
-    // }
+    internal int GetNumItem(GoodDefn good) => PlayerTownInventory[good.GoodType];
 
     internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
     {
@@ -108,40 +78,6 @@ public partial class AI_TownState
         sourceNode.NumWorkers += numSent;
         destNode.NumWorkers -= numSent;
     }
-
-    // internal void SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend,
-    //         out int originalSourceNodeNumWorkers, out int originalDestNodeNumWorkers, out PlayerData originalOwner)
-    // {
-    //     // store all values we need to undo the action (anything we change below)
-    //     originalSourceNodeNumWorkers = sourceNode.NumWorkers;
-    //     originalDestNodeNumWorkers = destNode.NumWorkers;
-    //     originalOwner = destNode.OwnedBy;
-
-    //     // For now, assume 1:1 attack.  In the future support e.g. stronger attackers, defensive bonus, etc.
-    //     sourceNode.NumWorkers -= numToSend;
-    //     destNode.NumWorkers -= numToSend;
-
-    //     if (destNode.NumWorkers == 0)
-    //     {
-    //         // attackers and defenders both died
-    //         destNode.OwnedBy = null;
-    //     }
-    //     else if (destNode.NumWorkers < 0)
-    //     {
-    //         // we captured the node
-    //         destNode.OwnedBy = player;
-
-    //         destNode.NumWorkers = -destNode.NumWorkers;
-    //     }
-    // }
-
-    // internal void Undo_SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode,
-    //                                            int originalSourceNodeNumWorkers, int originalDestNodeNumWorkers, PlayerData originalOwner)
-    // {
-    //     sourceNode.NumWorkers = originalSourceNodeNumWorkers;
-    //     destNode.NumWorkers = originalDestNodeNumWorkers;
-    //     destNode.OwnedBy = originalOwner;
-    // }
 
     internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, int turnNumber, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, float percentToSend, out int numSent)
     {
@@ -165,10 +101,7 @@ public partial class AI_TownState
             resource1Amount = reqs[0].Amount;
 
             // TODO: Need to consume from particular nodes, not just the town inventory
-            // PlayerTownInventory[resource1] -= resource1Amount;
-            if (resource1 == GoodType.Wood) PlayerTownInventory_Wood -= resource1Amount;
-            else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone -= resource1Amount;
-            else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource1Amount;
+            PlayerTownInventory[resource1] -= resource1Amount;
         }
         else
         {
@@ -183,10 +116,7 @@ public partial class AI_TownState
             resource2Amount = reqs[1].Amount;
 
             // TODO: Need to consume from particular nodes, not just the town inventory
-            // PlayerTownInventory[resource2] -= resource2Amount;
-            if (resource2 == GoodType.Wood) PlayerTownInventory_Wood -= resource2Amount;
-            else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone -= resource2Amount;
-            else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource2Amount;
+            PlayerTownInventory[resource2] -= resource2Amount;
         }
         else
         {
@@ -203,76 +133,9 @@ public partial class AI_TownState
         buildInNode.ClearBuilding();
 
         // Undo Consume resources
-        if (resource1 == GoodType.Wood) PlayerTownInventory_Wood += resource1Amount;
-        else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone += resource1Amount;
-        else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank += resource1Amount;
-
-        if (resource2 == GoodType.Wood) PlayerTownInventory_Wood += resource2Amount;
-        else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone += resource2Amount;
-        else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank += resource2Amount;
+        if (resource1 != GoodType.Unset) PlayerTownInventory[resource1] += resource1Amount;
+        if (resource2 != GoodType.Unset) PlayerTownInventory[resource2] += resource2Amount;
     }
-
-    // internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount)
-    // {
-    //     // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
-    //     // Debug.Assert(!node.HasBuilding, "can only build in empty nodes.");
-    //     node.SetBuilding(buildingDefn);
-
-    //     // Consume resources
-    //     var reqs = buildingDefn.ConstructionRequirements;
-    //     // Debug.Assert(reqs.Count <= 2, "only support buildings with 1 or 2 construction requirements for now.");
-
-    //     // == resource 1
-    //     if (reqs.Count > 0)
-    //     {
-    //         resource1 = reqs[0].Good.GoodType;
-    //         resource1Amount = reqs[0].Amount;
-
-    //         // TODO: Need to consume from particular nodes, not just the town inventory
-    //         // PlayerTownInventory[resource1] -= resource1Amount;
-    //         if (resource1 == GoodType.Wood) PlayerTownInventory_Wood -= resource1Amount;
-    //         else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone -= resource1Amount;
-    //         else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource1Amount;
-    //     }
-    //     else
-    //     {
-    //         resource1 = GoodType.Unset;
-    //         resource1Amount = 0;
-    //     }
-
-    //     // == resource 2
-    //     if (reqs.Count > 1)
-    //     {
-    //         resource2 = reqs[1].Good.GoodType;
-    //         resource2Amount = reqs[1].Amount;
-
-    //         // TODO: Need to consume from particular nodes, not just the town inventory
-    //         // PlayerTownInventory[resource2] -= resource2Amount;
-    //         if (resource2 == GoodType.Wood) PlayerTownInventory_Wood -= resource2Amount;
-    //         else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone -= resource2Amount;
-    //         else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource2Amount;
-    //     }
-    //     else
-    //     {
-    //         resource2 = GoodType.Unset;
-    //         resource2Amount = 0;
-    //     }
-    // }
-
-    // internal void Undo_BuildBuilding(AI_NodeState node, GoodType resource1, int resource1Amount, GoodType resource2, int resource2Amount)
-    // {
-    //     // Undo build building in empty node
-    //     node.ClearBuilding();
-
-    //     // Undo Consume resources
-    //     if (resource1 == GoodType.Wood) PlayerTownInventory_Wood = resource1Amount;
-    //     else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone = resource1Amount;
-    //     else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource1Amount;
-
-    //     if (resource2 == GoodType.Wood) PlayerTownInventory_Wood = resource2Amount;
-    //     else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone = resource2Amount;
-    //     else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource2Amount;
-    // }
 
     internal void AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner)
     {
@@ -328,12 +191,8 @@ public partial class AI_TownState
         for (int i = 0; i < NumReqs; i++)
         {
             var req = craftingReqs[i];
-            switch (req.Good.GoodType)
-            {
-                case GoodType.Wood: if (PlayerTownInventory_Wood < req.Amount) return false; break;
-                case GoodType.Stone: if (PlayerTownInventory_Stone < req.Amount) return false; break;
-                case GoodType.StoneWoodPlank: if (PlayerTownInventory_StoneWoodPlank < req.Amount) return false; break;
-            }
+            if (PlayerTownInventory[req.Good.GoodType] < req.Amount)
+                return false;
         }
         return true;
     }
