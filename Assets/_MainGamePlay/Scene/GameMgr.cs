@@ -1,32 +1,33 @@
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 public class GameMgr : MonoBehaviour
 {
     public TownData Town;
-    public NodeGO NodePrefab;
-    public Worker WorkerPrefab;
-
-    public int MaxAIDepth = 7;
-    public bool DebugOutputStrategyToConsole = false;
-    public bool DebugOutputStrategyReasons = false;
-
-    public List<NodeGO> Nodes = new();
-    public List<Worker> Workers = new();
-    public Material NodeConnectionMat;
-
-    public GameObject NodesFolder;
-    public GameObject WorkersFolder;
-
     public TownDefn TestTownDefn;
-    public WorkerDefn TestWorkerDefn;
+
+
+    [FoldoutGroup("Nodes", false)] public NodeGO NodePrefab;
+    [FoldoutGroup("Nodes", false)] public List<NodeGO> Nodes = new();
+    [FoldoutGroup("Nodes", false)] public Material NodeConnectionMat;
+    [FoldoutGroup("Nodes", false)] public GameObject NodesFolder;
+
+    [FoldoutGroup("Workers", false)] public Worker WorkerPrefab;
+    [FoldoutGroup("Workers", false)] public List<Worker> Workers = new();
+    [FoldoutGroup("Workers", false)] public GameObject WorkersFolder;
+    [FoldoutGroup("Workers", false)] public WorkerDefn TestWorkerDefn;
+
 
 #if DEBUG
     // Debugger panel
+    public AIDebuggerPanel AIDebuggerPanel;
+    public int MaxAIDepth = 7;
+    public int ShowDebuggerAI_PlayerId = 2;
     public bool ShowDebuggerAI = true;
     bool lastShowDebuggerAI;
-    public AIDebuggerPanel AIDebuggerPanel;
-    public int ShowDebuggerAI_PlayerId = 2;
+    public bool DebugOutputStrategyToConsole = false;
+    public bool DebugOutputStrategyReasons = false;
 #endif
 
     public static GameMgr Instance;

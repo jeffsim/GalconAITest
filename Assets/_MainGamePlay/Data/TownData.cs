@@ -54,8 +54,8 @@ public class TownData
     public void Update()
     {
         // testing one player for now
-        // Players[2].Update(this);
-        foreach (var player in Players)
-            player?.Update(this);
+        Players[2].Update(this);
+        // foreach (var player in Players)
+            // player?.Update(this);
     }
 }
