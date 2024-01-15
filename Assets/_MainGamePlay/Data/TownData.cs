@@ -54,11 +54,11 @@ public class TownData
 
     public void Update()
     {
-        // foreach (var player in Players)
-        // player?.Update(this);
+        foreach (var player in Players)
+            player?.Update(this);
 
         // or test just one player:
-        Players[1].Update(this);
+        // Players[1].Update(this);
     }
 
     internal void Debug_WorldTurn()

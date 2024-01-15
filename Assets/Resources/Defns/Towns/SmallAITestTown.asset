@@ -71,7 +71,7 @@ MonoBehaviour:
     StartingInventory:
       exported_Keys:
       - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
-      exported_Values: 02000000
+      exported_Values: 04000000
   - NodeId: 6
     WorldLoc: {x: -5, y: 0, z: 0}
     OwnedByPlayerId: 0
