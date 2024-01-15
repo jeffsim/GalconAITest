@@ -75,6 +75,7 @@ public partial class PlayerAI
         actionPoolIndex = 0;
 
 #if DEBUG
+        AIDebugger.TrackForCurrentPlayer = player.Id == GameMgr.Instance.ShowDebuggerAI_PlayerId;
         AIDebugger.Clear();
 #endif
         var bestAction = RecursivelyDetermineBestAction(0, 0);
@@ -89,7 +90,7 @@ public partial class PlayerAI
 
         if (triggerAIDebuggerUpdate)
         {
-            townData.OnAIDebuggerUpdate?.Invoke();
+            townData.OnAIDebuggerUpdate?.Invoke(player.Id);
             triggerAIDebuggerUpdate = false;
         }
 #endif

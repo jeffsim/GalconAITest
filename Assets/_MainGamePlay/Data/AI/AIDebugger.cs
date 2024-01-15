@@ -3,10 +3,12 @@ public static class AIDebugger
 {
     public static AIDebuggerEntryData topEntry = new();
     public static AIDebuggerEntryData curEntry;
+    public static bool TrackForCurrentPlayer;
+    public static bool ShouldTrackEntries => GameMgr.Instance.ShowDebuggerAI && TrackForCurrentPlayer;
 
     public static void Clear()
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return;
+        if (!AIDebugger.ShouldTrackEntries) return;
         curEntry = topEntry;
         curEntry.ChildEntries.Clear();
         AIDebuggerEntryData.ResetPool();
@@ -14,7 +16,7 @@ public static class AIDebugger
 
     internal static AIDebuggerEntryData TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return null;
+        if (!AIDebugger.ShouldTrackEntries) return null;
         return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
                    AIActionType.ConstructBuildingInEmptyNode,
                    fromNode,
@@ -30,7 +32,7 @@ public static class AIDebugger
 
     internal static AIDebuggerEntryData TrackPerformAction_Attack(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return null;
+        if (!AIDebugger.ShouldTrackEntries) return null;
         return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
                   AIActionType.AttackFromNode,
                   fromNode,
@@ -46,7 +48,7 @@ public static class AIDebugger
 
     private static AIDebuggerEntryData PushPerformedAction(AIDebuggerEntryData aIDebuggerEntryData)
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return null;
+        if (!AIDebugger.ShouldTrackEntries) return null;
 
         aIDebuggerEntryData.DebugOutput();
         curEntry.ChildEntries.Add(aIDebuggerEntryData);
@@ -58,7 +60,7 @@ public static class AIDebugger
 
     internal static void PopPerformedAction(AIDebuggerEntryData prevEntry)
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return;
+        if (!AIDebugger.ShouldTrackEntries) return;
 
         curEntry = prevEntry;// curEntry.ParentEntry;
     }

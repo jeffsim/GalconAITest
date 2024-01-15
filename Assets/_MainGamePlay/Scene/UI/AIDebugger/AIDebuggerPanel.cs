@@ -67,12 +67,20 @@ public class AIDebuggerPanel : MonoBehaviour
 #endif
     }
 
-    public void ShowBest()
+    public void ShowBest(int playerId)
     {
+        if (playerId != GameMgr.Instance.ShowDebuggerAI_PlayerId) return;
         //     recursivelyIdentifyHighestScoreAmongPeers(AIDebugger.topEntry);
         clearBestStrategyPaths(AIDebugger.topEntry);
         identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
         Refresh();
+    }
+
+    public void OnShowForPlayerIdClicked(int playerId)
+    {
+        GameMgr.Instance.ShowDebuggerAI_PlayerId = playerId;
+        GameMgr.Instance.Town.Update(); // force an update to get latest AI
+        ShowBest(playerId);
     }
 
     private void clearBestStrategyPaths(AIDebuggerEntryData curEntry)

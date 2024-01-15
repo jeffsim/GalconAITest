@@ -9,7 +9,7 @@ public class TownData
     public List<NodeData> Nodes = new();
     public List<WorkerData> Workers = new();
 
-    public Action OnAIDebuggerUpdate { get; internal set; }
+    public Action<int> OnAIDebuggerUpdate { get; internal set; }
 
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
     {
@@ -17,9 +17,9 @@ public class TownData
 
         // Create players
         Players.Add(null); // no player (e.g. for unowned Node)
-        Players.Add(new PlayerData() { Name = "Player R", Color = Color.red, ControlledByAI = true, WorkerDefn = testWorkerDefn });
-        Players.Add(new PlayerData() { Name = "Player G", Color = Color.green, ControlledByAI = true, WorkerDefn = testWorkerDefn });
-        Players.Add(new PlayerData() { Name = "Player B", Color = Color.blue, ControlledByAI = true, WorkerDefn = testWorkerDefn });
+        Players.Add(new PlayerData() { Id = 1, Name = "Player R", Color = Color.red, ControlledByAI = true, WorkerDefn = testWorkerDefn });
+        Players.Add(new PlayerData() { Id = 2, Name = "Player G", Color = Color.green, ControlledByAI = true, WorkerDefn = testWorkerDefn });
+        Players.Add(new PlayerData() { Id = 3, Name = "Player B", Color = Color.blue, ControlledByAI = true, WorkerDefn = testWorkerDefn });
 
         // Create Nodes
         foreach (var nodeDefn in townDefn.Nodes)
@@ -54,8 +54,8 @@ public class TownData
     public void Update()
     {
         // testing one player for now
-        Players[2].Update(this);
-        // foreach (var player in Players)
-        //     player?.Update(this);
+        // Players[2].Update(this);
+        foreach (var player in Players)
+            player?.Update(this);
     }
 }

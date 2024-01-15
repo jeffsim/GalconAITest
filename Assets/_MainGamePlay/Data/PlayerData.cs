@@ -5,6 +5,7 @@ public class PlayerData
 {
     public WorkerDefn WorkerDefn;
     public string Name;
+    public int Id;
     public Color Color = Color.white;
     public bool ControlledByAI;
     PlayerAI AI;

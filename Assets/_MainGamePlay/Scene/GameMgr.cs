@@ -8,7 +8,6 @@ public class GameMgr : MonoBehaviour
     public Worker WorkerPrefab;
 
     public int MaxAIDepth = 7;
-    public bool ShowDebuggerAI = true;
     public bool DebugOutputStrategyToConsole = false;
     public bool DebugOutputStrategyReasons = false;
 
@@ -24,8 +23,10 @@ public class GameMgr : MonoBehaviour
 
 #if DEBUG
     // Debugger panel
+    public bool ShowDebuggerAI = true;
     bool lastShowDebuggerAI;
     public AIDebuggerPanel AIDebuggerPanel;
+    public int ShowDebuggerAI_PlayerId = 2;
 #endif
 
     public static GameMgr Instance;
@@ -81,6 +82,12 @@ public class GameMgr : MonoBehaviour
         ResetTown();
     }
 
+    public void OnStepClicked()
+    {
+        // move the world forward one turn
+        Debug.Log("OnStepClicked");
+    }
+
     private void addLineRenderer(NodeData startNode, NodeData endNode)
     {
         LineRenderer lineRenderer = new GameObject("Path Line").AddComponent<LineRenderer>();
@@ -101,9 +108,9 @@ public class GameMgr : MonoBehaviour
         Town.Update();
 
 #if DEBUG
-        if (lastShowDebuggerAI != GameMgr.Instance.ShowDebuggerAI)
+        if (lastShowDebuggerAI != ShowDebuggerAI)
         {
-            lastShowDebuggerAI = GameMgr.Instance.ShowDebuggerAI;
+            lastShowDebuggerAI = ShowDebuggerAI;
             AIDebuggerPanel.gameObject.SetActive(lastShowDebuggerAI);
             if (lastShowDebuggerAI)
                 AIDebuggerPanel.Refresh();
