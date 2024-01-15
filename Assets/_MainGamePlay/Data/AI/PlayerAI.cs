@@ -83,6 +83,10 @@ public partial class PlayerAI
         performAction(bestAction);
 
 #if DEBUG
+
+        // for ALL entries, calculate the count of all child entries under it and store in entry.AllChildEntriesCount
+        AIDebugger.topEntry.CalculateAllChildEntriesCount();
+
         if (triggerAIDebuggerUpdate)
         {
             townData.OnAIDebuggerUpdate?.Invoke();

@@ -20,6 +20,7 @@ public class AIDebuggerEntryData
     public AIDebuggerEntryData ParentEntry;
 
     public List<AIDebuggerEntryData> ChildEntries = new(10);
+    public int AllChildEntriesCount;
 
     public bool IsBestOption;
 
@@ -97,6 +98,17 @@ public class AIDebuggerEntryData
             case AIActionType.SendWorkersToOwnedNode: return NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
             case AIActionType.SendWorkersToEmptyNode: return NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
             default: return "TODO: " + ActionType + "";
+        }
+    }
+
+    internal void CalculateAllChildEntriesCount()
+    {
+        // for ALL entries, calculate the count of all child entries under it and store in entry.AllChildEntriesCount
+        AllChildEntriesCount = ChildEntries.Count;
+        foreach (var childEntry in ChildEntries)
+        {
+            childEntry.CalculateAllChildEntriesCount();
+            AllChildEntriesCount += childEntry.AllChildEntriesCount;
         }
     }
 }

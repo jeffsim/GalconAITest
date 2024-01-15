@@ -8,6 +8,7 @@ public class AIDebuggerEntry : MonoBehaviour
     public TextMeshProUGUI ActionType;
     public TextMeshProUGUI Information;
     public TextMeshProUGUI Score;
+    public TextMeshProUGUI Count;
     public Button ThisButton;
     AIDebuggerEntryData entry;
     AIDebuggerPanel panel;
@@ -40,6 +41,9 @@ public class AIDebuggerEntry : MonoBehaviour
         }
         Information.text = entry.InformationString();
         Score.text = entry.Score.ToString("0.0");
+
+        // Count shows "(X,Y)" where X is the # of immediate children and Y is the # of all children
+        Count.text = "(" + entry.ChildEntries.Count + ", " + entry.AllChildEntriesCount + ")";
 
         // Indent
         var rt = ThisButton.GetComponent<RectTransform>();
