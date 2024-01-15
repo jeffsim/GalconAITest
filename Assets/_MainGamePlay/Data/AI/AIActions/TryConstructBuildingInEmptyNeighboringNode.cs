@@ -2,7 +2,7 @@ using UnityEngine;
 
 public partial class PlayerAI
 {
-    private void TrySendWorkersToConstructBuildingInEmptyNeighboringNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
+    private void TrySendWorkersToConstructBuildingInEmptyNeighboringNode(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount, int actionNumberOnEntry)
     {
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return; // not enough workers in node to send any out
@@ -34,7 +34,7 @@ public partial class PlayerAI
 
                 // ==== Perform the action and get the score of the state after the action is performed
                 float percentOfWorkersToSend = .5f; // TODO: Try different #s?
-                aiTownState.SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, buildingDefn, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount, percentOfWorkersToSend, out int numSent);
+                aiTownState.SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, buildingDefn, curDepth, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount, percentOfWorkersToSend, out int numSent);
                 aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
 #if DEBUG
@@ -52,7 +52,7 @@ public partial class PlayerAI
                     bestAction.DestNode = toNode;
                     bestAction.BuildingToConstruct = buildingDefn;
 #if DEBUG
-                    bestAction.TrackStrategyDebugInfoInAction(actionScore, debugOutput_actionScoreReasons, thisActionNum, recurseCount, curDepth);
+                    bestAction.TrackStrategyDebugInfoInAction(actionScore, debugOutput_actionScoreReasons, actionNumberOnEntry, recurseCount, curDepth);
 #endif
                 }
 

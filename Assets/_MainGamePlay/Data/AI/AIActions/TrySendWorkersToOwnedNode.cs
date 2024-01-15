@@ -42,7 +42,7 @@ public partial class PlayerAI
             }
 
             // Undo the action
-            aiTownState.Undo_SendWorkersToEmptyNode(fromNode, toNode, numSent);
+            aiTownState.Undo_SendWorkersToOwnedNode(fromNode, toNode, numSent);
         }
     }
 }

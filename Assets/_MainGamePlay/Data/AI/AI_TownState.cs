@@ -8,9 +8,9 @@ public partial class AI_TownState
     public int NumNodes;
     PlayerData player;
 
-    int PlayerTownInventory_Wood;
-    int PlayerTownInventory_Stone;
-    int PlayerTownInventory_StoneWoodPlank;
+    public int PlayerTownInventory_Wood;
+    public int PlayerTownInventory_Stone;
+    public int PlayerTownInventory_StoneWoodPlank;
 
     public AI_TownState(PlayerData player)
     {
@@ -78,23 +78,23 @@ public partial class AI_TownState
         return 0;
     }
 
-    internal void SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
-    {
-        numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
+    // internal void SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
+    // {
+    //     numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
 
-        // We are capturing a new node; need to update lists (e.g. PlayerOwnedNodes)
-        sourceNode.NumWorkers -= numSent;
-        destNode.NumWorkers += numSent;
-        destNode.OwnedBy = player;
-    }
+    //     // We are capturing a new node; need to update lists (e.g. PlayerOwnedNodes)
+    //     sourceNode.NumWorkers -= numSent;
+    //     destNode.NumWorkers += numSent;
+    //     destNode.OwnedBy = player;
+    // }
 
-    internal void Undo_SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)
-    {
-        // We are undo'ing capture of a new node; need to restore lists (e.g. PlayerOwnedNodes)
-        sourceNode.NumWorkers += numSent;
-        destNode.NumWorkers -= numSent;
-        destNode.OwnedBy = null;
-    }
+    // internal void Undo_SendWorkersToEmptyNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)
+    // {
+    //     // We are undo'ing capture of a new node; need to restore lists (e.g. PlayerOwnedNodes)
+    //     sourceNode.NumWorkers += numSent;
+    //     destNode.NumWorkers -= numSent;
+    //     destNode.OwnedBy = null;
+    // }
 
     internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
     {
@@ -109,41 +109,41 @@ public partial class AI_TownState
         destNode.NumWorkers -= numSent;
     }
 
-    internal void SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend,
-            out int originalSourceNodeNumWorkers, out int originalDestNodeNumWorkers, out PlayerData originalOwner)
-    {
-        // store all values we need to undo the action (anything we change below)
-        originalSourceNodeNumWorkers = sourceNode.NumWorkers;
-        originalDestNodeNumWorkers = destNode.NumWorkers;
-        originalOwner = destNode.OwnedBy;
+    // internal void SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend,
+    //         out int originalSourceNodeNumWorkers, out int originalDestNodeNumWorkers, out PlayerData originalOwner)
+    // {
+    //     // store all values we need to undo the action (anything we change below)
+    //     originalSourceNodeNumWorkers = sourceNode.NumWorkers;
+    //     originalDestNodeNumWorkers = destNode.NumWorkers;
+    //     originalOwner = destNode.OwnedBy;
 
-        // For now, assume 1:1 attack.  In the future support e.g. stronger attackers, defensive bonus, etc.
-        sourceNode.NumWorkers -= numToSend;
-        destNode.NumWorkers -= numToSend;
+    //     // For now, assume 1:1 attack.  In the future support e.g. stronger attackers, defensive bonus, etc.
+    //     sourceNode.NumWorkers -= numToSend;
+    //     destNode.NumWorkers -= numToSend;
 
-        if (destNode.NumWorkers == 0)
-        {
-            // attackers and defenders both died
-            destNode.OwnedBy = null;
-        }
-        else if (destNode.NumWorkers < 0)
-        {
-            // we captured the node
-            destNode.OwnedBy = player;
+    //     if (destNode.NumWorkers == 0)
+    //     {
+    //         // attackers and defenders both died
+    //         destNode.OwnedBy = null;
+    //     }
+    //     else if (destNode.NumWorkers < 0)
+    //     {
+    //         // we captured the node
+    //         destNode.OwnedBy = player;
 
-            destNode.NumWorkers = -destNode.NumWorkers;
-        }
-    }
+    //         destNode.NumWorkers = -destNode.NumWorkers;
+    //     }
+    // }
 
-    internal void Undo_SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode,
-                                               int originalSourceNodeNumWorkers, int originalDestNodeNumWorkers, PlayerData originalOwner)
-    {
-        sourceNode.NumWorkers = originalSourceNodeNumWorkers;
-        destNode.NumWorkers = originalDestNodeNumWorkers;
-        destNode.OwnedBy = originalOwner;
-    }
+    // internal void Undo_SendWorkersToAttackNode(AI_NodeState sourceNode, AI_NodeState destNode,
+    //                                            int originalSourceNodeNumWorkers, int originalDestNodeNumWorkers, PlayerData originalOwner)
+    // {
+    //     sourceNode.NumWorkers = originalSourceNodeNumWorkers;
+    //     destNode.NumWorkers = originalDestNodeNumWorkers;
+    //     destNode.OwnedBy = originalOwner;
+    // }
 
-    internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, float percentToSend, out int numSent)
+    internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, int turnNumber, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, float percentToSend, out int numSent)
     {
         numSent = Math.Max(1, (int)(sendFromNode.NumWorkers * percentToSend));
         sendFromNode.NumWorkers -= numSent;
@@ -152,7 +152,7 @@ public partial class AI_TownState
 
         // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
         // Debug.Assert(!node.HasBuilding, "can only build in empty nodes.");
-        buildInNode.SetBuilding(buildingDefn);
+        buildInNode.SetBuilding(buildingDefn, turnNumber);
 
         // Consume resources
         var reqs = buildingDefn.ConstructionRequirements;
@@ -212,67 +212,67 @@ public partial class AI_TownState
         else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank += resource2Amount;
     }
 
-    internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount)
-    {
-        // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
-        // Debug.Assert(!node.HasBuilding, "can only build in empty nodes.");
-        node.SetBuilding(buildingDefn);
+    // internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount)
+    // {
+    //     // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
+    //     // Debug.Assert(!node.HasBuilding, "can only build in empty nodes.");
+    //     node.SetBuilding(buildingDefn);
 
-        // Consume resources
-        var reqs = buildingDefn.ConstructionRequirements;
-        // Debug.Assert(reqs.Count <= 2, "only support buildings with 1 or 2 construction requirements for now.");
+    //     // Consume resources
+    //     var reqs = buildingDefn.ConstructionRequirements;
+    //     // Debug.Assert(reqs.Count <= 2, "only support buildings with 1 or 2 construction requirements for now.");
 
-        // == resource 1
-        if (reqs.Count > 0)
-        {
-            resource1 = reqs[0].Good.GoodType;
-            resource1Amount = reqs[0].Amount;
+    //     // == resource 1
+    //     if (reqs.Count > 0)
+    //     {
+    //         resource1 = reqs[0].Good.GoodType;
+    //         resource1Amount = reqs[0].Amount;
 
-            // TODO: Need to consume from particular nodes, not just the town inventory
-            // PlayerTownInventory[resource1] -= resource1Amount;
-            if (resource1 == GoodType.Wood) PlayerTownInventory_Wood -= resource1Amount;
-            else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone -= resource1Amount;
-            else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource1Amount;
-        }
-        else
-        {
-            resource1 = GoodType.Unset;
-            resource1Amount = 0;
-        }
+    //         // TODO: Need to consume from particular nodes, not just the town inventory
+    //         // PlayerTownInventory[resource1] -= resource1Amount;
+    //         if (resource1 == GoodType.Wood) PlayerTownInventory_Wood -= resource1Amount;
+    //         else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone -= resource1Amount;
+    //         else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource1Amount;
+    //     }
+    //     else
+    //     {
+    //         resource1 = GoodType.Unset;
+    //         resource1Amount = 0;
+    //     }
 
-        // == resource 2
-        if (reqs.Count > 1)
-        {
-            resource2 = reqs[1].Good.GoodType;
-            resource2Amount = reqs[1].Amount;
+    //     // == resource 2
+    //     if (reqs.Count > 1)
+    //     {
+    //         resource2 = reqs[1].Good.GoodType;
+    //         resource2Amount = reqs[1].Amount;
 
-            // TODO: Need to consume from particular nodes, not just the town inventory
-            // PlayerTownInventory[resource2] -= resource2Amount;
-            if (resource2 == GoodType.Wood) PlayerTownInventory_Wood -= resource2Amount;
-            else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone -= resource2Amount;
-            else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource2Amount;
-        }
-        else
-        {
-            resource2 = GoodType.Unset;
-            resource2Amount = 0;
-        }
-    }
+    //         // TODO: Need to consume from particular nodes, not just the town inventory
+    //         // PlayerTownInventory[resource2] -= resource2Amount;
+    //         if (resource2 == GoodType.Wood) PlayerTownInventory_Wood -= resource2Amount;
+    //         else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone -= resource2Amount;
+    //         else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank -= resource2Amount;
+    //     }
+    //     else
+    //     {
+    //         resource2 = GoodType.Unset;
+    //         resource2Amount = 0;
+    //     }
+    // }
 
-    internal void Undo_BuildBuilding(AI_NodeState node, GoodType resource1, int resource1Amount, GoodType resource2, int resource2Amount)
-    {
-        // Undo build building in empty node
-        node.ClearBuilding();
+    // internal void Undo_BuildBuilding(AI_NodeState node, GoodType resource1, int resource1Amount, GoodType resource2, int resource2Amount)
+    // {
+    //     // Undo build building in empty node
+    //     node.ClearBuilding();
 
-        // Undo Consume resources
-        if (resource1 == GoodType.Wood) PlayerTownInventory_Wood = resource1Amount;
-        else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone = resource1Amount;
-        else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource1Amount;
+    //     // Undo Consume resources
+    //     if (resource1 == GoodType.Wood) PlayerTownInventory_Wood = resource1Amount;
+    //     else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone = resource1Amount;
+    //     else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource1Amount;
 
-        if (resource2 == GoodType.Wood) PlayerTownInventory_Wood = resource2Amount;
-        else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone = resource2Amount;
-        else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource2Amount;
-    }
+    //     if (resource2 == GoodType.Wood) PlayerTownInventory_Wood = resource2Amount;
+    //     else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone = resource2Amount;
+    //     else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource2Amount;
+    // }
 
     internal void AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner)
     {

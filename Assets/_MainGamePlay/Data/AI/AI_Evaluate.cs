@@ -42,7 +42,15 @@ public partial class AI_TownState
                         int dist = node.DistanceToClosestGatherableResourceNode(node.ResourceThisNodeCanGoGather);
                         if (dist == 1)
                         {
-                            score += 2f;
+                            score += 1.5f;
+
+                            // The longer we've owned the node, the more useful it is.  Use node.TurnBuildingWasBuilt, which goes from 0 to maxStateDepth, to weight the score
+                            // where turn 0 is the first turn, and maxStateDepth is the last turn
+                            // building built turn 0; currently on turn 10; multiply score by 10
+                            // building built turn 5; currently on turn 10; multiply score by 5
+                            score += (maxStateDepth - node.TurnBuildingWasBuilt) * .1f;
+
+
 #if DEBUG
                             scoreReasons?.ScoresFrom_ResourceGatherersCloseToResourceNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = 2f });
 #endif

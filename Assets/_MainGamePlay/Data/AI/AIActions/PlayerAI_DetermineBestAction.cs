@@ -4,19 +4,9 @@ public partial class PlayerAI
 {
     // Determine the best action that can be taken given the current aiTownState and return that action, ensuring
     // that aiTownState is fully restored to its original state before returning.
-    // Actions a player-owned Node can take:
-    // 1. Send 50% of workers to a node that neighbors the node
-    // 2. Construct a building in a node we own. 
     AIAction RecursivelyDetermineBestAction(int curDepth, float scoreOnEntry)
     {
-#if DEBUG
         var recurseCount = ++debugOutput_callsToRecursivelyDetermineBestAction;
-        // if (debugOutput_ActionsTried >= maxPoolSize)
-        // {
-        //     Debug.Assert(debugOutput_ActionsTried < maxPoolSize, "stuck in loop in RecursivelyDetermineBestAction ");
-        //     return new AIAction() { Type = AIActionType.ERROR_StuckInLoop, Score = scoreOnEntry };
-        // }
-#endif
 
         if (actionPoolIndex >= maxPoolSize)
         {
@@ -36,6 +26,21 @@ public partial class PlayerAI
             return bestAction;
         }
 
+        // Update inventory counts
+        int prevWood = aiTownState.PlayerTownInventory_Wood;
+        int prevStone = aiTownState.PlayerTownInventory_Stone;
+        int prevStoneWoodPlank = aiTownState.PlayerTownInventory_StoneWoodPlank;
+        foreach (var node in aiTownState.Nodes)
+        {
+            if (node.CanGoGatherResources && node.OwnedBy == player)
+            {
+                if (node.ResourceThisNodeCanGoGather == GoodType.Wood)
+                    aiTownState.PlayerTownInventory_Wood++; // simple for now
+                if (node.ResourceThisNodeCanGoGather == GoodType.Stone)
+                    aiTownState.PlayerTownInventory_Stone++; // simple for now
+            }
+        }
+
         bestAction.Score = 0;
         for (int i = 0; i < aiTownState.NumNodes; i++)
         {
@@ -45,29 +50,25 @@ public partial class PlayerAI
             TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
             TryAttackFromNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
             //      TrySendWorkersToOwnedNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
-
-            // different approach; identify N tactical options based on current state and weigh each option.  sort of goap/utility?
-            // tactic: enable gathering of more resources (wood, etc)
-            //    valuable if: we can 'see' a resource node that we don't own and we have workers that can reach it and we don't have a building that can gather that resource
-            //                 AND we need the resource.  Resource need is determined by ...
-            // tactic: enable generation of more crafted items (planks, etc) - enables generation of buildings
-            // tactic: attack enemy node
-            // tactic: defend node by sending workers to it
-            // 
-
-
-            // TryConstructBuildingInOwnedEmptyNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
-            // TryConstructBuildingInNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
-            // TryAttackFromNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
         }
 
         if (bestAction.Score <= scoreOnEntry)
         {
-            // couldn't find an action that resulted in a better state; do nothing
+            // couldn't find an action that resulted in a better state; do nothing for a turn and see if e.g. resources accumulate to allow a better action next turn
             bestAction.Type = AIActionType.DoNothing; // ???
             bestAction.DebugOutput_NextAction = null;
             bestAction.Score = scoreOnEntry;
+
+            aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
+            bestAction.Score = scoreAfterActionAndBeforeSubActions;
+
+            RecursivelyDetermineBestAction(curDepth + 1, scoreOnEntry);
         }
+
+        // Restore inventory counts
+        aiTownState.PlayerTownInventory_Wood = prevWood;
+        aiTownState.PlayerTownInventory_Stone = prevStone;
+        aiTownState.PlayerTownInventory_StoneWoodPlank = prevStoneWoodPlank;
 
         return bestAction;
     }

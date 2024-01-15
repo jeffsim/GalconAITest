@@ -18,6 +18,7 @@ public class AI_NodeState
 
     // Buildings
     public bool HasBuilding;
+    public int TurnBuildingWasBuilt;    // used to determine how long we've owned the building; e.g. building a woodcutter sooner rahter than later is better
 
     public bool CanGoGatherResources;
     public GoodType ResourceThisNodeCanGoGather;
@@ -30,13 +31,16 @@ public class AI_NodeState
 
     public void ClearBuilding() => HasBuilding = false;
 
-    public void SetBuilding(BuildingDefn buildingDefn)
+    public void SetBuilding(BuildingDefn buildingDefn, int turnNumber)
     {
         HasBuilding = true;
+        TurnBuildingWasBuilt = turnNumber;
         CanGoGatherResources = buildingDefn.CanGatherResources;
         if (CanGoGatherResources)
             ResourceThisNodeCanGoGather = buildingDefn.ResourceThisNodeCanGoGather.GoodType;
 
+        // This can only happen at start; e.g. this is a forest - don't need to handle every time a building is built
+        // ^ that's only true if we don't allow resource nodes to be built
         CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
         if (CanBeGatheredFrom)
             ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
@@ -80,7 +84,7 @@ public class AI_NodeState
         if (nodeData.Building == null)
             ClearBuilding();
         else
-            SetBuilding(nodeData.Building.Defn);
+            SetBuilding(nodeData.Building.Defn, 0);
         NumWorkers = nodeData.NumWorkers;
         OwnedBy = nodeData.OwnedBy;
     }
@@ -100,13 +104,12 @@ public class AI_NodeState
 
     internal int DistanceToClosestGatherableResourceNode(GoodType goodType)
     {
-        switch (goodType)
+        return goodType switch
         {
-            case GoodType.Wood: return DistanceToGatherableResource_Wood;
-            case GoodType.Stone: return DistanceToGatherableResource_Stone;
-            default:
-                throw new NotImplementedException();
-        }
+            GoodType.Wood => DistanceToGatherableResource_Wood,
+            GoodType.Stone => DistanceToGatherableResource_Stone,
+            _ => throw new NotImplementedException(),
+        };
     }
 }
 
