@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class GameMgr : MonoBehaviour
+public class AITestScene : MonoBehaviour
 {
     public TownData Town;
     public TownDefn TestTownDefn;
@@ -29,7 +29,7 @@ public class GameMgr : MonoBehaviour
     public bool DebugOutputStrategyReasons = false;
 #endif
 
-    public static GameMgr Instance;
+    public static AITestScene Instance;
 
     void OnEnable()
     {
@@ -85,7 +85,7 @@ public class GameMgr : MonoBehaviour
     {
         // move the world forward one turn
         Town.Debug_WorldTurn();
-        GameMgr.Instance.Town.Update(); // force an update to get latest AI
+        AITestScene.Instance.Town.Update(); // force an update to get latest AI
         AIDebuggerPanel.ShowBestClicked();
     }
 

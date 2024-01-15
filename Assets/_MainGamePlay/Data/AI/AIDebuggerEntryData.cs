@@ -78,7 +78,7 @@ public class AIDebuggerEntryData
 
     public void DebugOutput()
     {
-        if (!GameMgr.Instance.DebugOutputStrategyToConsole) return;
+        if (!AITestScene.Instance.DebugOutputStrategyToConsole) return;
         switch (ActionType)
         {
             case AIActionType.ConstructBuildingInEmptyNode:

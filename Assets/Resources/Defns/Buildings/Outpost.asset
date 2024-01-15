@@ -37,5 +37,5 @@ MonoBehaviour:
   ResourceGatheredFromThisNode: {fileID: 0}
   CanCraftGoods: 0
   CraftableGoods: []
-  CanGenerateWorkers: 0
-  GeneratableWorker: {fileID: 11400000, guid: 39551361d0d95bf42abb5a0ce17de970, type: 2}
+  CanGenerateWorkers: 1
+  GeneratableWorker: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}

@@ -3669,7 +3669,7 @@ GameObject:
   - component: {fileID: 2056783223}
   - component: {fileID: 2056783224}
   m_Layer: 0
-  m_Name: GameMgr
+  m_Name: AITestScene
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

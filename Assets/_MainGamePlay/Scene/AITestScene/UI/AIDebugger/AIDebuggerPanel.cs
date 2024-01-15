@@ -16,12 +16,12 @@ public class AIDebuggerPanel : MonoBehaviour
     {
         ForceExpandAll = false;
         ShowBestOnStart = true;
-        EventSystem.current.SetSelectedGameObject(PlayerSelectButtons[GameMgr.Instance.DebugPlayerToViewDetailsOn.Id - 1].gameObject); // harcoded. fuck it.
+        EventSystem.current.SetSelectedGameObject(PlayerSelectButtons[AITestScene.Instance.DebugPlayerToViewDetailsOn.Id - 1].gameObject); // harcoded. fuck it.
     }
 
     public void Refresh()
     {
-        if (!GameMgr.Instance.ShowDebuggerAI) return;
+        if (!AITestScene.Instance.ShowDebuggerAI) return;
 
         List.RemoveAllChildren();
 
@@ -72,11 +72,11 @@ public class AIDebuggerPanel : MonoBehaviour
 #endif
     }
 
-    public void ShowBestClicked() => ShowBest(GameMgr.Instance.DebugPlayerToViewDetailsOn.Id);
+    public void ShowBestClicked() => ShowBest(AITestScene.Instance.DebugPlayerToViewDetailsOn.Id);
 
     public void ShowBest(int playerId)
     {
-        if (playerId != GameMgr.Instance.DebugPlayerToViewDetailsOn.Id) return;
+        if (playerId != AITestScene.Instance.DebugPlayerToViewDetailsOn.Id) return;
         //     recursivelyIdentifyHighestScoreAmongPeers(AIDebugger.topEntry);
         clearBestStrategyPaths(AIDebugger.topEntry);
         identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
@@ -85,8 +85,8 @@ public class AIDebuggerPanel : MonoBehaviour
 
     public void OnShowForPlayerIdClicked(int playerId)
     {
-        GameMgr.Instance.DebugPlayerToViewDetailsOn = GameMgr.Instance.Town.Players[playerId];
-        GameMgr.Instance.Town.Update(); // force an update to get latest AI
+        AITestScene.Instance.DebugPlayerToViewDetailsOn = AITestScene.Instance.Town.Players[playerId];
+        AITestScene.Instance.Town.Update(); // force an update to get latest AI
 
         // hardcode because FUCK IT
         EventSystem.current.SetSelectedGameObject(PlayerSelectButtons[playerId - 1].gameObject);

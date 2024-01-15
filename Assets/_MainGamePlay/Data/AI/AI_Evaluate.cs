@@ -7,7 +7,7 @@ public partial class AI_TownState
 
         scoreReasons = null;
 #if DEBUG
-        if (GameMgr.Instance.DebugOutputStrategyReasons)
+        if (AITestScene.Instance.DebugOutputStrategyReasons)
             scoreReasons = new();
 #endif
 

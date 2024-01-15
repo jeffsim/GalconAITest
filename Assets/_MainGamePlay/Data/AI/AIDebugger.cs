@@ -4,7 +4,7 @@ public static class AIDebugger
     public static AIDebuggerEntryData topEntry = new();
     public static AIDebuggerEntryData curEntry;
     public static bool TrackForCurrentPlayer;
-    public static bool ShouldTrackEntries => GameMgr.Instance.ShowDebuggerAI && TrackForCurrentPlayer;
+    public static bool ShouldTrackEntries => AITestScene.Instance.ShowDebuggerAI && TrackForCurrentPlayer;
 
     public static void Clear()
     {

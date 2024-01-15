@@ -5,7 +5,7 @@ public partial class PlayerAI
 {
     private void performAction(AIAction bestAction)
     {
-        if (!GameMgr.Instance.DebugOutputStrategyToConsole)
+        if (!AITestScene.Instance.DebugOutputStrategyToConsole)
             return;
         if (bestAction.Type == AIActionType.DoNothing)
             return; // no action to take
@@ -52,7 +52,7 @@ public partial class PlayerAI
             }
 
             // add score reasons
-            if (GameMgr.Instance.DebugOutputStrategyReasons)
+            if (AITestScene.Instance.DebugOutputStrategyReasons)
             {
                 str += " | Score reasons: ";
                 str += actionToOutput.DebugOutput_ScoreReasonsBeforeSubActions;

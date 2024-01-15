@@ -23,11 +23,16 @@ MonoBehaviour:
     SerializationNodes: []
   Id: Camp
   Name: Camp
+  Description: 
   Color: {r: 0.5529971, g: 0, b: 1, a: 1}
   WorkerDefn: {fileID: 0}
   CanBeBuiltByPlayer: 0
   ConstructionRequirements: []
   CanGatherResources: 0
-  GatherableResource: {fileID: 0}
+  ResourceThisNodeCanGoGather: {fileID: 0}
+  CanBeGatheredFrom: 0
+  ResourceGatheredFromThisNode: {fileID: 0}
   CanCraftGoods: 0
   CraftableGoods: []
+  CanGenerateWorkers: 1
+  GeneratableWorker: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}

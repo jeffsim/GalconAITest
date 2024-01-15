@@ -117,13 +117,13 @@ public class AIAction
 
     public void TrackStrategyDebugInfoInAction(AIAction actionScore, DebugAIStateReasons debugOutput_actionScoreReasons, int thisActionNum, int recurseCount, int curDepth)
     {
-        if (!GameMgr.Instance.DebugOutputStrategyToConsole) return;
+        if (!AITestScene.Instance.DebugOutputStrategyToConsole) return;
 
         DebugOutput_NextAction = actionScore;
         DebugOutput_TriedActionNum = thisActionNum;
         DebugOutput_RecursionNum = recurseCount;
         DebugOutput_Depth = curDepth;
-        if (GameMgr.Instance.DebugOutputStrategyReasons)
+        if (AITestScene.Instance.DebugOutputStrategyReasons)
             DebugOutput_ScoreReasonsBeforeSubActions = debugOutput_actionScoreReasons;
     }
 

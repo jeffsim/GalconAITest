@@ -49,21 +49,21 @@ public partial class PlayerAI
 
     internal void Update(TownData townData)
     {
-        maxDepth = GameMgr.Instance.MaxAIDepth;
+        maxDepth = AITestScene.Instance.MaxAIDepth;
 
         aiTownState.UpdateState(townData);
 
 #if DEBUG
         bool triggerAIDebuggerUpdate = false;
-        if (lastMaxDepth != GameMgr.Instance.MaxAIDepth)
+        if (lastMaxDepth != AITestScene.Instance.MaxAIDepth)
         {
-            lastMaxDepth = GameMgr.Instance.MaxAIDepth;
+            lastMaxDepth = AITestScene.Instance.MaxAIDepth;
             ConsoleClearer.ClearConsole();
 
             triggerAIDebuggerUpdate = true;
         }
 
-        if (GameMgr.Instance.DebugOutputStrategyReasons)
+        if (AITestScene.Instance.DebugOutputStrategyReasons)
         {
             for (int i = 0; i < actionPool.Length; i++)
                 actionPool[i].Reset();
@@ -76,11 +76,11 @@ public partial class PlayerAI
         actionPoolIndex = 0;
 
 #if DEBUG
-        AIDebugger.TrackForCurrentPlayer = player == GameMgr.Instance.DebugPlayerToViewDetailsOn;
+        AIDebugger.TrackForCurrentPlayer = player == AITestScene.Instance.DebugPlayerToViewDetailsOn;
         AIDebugger.Clear();
 #endif
         BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
-        if (GameMgr.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
+        if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
         // performAction(BestNextActionToTake);
 

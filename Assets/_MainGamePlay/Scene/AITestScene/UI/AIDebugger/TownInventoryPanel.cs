@@ -8,7 +8,7 @@ public class TownInventoryPanel : MonoBehaviour
 
     void Update()
     {
-        var player = GameMgr.Instance.DebugPlayerToViewDetailsOn;
+        var player = AITestScene.Instance.DebugPlayerToViewDetailsOn;
 
         // todo: cache
         Wood.text = "Wood: " + getNumItemInPlayerInventory(player, GoodType.Wood);
@@ -18,7 +18,7 @@ public class TownInventoryPanel : MonoBehaviour
     private int getNumItemInPlayerInventory(PlayerData player, GoodType good)
     {
         int count = 0;
-        foreach (var node in GameMgr.Instance.Town.Nodes)
+        foreach (var node in AITestScene.Instance.Town.Nodes)
             if (node.OwnedBy == player)
                 count += node.Inventory[good];
         return count;
