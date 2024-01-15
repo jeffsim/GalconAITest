@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 315161828a8d7453f963b5d8d419bac3, type: 3}
-  m_Name: Woodcutter
+  m_Name: Outpost
   m_EditorClassIdentifier: 
   serializationData:
     SerializedFormat: 2
@@ -21,16 +21,16 @@ MonoBehaviour:
     PrefabModificationsReferencedUnityObjects: []
     PrefabModifications: []
     SerializationNodes: []
-  Id: Woodcutter
-  Name: Woodcutter
+  Id: Outpost
+  Name: Outpost
   Description: 
-  Color: {r: 0, g: 0.4528302, b: 0.048278306, a: 1}
-  WorkerDefn: {fileID: 0}
+  Color: {r: 0, g: 1, b: 0.8925357, a: 1}
+  WorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
   CanBeBuiltByPlayer: 1
   ConstructionRequirements:
   - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
     Amount: 2
-  CanGatherResources: 1
+  CanGatherResources: 0
   ResourceThisNodeCanGoGather: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d,
     type: 2}
   CanBeGatheredFrom: 0
@@ -38,4 +38,4 @@ MonoBehaviour:
   CanCraftGoods: 0
   CraftableGoods: []
   CanGenerateWorkers: 0
-  GeneratableWorker: {fileID: 0}
+  GeneratableWorker: {fileID: 11400000, guid: 39551361d0d95bf42abb5a0ce17de970, type: 2}

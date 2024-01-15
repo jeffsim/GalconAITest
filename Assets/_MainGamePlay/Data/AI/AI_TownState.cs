@@ -203,13 +203,13 @@ public partial class AI_TownState
         buildInNode.ClearBuilding();
 
         // Undo Consume resources
-        if (resource1 == GoodType.Wood) PlayerTownInventory_Wood = resource1Amount;
-        else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone = resource1Amount;
-        else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource1Amount;
+        if (resource1 == GoodType.Wood) PlayerTownInventory_Wood += resource1Amount;
+        else if (resource1 == GoodType.Stone) PlayerTownInventory_Stone += resource1Amount;
+        else if (resource1 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank += resource1Amount;
 
-        if (resource2 == GoodType.Wood) PlayerTownInventory_Wood = resource2Amount;
-        else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone = resource2Amount;
-        else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank = resource2Amount;
+        if (resource2 == GoodType.Wood) PlayerTownInventory_Wood += resource2Amount;
+        else if (resource2 == GoodType.Stone) PlayerTownInventory_Stone += resource2Amount;
+        else if (resource2 == GoodType.StoneWoodPlank) PlayerTownInventory_StoneWoodPlank += resource2Amount;
     }
 
     internal void BuildBuilding(AI_NodeState node, BuildingDefn buildingDefn, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount)

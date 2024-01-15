@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 [Serializable]
@@ -11,6 +12,7 @@ public class NodeDefn
     public int OwnedByPlayerId = -1;
     public BuildingDefn StartingBuilding;
     public int NumStartingWorkers = 0;
+    public SerializedDictionary<GoodDefn, int> StartingInventory = new();
 }
 
 [Serializable]

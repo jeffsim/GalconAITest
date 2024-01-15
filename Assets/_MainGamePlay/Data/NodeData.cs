@@ -29,5 +29,9 @@ public class NodeData
         NumWorkers = nodeDefn.NumStartingWorkers;
         if (nodeDefn.StartingBuilding != null)
             Building = new BuildingData(nodeDefn.StartingBuilding);
+
+        // Populate starting inventory
+        foreach (var kvp in nodeDefn.StartingInventory)
+            Inventory[kvp.Key] = kvp.Value;
     }
 }

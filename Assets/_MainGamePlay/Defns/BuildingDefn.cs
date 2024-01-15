@@ -6,6 +6,7 @@ using UnityEngine;
 public class BuildingDefn : BaseDefn
 {
     public string Name;
+    public string Description;
     public Color Color = Color.white;
     public WorkerDefn WorkerDefn;
 
