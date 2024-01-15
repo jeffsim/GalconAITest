@@ -66,11 +66,19 @@ public class TownData
         // Update resource gathering nodes
         foreach (var node in Nodes)
         {
-            if (node.Building == null || !node.Building.Defn.CanGatherResources) continue;
+            if (node.Building == null) continue;
 
-            // TODO: assume a resource node is nearby and not depleted
-            if (node.Inventory.ContainsKey(node.Building.Defn.ResourceThisNodeCanGoGather.GoodType))
-                node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += 1; // TODO: node.Building.Defn.ResourceProducedPerTurn;
+            if (node.Building.Defn.CanGatherResources)
+            {
+                // TODO: assume a resource node is nearby and not depleted
+                if (node.Inventory.ContainsKey(node.Building.Defn.ResourceThisNodeCanGoGather.GoodType))
+                    node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += 1; // TODO: node.Building.Defn.ResourceProducedPerTurn;
+            }
+            if (node.Building.Defn.CanGenerateWorkers)
+            {
+                node.NumWorkers += 1; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
+            }
+
         }
 
         // not how this will normally be done, but fine for testing purposes
