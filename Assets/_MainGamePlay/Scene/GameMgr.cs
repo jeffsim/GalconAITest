@@ -69,7 +69,7 @@ public class GameMgr : MonoBehaviour
         //     Workers.Add(workerGO);
         // }
 
-        DebugPlayerToViewDetailsOn = Town.Players[2];
+        DebugPlayerToViewDetailsOn = Town.Players[1];
 
         lastShowDebuggerAI = ShowDebuggerAI;
 

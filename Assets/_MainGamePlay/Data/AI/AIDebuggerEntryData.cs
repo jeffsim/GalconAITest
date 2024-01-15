@@ -69,6 +69,9 @@ public class AIDebuggerEntryData
         entry.ActionNumber = actionNum;
         entry.RecurseDepth = curDepth;
         entry.ParentEntry = curEntry;
+        entry.BestNextAction = null;
+        entry.IsInBestStrategyPath = false;
+        entry.IsHighestOptionOfPeers = false;
         entry.ChildEntries.Clear();
         return entry;
     }

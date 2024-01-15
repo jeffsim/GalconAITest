@@ -595,7 +595,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 669.85693, y: 50.535095}
+  m_AnchoredPosition: {x: 669.85693, y: 50.535156}
   m_SizeDelta: {x: 99.2105, y: 81.0692}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &165574191
@@ -3714,7 +3714,7 @@ MonoBehaviour:
   WorkersFolder: {fileID: 832437443}
   TestWorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
   AIDebuggerPanel: {fileID: 134469009}
-  MaxAIDepth: 8
+  MaxAIDepth: 2
   ShowDebuggerAI: 1
   DebugOutputStrategyToConsole: 0
   DebugOutputStrategyReasons: 0

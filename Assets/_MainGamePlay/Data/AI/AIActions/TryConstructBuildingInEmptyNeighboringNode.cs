@@ -38,7 +38,7 @@ public partial class PlayerAI
                 aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
 #if DEBUG
-                var prevEntry = AIDebugger.TrackPerformAction_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried, curDepth, recurseCount);
+                var prevEntry = AIDebugger.TrackPerformAction_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried++, curDepth, recurseCount);
 #endif
 
                 // ==== Recursively determine what the best action is after this action is performed

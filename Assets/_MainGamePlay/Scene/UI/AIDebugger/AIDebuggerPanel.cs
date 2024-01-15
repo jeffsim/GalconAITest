@@ -29,6 +29,8 @@ public class AIDebuggerPanel : MonoBehaviour
 
         if (ShowBestOnStart)
         {
+            initializeExpandedEntries(AIDebugger.topEntry, true, false);
+
             clearBestStrategyPaths(AIDebugger.topEntry);
             identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
             ShowBestOnStart = false;

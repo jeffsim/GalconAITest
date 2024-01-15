@@ -54,11 +54,11 @@ public class TownData
 
     public void Update()
     {
-        foreach (var player in Players)
-            player?.Update(this);
+        // foreach (var player in Players)
+        // player?.Update(this);
 
         // or test just one player:
-        // Players[2].Update(this);
+        Players[1].Update(this);
     }
 
     internal void Debug_WorldTurn()
@@ -78,6 +78,7 @@ public class TownData
         {
             if (player == null) continue;
             var moveToMake = player.AI.BestNextActionToTake;
+            if (moveToMake == null || moveToMake.Type == AIActionType.DoNothing) continue; // wasn't updated
 
             // Convert from ai node data to real node data
             var fromNode = moveToMake.SourceNode.RealNode;
