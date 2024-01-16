@@ -30,7 +30,7 @@ public partial class PlayerAI
                 if (buildingDefn.CanGatherResources && toNode.DistanceToClosestGatherableResourceNode(buildingDefn.ResourceThisNodeCanGoGather.GoodType) > 1) continue;
 
                 // Don't build barracks unless enemy is in neighboring node. NOTE: should instead check if enemy is within X nodes
-                if (buildingDefn.CanGenerateWorkers && toNode.DistanceToClosestEnemyNode(player) > 1) continue;
+               // if (buildingDefn.CanGenerateWorkers && toNode.DistanceToClosestEnemyNode(player) > 1) continue;
 
                 // ==== Perform the action and get the score of the state after the action is performed
                 float percentOfWorkersToSend = .5f; // TODO: Try different #s?

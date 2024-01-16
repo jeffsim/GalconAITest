@@ -49,6 +49,7 @@ public class TownData
         foreach (var node in Nodes)
             if (node.NodeId == nodeId)
                 return node;
+        Debug.Log("Failed to find node with Id " + nodeId);
         return null;
     }
 

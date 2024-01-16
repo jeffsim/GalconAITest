@@ -24,7 +24,7 @@ MonoBehaviour:
   Id: redmond
   Nodes:
   - NodeId: 0
-    WorldLoc: {x: 590, y: 0, z: 411}
+    WorldLoc: {x: 535.95, y: 0, z: 429.08}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 64
@@ -32,15 +32,15 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 1
-    WorldLoc: {x: 620, y: 0, z: 430}
+    WorldLoc: {x: 538.61, y: 0, z: 429.04}
     OwnedByPlayerId: 0
-    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
+    StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
     StartingInventory:
       exported_Keys: []
       exported_Values: 
   - NodeId: 2
-    WorldLoc: {x: 633, y: 5, z: 416}
+    WorldLoc: {x: 540.2, y: 0, z: 427.44}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -56,15 +56,15 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 4
-    WorldLoc: {x: 604, y: 0, z: 394}
-    OwnedByPlayerId: 1
+    WorldLoc: {x: 535.61, y: 0, z: 425.93}
+    OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
     NumStartingWorkers: 0
     StartingInventory:
       exported_Keys: []
       exported_Values: 
   - NodeId: 5
-    WorldLoc: {x: 570, y: 0, z: 488}
+    WorldLoc: {x: 538.18, y: 0, z: 438.32}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -72,7 +72,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 6
-    WorldLoc: {x: 558, y: 0, z: 520}
+    WorldLoc: {x: 540.15, y: 0, z: 438.2}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -80,7 +80,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 7
-    WorldLoc: {x: 573, y: 0, z: 453}
+    WorldLoc: {x: 537.16, y: 0, z: 434.56}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -88,7 +88,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 8
-    WorldLoc: {x: 529, y: 0, z: 445}
+    WorldLoc: {x: 530.9, y: 0, z: 434.8}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
     NumStartingWorkers: 0
@@ -96,15 +96,16 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 9
-    WorldLoc: {x: 626, y: 0, z: 398}
-    OwnedByPlayerId: 1
+    WorldLoc: {x: 537.97, y: 0, z: 426.34}
+    OwnedByPlayerId: 2
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
-    NumStartingWorkers: 0
+    NumStartingWorkers: 20
     StartingInventory:
-      exported_Keys: []
-      exported_Values: 
+      exported_Keys:
+      - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+      exported_Values: 08000000
   - NodeId: 10
-    WorldLoc: {x: 528, y: 0, z: 404}
+    WorldLoc: {x: 532.44, y: 0, z: 428.43}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -120,8 +121,8 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 12
-    WorldLoc: {x: 471, y: 0, z: 444}
-    OwnedByPlayerId: 0
+    WorldLoc: {x: 530.11, y: 0, z: 428.25}
+    OwnedByPlayerId: 1
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
     NumStartingWorkers: 10
     StartingInventory:
@@ -129,7 +130,7 @@ MonoBehaviour:
       - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
       exported_Values: 08000000
   - NodeId: 13
-    WorldLoc: {x: 555, y: 0, z: 551}
+    WorldLoc: {x: 541.76, y: 0, z: 439.84}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -137,7 +138,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 14
-    WorldLoc: {x: 550, y: 0, z: 588}
+    WorldLoc: {x: 542.46, y: 0, z: 441.93}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -145,7 +146,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 15
-    WorldLoc: {x: 573, y: 0, z: 670}
+    WorldLoc: {x: 544.04, y: 0, z: 438.74}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -153,7 +154,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 16
-    WorldLoc: {x: 526, y: 0, z: 544}
+    WorldLoc: {x: 539.49, y: 0, z: 441.37}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -161,7 +162,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 17
-    WorldLoc: {x: 607, y: 0, z: 573}
+    WorldLoc: {x: 543.56, y: 0, z: 436.32}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -169,7 +170,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 18
-    WorldLoc: {x: 545, y: 0, z: 478}
+    WorldLoc: {x: 535.17, y: 0, z: 441.1}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
     NumStartingWorkers: 0
@@ -177,15 +178,16 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 19
-    WorldLoc: {x: 593, y: 0, z: 464}
-    OwnedByPlayerId: 2
+    WorldLoc: {x: 541.31, y: 0, z: 435.44}
+    OwnedByPlayerId: 3
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
-    NumStartingWorkers: 32
+    NumStartingWorkers: 64
     StartingInventory:
-      exported_Keys: []
-      exported_Values: 
+      exported_Keys:
+      - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+      exported_Values: 16000000
   - NodeId: 20
-    WorldLoc: {x: 543, y: 0, z: 496}
+    WorldLoc: {x: 534.16, y: 0, z: 437.93}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -193,7 +195,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 21
-    WorldLoc: {x: 516, y: 0, z: 496}
+    WorldLoc: {x: 531.44, y: 0, z: 438.88}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -201,7 +203,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 22
-    WorldLoc: {x: 517, y: 0, z: 475}
+    WorldLoc: {x: 531.97, y: 0, z: 442.72}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
     NumStartingWorkers: 0
@@ -209,15 +211,15 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 23
-    WorldLoc: {x: 645, y: 0, z: 426}
+    WorldLoc: {x: 540.95, y: 0, z: 430.18}
     OwnedByPlayerId: 0
-    StartingBuilding: {fileID: 0}
+    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
     NumStartingWorkers: 0
     StartingInventory:
       exported_Keys: []
       exported_Values: 
   - NodeId: 24
-    WorldLoc: {x: 576, y: 0, z: 428}
+    WorldLoc: {x: 539, y: 0, z: 432.23}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
@@ -225,7 +227,7 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 25
-    WorldLoc: {x: 526, y: 0, z: 393}
+    WorldLoc: {x: 533.16, y: 0, z: 425.94}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
     NumStartingWorkers: 0
@@ -233,9 +235,25 @@ MonoBehaviour:
       exported_Keys: []
       exported_Values: 
   - NodeId: 26
-    WorldLoc: {x: 447, y: 0, z: 473}
+    WorldLoc: {x: 527.92, y: 0, z: 429.47}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 27
+    WorldLoc: {x: 535.15, y: 0, z: 431.83}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 28
+    WorldLoc: {x: 529.06, y: 0, z: 432.09}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
     StartingInventory:
       exported_Keys: []
@@ -308,4 +326,10 @@ MonoBehaviour:
   - Nodes: {x: 26, y: 11}
     IsBidirectional: 1
   - Nodes: {x: 4, y: 0}
+    IsBidirectional: 1
+  - Nodes: {x: 1, y: 23}
+    IsBidirectional: 1
+  - Nodes: {x: 17, y: 19}
+    IsBidirectional: 1
+  - Nodes: {x: 0, y: 10}
     IsBidirectional: 1
