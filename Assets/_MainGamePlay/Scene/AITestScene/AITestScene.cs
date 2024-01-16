@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
 public class AITestScene : MonoBehaviour
 {
-    public TownData Town;
+    [NonSerialized][ShowInInspector] public TownData Town;
     public TownDefn TestTownDefn;
 
     [FoldoutGroup("Nodes", false)] public NodeGO NodePrefab;
@@ -19,7 +20,7 @@ public class AITestScene : MonoBehaviour
 
 #if DEBUG
     public PlayerData DebugPlayerToViewDetailsOn;
-   
+
     // Debugger panel
     public AIDebuggerPanel AIDebuggerPanel;
     public int MaxAIDepth = 7;

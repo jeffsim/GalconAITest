@@ -22,7 +22,9 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: Carpenter
+  IsEnabled: 0
   Name: Carpenter
+  Description: 
   Color: {r: 0.4509804, g: 0, b: 0.08856832, a: 1}
   WorkerDefn: {fileID: 0}
   CanBeBuiltByPlayer: 1
@@ -32,8 +34,12 @@ MonoBehaviour:
   - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
     Amount: 1
   CanGatherResources: 0
-  GatherableResource: {fileID: 0}
+  ResourceThisNodeCanGoGather: {fileID: 0}
+  CanBeGatheredFrom: 0
+  ResourceGatheredFromThisNode: {fileID: 0}
   CanCraftGoods: 1
   CraftableGoods:
   - {fileID: 11400000, guid: 83348bb31bf6120419ab9aea7efba36e, type: 2}
   - {fileID: 11400000, guid: f0ae232d3a3389349b7e36df1345973d, type: 2}
+  CanGenerateWorkers: 0
+  GeneratableWorker: {fileID: 0}

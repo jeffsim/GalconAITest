@@ -12,7 +12,7 @@ public partial class PlayerAI
     AI_TownState aiTownState;
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
     int maxDepth;
-    int debugOutput_ActionsTried;
+    public int debugOutput_ActionsTried;
     int debugOutput_callsToRecursivelyDetermineBestAction;
 
     public AIAction BestNextActionToTake = new();

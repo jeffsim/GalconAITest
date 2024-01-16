@@ -5,4 +5,5 @@ using Sirenix.OdinInspector;
 public class BaseDefn : SerializedScriptableObject
 {
     public string Id;
+    public bool IsEnabled = true;
 }

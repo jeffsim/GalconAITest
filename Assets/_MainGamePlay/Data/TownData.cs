@@ -11,6 +11,7 @@ public class TownData
     public List<WorkerData> Workers = new();
 
     public Action<int> OnAIDebuggerUpdate { get; internal set; }
+    public int TestOnePlayerId = 3;
 
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
     {
@@ -55,11 +56,16 @@ public class TownData
 
     public void Update()
     {
-        foreach (var player in Players)
-            player?.Update(this);
-
-        // or test just one player:
-        // Players[3].Update(this);
+        if (TestOnePlayerId == 0)
+        {
+            foreach (var player in Players)
+                player?.Update(this);
+        }
+        else
+        {
+            // or test just one player:
+            Players[TestOnePlayerId].Update(this);
+        }
     }
 
     internal void Debug_WorldTurn()

@@ -29,7 +29,8 @@ public class GameDefnsMgr
         defnDict.Clear();
         var defns = Resources.LoadAll<T>("Defns/" + folderName);
         foreach (var defn in defns)
-            defnDict[defn.Id] = defn as T;
+            if (defn.IsEnabled)
+                defnDict[defn.Id] = defn as T;
     }
 }
 

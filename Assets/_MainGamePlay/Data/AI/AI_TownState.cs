@@ -59,7 +59,7 @@ public partial class AI_TownState
             if (node.OwnedBy == player)
             {
                 foreach (var invItem in node.Inventory)
-                    PlayerTownInventory[invItem.Key] = invItem.Value;
+                    PlayerTownInventory[invItem.Key] += invItem.Value;
             }
         }
 

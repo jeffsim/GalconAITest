@@ -22,7 +22,9 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: TownStatue
+  IsEnabled: 0
   Name: TownStatue
+  Description: 
   Color: {r: 0, g: 1, b: 0.97757244, a: 1}
   WorkerDefn: {fileID: 0}
   CanBeBuiltByPlayer: 1
@@ -30,6 +32,10 @@ MonoBehaviour:
   - Good: {fileID: 11400000, guid: f0ae232d3a3389349b7e36df1345973d, type: 2}
     Amount: 3
   CanGatherResources: 0
-  GatherableResource: {fileID: 0}
+  ResourceThisNodeCanGoGather: {fileID: 0}
+  CanBeGatheredFrom: 0
+  ResourceGatheredFromThisNode: {fileID: 0}
   CanCraftGoods: 0
   CraftableGoods: []
+  CanGenerateWorkers: 0
+  GeneratableWorker: {fileID: 0}

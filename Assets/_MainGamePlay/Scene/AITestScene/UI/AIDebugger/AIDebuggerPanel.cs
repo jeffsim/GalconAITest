@@ -37,6 +37,7 @@ public class AIDebuggerPanel : MonoBehaviour
         }
 
         AddChildEntries(AIDebugger.topEntry.ChildEntries);
+        Debug.Log("Total actions: " +AITestScene.Instance.DebugPlayerToViewDetailsOn.AI.debugOutput_ActionsTried);
     }
 
     private void initializeExpandedEntries(AIDebuggerEntryData curEntry, bool forceValue = false, bool value = false)
@@ -51,9 +52,8 @@ public class AIDebuggerPanel : MonoBehaviour
 
     private void AddChildEntries(List<AIDebuggerEntryData> childEntries)
     {
-        // limit to 1000 entries in List
-        if (List.transform.childCount > 1000)
-            return;
+        // limit to 1000 AIDebuggerEntry objects (recursively) in List
+        if (List.gameObject.GetAllChildrenOfType<AIDebuggerEntry>() > 1000) return;
         foreach (var child in childEntries)
         {
             var entryObj = Instantiate(EntryPrefab);

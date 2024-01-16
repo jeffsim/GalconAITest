@@ -183,6 +183,18 @@ public static class Utilities
 
 public static class GameObjectExtensions
 {
+    public static int GetAllChildrenOfType<T>(this GameObject gameObject)
+    {
+        // return # of T objects (recursively) in this gameobject, recursing down the hierarchy
+        int count = 0;
+        foreach (Transform child in gameObject.transform)
+        {
+            if (child.gameObject.GetComponent<T>() != null)
+                count++;
+            count += child.gameObject.GetAllChildrenOfType<T>();
+        }
+        return count;
+    }
     public static void Hide(this GameObject gameObject)
     {
         gameObject.SetActive(false);
