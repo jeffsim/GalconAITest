@@ -1,0 +1,311 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 702bc8149c0dc4c02b4597fc7d22ac71, type: 3}
+  m_Name: Redmond
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes: []
+  Id: redmond
+  Nodes:
+  - NodeId: 0
+    WorldLoc: {x: 590, y: 0, z: 411}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 64
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 1
+    WorldLoc: {x: 620, y: 0, z: 430}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 2
+    WorldLoc: {x: 633, y: 5, z: 416}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 3
+    WorldLoc: {x: -617, y: 0, z: 410}
+    OwnedByPlayerId: 2
+    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 4
+    WorldLoc: {x: 604, y: 0, z: 394}
+    OwnedByPlayerId: 1
+    StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 5
+    WorldLoc: {x: 570, y: 0, z: 488}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 6
+    WorldLoc: {x: 558, y: 0, z: 520}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 7
+    WorldLoc: {x: 573, y: 0, z: 453}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 8
+    WorldLoc: {x: 529, y: 0, z: 445}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 9
+    WorldLoc: {x: 626, y: 0, z: 398}
+    OwnedByPlayerId: 1
+    StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 10
+    WorldLoc: {x: 528, y: 0, z: 404}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 11
+    WorldLoc: {x: 532, y: 0, z: 431}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 12
+    WorldLoc: {x: 471, y: 0, z: 444}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
+    NumStartingWorkers: 10
+    StartingInventory:
+      exported_Keys:
+      - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+      exported_Values: 08000000
+  - NodeId: 13
+    WorldLoc: {x: 555, y: 0, z: 551}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 14
+    WorldLoc: {x: 550, y: 0, z: 588}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 15
+    WorldLoc: {x: 573, y: 0, z: 670}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 16
+    WorldLoc: {x: 526, y: 0, z: 544}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 17
+    WorldLoc: {x: 607, y: 0, z: 573}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 18
+    WorldLoc: {x: 545, y: 0, z: 478}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 19
+    WorldLoc: {x: 593, y: 0, z: 464}
+    OwnedByPlayerId: 2
+    StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
+    NumStartingWorkers: 32
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 20
+    WorldLoc: {x: 543, y: 0, z: 496}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 21
+    WorldLoc: {x: 516, y: 0, z: 496}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 22
+    WorldLoc: {x: 517, y: 0, z: 475}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: f34c1d1b164bae14fbf269d1af8be63f, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 23
+    WorldLoc: {x: 645, y: 0, z: 426}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 24
+    WorldLoc: {x: 576, y: 0, z: 428}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 25
+    WorldLoc: {x: 526, y: 0, z: 393}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  - NodeId: 26
+    WorldLoc: {x: 447, y: 0, z: 473}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
+    NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
+  NodeConnections:
+  - Nodes: {x: 12, y: 11}
+    IsBidirectional: 1
+  - Nodes: {x: 26, y: 11}
+    IsBidirectional: 1
+  - Nodes: {x: 26, y: 12}
+    IsBidirectional: 1
+  - Nodes: {x: 11, y: 8}
+    IsBidirectional: 1
+  - Nodes: {x: 11, y: 10}
+    IsBidirectional: 1
+  - Nodes: {x: 10, y: 25}
+    IsBidirectional: 1
+  - Nodes: {x: 7, y: 5}
+    IsBidirectional: 1
+  - Nodes: {x: 5, y: 6}
+    IsBidirectional: 1
+  - Nodes: {x: 5, y: 19}
+    IsBidirectional: 1
+  - Nodes: {x: 27, y: 11}
+    IsBidirectional: 1
+  - Nodes: {x: 27, y: 7}
+    IsBidirectional: 1
+  - Nodes: {x: 0, y: 27}
+    IsBidirectional: 1
+  - Nodes: {x: 27, y: 24}
+    IsBidirectional: 1
+  - Nodes: {x: 24, y: 7}
+    IsBidirectional: 1
+  - Nodes: {x: 1, y: 0}
+    IsBidirectional: 1
+  - Nodes: {x: 1, y: 2}
+    IsBidirectional: 1
+  - Nodes: {x: 2, y: 9}
+    IsBidirectional: 1
+  - Nodes: {x: 9, y: 0}
+    IsBidirectional: 1
+  - Nodes: {x: 5, y: 6}
+    IsBidirectional: 1
+  - Nodes: {x: 20, y: 5}
+    IsBidirectional: 1
+  - Nodes: {x: 18, y: 20}
+    IsBidirectional: 1
+  - Nodes: {x: 20, y: 21}
+    IsBidirectional: 1
+  - Nodes: {x: 21, y: 22}
+    IsBidirectional: 1
+  - Nodes: {x: 22, y: 18}
+    IsBidirectional: 1
+  - Nodes: {x: 6, y: 13}
+    IsBidirectional: 1
+  - Nodes: {x: 13, y: 16}
+    IsBidirectional: 1
+  - Nodes: {x: 13, y: 15}
+    IsBidirectional: 1
+  - Nodes: {x: 15, y: 17}
+    IsBidirectional: 1
+  - Nodes: {x: 13, y: 14}
+    IsBidirectional: 1
+  - Nodes: {x: 28, y: 26}
+    IsBidirectional: 1
+  - Nodes: {x: 28, y: 12}
+    IsBidirectional: 1
+  - Nodes: {x: 28, y: 11}
+    IsBidirectional: 1
+  - Nodes: {x: 26, y: 11}
+    IsBidirectional: 1
+  - Nodes: {x: 4, y: 0}
+    IsBidirectional: 1

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 315161828a8d7453f963b5d8d419bac3, type: 3}
+  m_Name: GoldMine
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes: []
+  Id: GoldMine
+  Name: GoldMine
+  Description: 
+  Color: {r: 0.21698111, g: 0.21698111, b: 0.21698111, a: 1}
+  WorkerDefn: {fileID: 0}
+  CanBeBuiltByPlayer: 0
+  ConstructionRequirements: []
+  CanGatherResources: 0
+  ResourceThisNodeCanGoGather: {fileID: 0}
+  CanBeGatheredFrom: 1
+  ResourceGatheredFromThisNode: {fileID: 11400000, guid: 608c88c4c7e552e46a371c46a3a53122,
+    type: 2}
+  CanCraftGoods: 0
+  CraftableGoods: []
+  CanGenerateWorkers: 0
+  GeneratableWorker: {fileID: 0}

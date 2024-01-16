@@ -3702,7 +3702,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb8d112529cf625468fd483f7e11a7a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TestTownDefn: {fileID: 11400000, guid: 1f32a133a07344de39f0415363c78f0a, type: 2}
+  TestTownDefn: {fileID: 11400000, guid: a65c714172c8acd4d865dde0590a94b6, type: 2}
   NodePrefab: {fileID: 6733801332491796304, guid: dd0a82998a1134fa6b73a93b5ae2d817,
     type: 3}
   Nodes: []
