@@ -73,9 +73,9 @@ public partial class AI_TownState
             else if (node.OwnedBy != null)
             {
                 // Subtract score for each node owned by another player
-                score -= .9f; // todo: weight this based on player's personality
+    //            score -= .9f; // todo: weight this based on player's personality
 #if DEBUG
-                scoreReasons?.ScoresFrom_EnemyOwnedNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = -.9f });
+      //          scoreReasons?.ScoresFrom_EnemyOwnedNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = -.9f });
 #endif
             }
         }

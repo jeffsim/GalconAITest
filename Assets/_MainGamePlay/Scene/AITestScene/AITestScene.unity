@@ -3714,7 +3714,7 @@ MonoBehaviour:
   WorkersFolder: {fileID: 832437443}
   TestWorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
   AIDebuggerPanel: {fileID: 134469009}
-  MaxAIDepth: 8
+  MaxAIDepth: 6
   ShowDebuggerAI: 1
   DebugOutputStrategyToConsole: 0
   DebugOutputStrategyReasons: 0

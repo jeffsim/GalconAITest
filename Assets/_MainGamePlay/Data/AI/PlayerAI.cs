@@ -2,6 +2,12 @@ using UnityEngine;
 
 public partial class PlayerAI
 {
+    public override string ToString()
+    {
+        if (BestNextActionToTake == null) return "null BestNextActionToTake";
+        return BestNextActionToTake.ToString();
+    }
+
     PlayerData player;
     AI_TownState aiTownState;
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
