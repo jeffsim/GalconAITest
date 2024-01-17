@@ -22,4 +22,5 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: default
-  Debug_StartingCameraPosition: {x: 524.1449, y: 28.096672, z: 417.9694}
+  IsEnabled: 1
+  Debug_StartingCameraPosition: {x: 528.6179, y: 14.1022415, z: 425.38815}
