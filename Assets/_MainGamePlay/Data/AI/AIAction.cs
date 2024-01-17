@@ -89,9 +89,9 @@ public class AIAction
                 return "Attack with " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " and capture it";
             case AIActionType.ConstructBuildingInEmptyNode:
                 return "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id;
-            case AIActionType.DoNothing: return "Do nothing (No beneficial action found)"; break;
-            case AIActionType.NoAction_MaxDepth: return "Max depth reached"; break;
-            case AIActionType.NoAction_GameOver: return "Game Over"; break;
+            case AIActionType.DoNothing: return "Do nothing (No beneficial action found)";
+            case AIActionType.NoAction_MaxDepth: return "Max depth reached";
+            case AIActionType.NoAction_GameOver: return "Game Over";
             default:
                 throw new Exception("Unhandled AIActionType: " + Type);
         }
