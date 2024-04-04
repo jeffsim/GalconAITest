@@ -41,7 +41,7 @@ public partial class PlayerAI
 
             TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, ref bestAction, curDepth, recurseCount, debugOutput_ActionsTried++);
             TryAttackFromNode(node, ref bestAction, curDepth, recurseCount, debugOutput_ActionsTried++);
-            //      TrySendWorkersToOwnedNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
+            // TrySendWorkersToOwnedNode(node, ref bestAction, curDepth, recurseCount, ++debugOutput_ActionsTried);
         }
 
         if (bestAction.Score <= scoreOnEntry)
