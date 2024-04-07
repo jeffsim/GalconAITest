@@ -85,7 +85,13 @@ public partial class PlayerAI
         AIDebugger.TrackForCurrentPlayer = player == AITestScene.Instance.DebugPlayerToViewDetailsOn;
         AIDebugger.Clear();
 #endif
-        BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
+        
+        var tryGOAP = true;
+        if (tryGOAP)
+            BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction_GOAP(0, 0));
+        else
+            BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
+
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
         // performAction(BestNextActionToTake);

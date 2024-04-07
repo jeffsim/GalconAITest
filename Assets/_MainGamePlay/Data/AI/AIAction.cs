@@ -81,20 +81,16 @@ public class AIAction
 {
     public override string ToString()
     {
-        switch (Type)
+        return Type switch
         {
-            case AIActionType.SendWorkersToOwnedNode:
-                return "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId;
-            case AIActionType.AttackFromNode:
-                return "Attack with " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " and capture it";
-            case AIActionType.ConstructBuildingInEmptyNode:
-                return "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id;
-            case AIActionType.DoNothing: return "Do nothing (No beneficial action found)";
-            case AIActionType.NoAction_MaxDepth: return "Max depth reached";
-            case AIActionType.NoAction_GameOver: return "Game Over";
-            default:
-                throw new Exception("Unhandled AIActionType: " + Type);
-        }
+            AIActionType.SendWorkersToOwnedNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId,
+            AIActionType.AttackFromNode => "Attack with " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " and capture it",
+            AIActionType.ConstructBuildingInEmptyNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id,
+            AIActionType.DoNothing => "Do nothing (No beneficial action found)",
+            AIActionType.NoAction_MaxDepth => "Max depth reached",
+            AIActionType.NoAction_GameOver => "Game Over",
+            _ => throw new Exception("Unhandled AIActionType: " + Type),
+        };
     }
 
     public float Score;
