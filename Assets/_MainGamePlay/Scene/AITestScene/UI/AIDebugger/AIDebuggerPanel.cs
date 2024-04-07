@@ -86,6 +86,8 @@ public class AIDebuggerPanel : MonoBehaviour
     public void OnShowForPlayerIdClicked(int playerId)
     {
         AITestScene.Instance.DebugPlayerToViewDetailsOn = AITestScene.Instance.Town.Players[playerId];
+        if (AITestScene.Instance.Town.TestOnePlayerId != 0)
+            AITestScene.Instance.Town.TestOnePlayerId = playerId;
         AITestScene.Instance.Town.Update(); // force an update to get latest AI
 
         // hardcode because FUCK IT
