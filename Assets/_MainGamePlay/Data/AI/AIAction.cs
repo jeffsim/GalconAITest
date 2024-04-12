@@ -5,10 +5,10 @@ public enum AIActionType
 {
     ERROR_StuckInLoop,
     DoNothing,
-    // SendWorkersToEmptyNode,
+    SendWorkersToEmptyNode,
     SendWorkersToOwnedNode,
     ConstructBuildingInEmptyNode,
-    // ConstructBuildingInOwnedEmptyNode,
+    ConstructBuildingInOwnedEmptyNode,
     AttackFromNode,
     NoAction_GameOver,
     NoAction_MaxDepth

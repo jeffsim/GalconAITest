@@ -85,10 +85,12 @@ public partial class PlayerAI
         AIDebugger.TrackForCurrentPlayer = player == AITestScene.Instance.DebugPlayerToViewDetailsOn;
         AIDebugger.Clear();
 #endif
-        
+
         var tryGOAP = true;
         if (tryGOAP)
-            BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction_GOAP(0, 0));
+        {
+            //        BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction_GOAP(0, 0));
+        }
         else
             BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
 
