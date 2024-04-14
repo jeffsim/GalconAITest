@@ -1,6 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
 
+/*
+    Purpose: The ResourceExtractionGoal generally focuses on optimizing the extraction and use of resources across all available nodes.
+    This goal might encompass a broad strategy for maximizing the overall resource output or efficiency from all controlled territories.
+
+    Utility Calculation: This goal might calculate utility based on how efficiently resources are being gathered, considering factors
+    like resource abundance, node productivity, and overall balance of resource types in relation to the game's economic demands.
+
+    Examples:
+    * Increasing the efficiency of resource nodes by upgrading extraction facilities.
+    * Focusing on resources that are abundant but underutilized.
+    * Balancing the resource output to meet the requirements of various other production or building goals.
+*/
 public class SpecificResourceCollectionGoal : Goal
 {
     private ResourceType targetedResource;
@@ -149,5 +161,88 @@ public class SpecificResourceCollectionGoal : Goal
     {
         // Example implementation of checking if economic milestones have been reached
         return false; // Example condition
+    }
+
+
+    // Cost
+
+    
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        // Start with a base cost factor, which could be adjusted based on game specifics
+        float cost = 0;
+
+        // Find the closest node that has the required resource
+        var closestResourceNode = FindClosestResourceNode(mapState, playerId, resourceType);
+        if (closestResourceNode == null)
+        {
+            // Extremely high cost if no resource nodes are available
+            return float.MaxValue;
+        }
+
+        // Calculate distance to the nearest resource node
+        var path = mapState.FindPathToResource(playerId, closestResourceNode);
+        if (path == null)
+        {
+            // No path found, set extremely high cost
+            return float.MaxValue;
+        }
+
+        cost += path.Distance; // Adding distance to cost
+
+        // Add cost based on enemy control and strength along the path
+        cost += CalculateEnemyControlledPathCost(path);
+
+        // Consider the defense of the resource node
+        cost += CalculateDefenseCost(closestResourceNode);
+
+        return cost;
+    }
+
+    private AINode_State FindClosestResourceNode(AIMap_State mapState, int playerId, ResourceType resourceType)
+    {
+        // Placeholder for finding the closest resource node that contains the required resource
+        return mapState.AllNodes.FirstOrDefault(node => node.Resources.ContainsKey(resourceType) && !node.IsUnderEnemyControl(playerId));
+    }
+
+    private PathResult FindPathToResource(int playerId, AINode_State resourceNode)
+    {
+        // Placeholder for pathfinding algorithm to find the shortest or safest path to the resource
+        return new PathResult { Distance = 10 }; // Example path result
+    }
+
+    private float CalculateEnemyControlledPathCost(PathResult path)
+    {
+        // Add cost based on enemy presence and strength
+        float enemyCost = 0;
+        foreach (var node in path.Nodes)
+        {
+            if (node.IsEnemyControlled(playerId))
+            {
+                enemyCost += node.MilitaryStrength * 1.5f; // Example calculation
+            }
+        }
+        return enemyCost;
+    }
+
+    private float CalculateDefenseCost(AINode_State resourceNode)
+    {
+        // Higher cost if the resource node is well defended
+        return resourceNode.IsUnderThreat ? resourceNode.MilitaryStrength : 0;
+    }
+}
+
+// Supporting classes and methods
+public class PathResult
+{
+    public float Distance { get; set; }
+    public List<AINode_State> Nodes { get; set; } = new List<AINode_State>();
+}
+
+public static class ExtensionMethods
+{
+    public static bool IsEnemyControlled(this AINode_State node, int playerId)
+    {
+        return node.OwnerId != playerId && node.OwnerId != 0; // Assuming 0 means uncontrolled
     }
 }

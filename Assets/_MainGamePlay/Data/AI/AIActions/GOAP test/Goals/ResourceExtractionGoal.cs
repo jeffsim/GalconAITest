@@ -24,6 +24,11 @@ public class ResourceExtractionGoal : Goal
         this.economicChains = economicChains;
     }
 
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        return .5f;
+    }
+
     public override float CalculateUtility(AIMap_State mapState, int playerId)
     {
         var playerNodes = GetPlayerNodes(mapState, playerId);

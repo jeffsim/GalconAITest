@@ -21,6 +21,11 @@ public class EstablishAlliancesGoal : Goal
         // Placeholder for actual potential allies calculation
         return 3;
     }
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        return .5f;
+    }
+
 }
 
 public class OffensiveFleetConstructionGoal : Goal
@@ -39,6 +44,11 @@ public class OffensiveFleetConstructionGoal : Goal
 
         return totalStrengthDeficit / (playerNodes.Count * 50.0f);
     }
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        return .5f;
+    }
+
 }
 
 public class ResourceGatheringGoal : Goal
@@ -64,6 +74,11 @@ public class ResourceGatheringGoal : Goal
 
         return -totalDeficit / (totalResourceTypes * 100.0f); // Normalized and inversed deficit
     }
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        return .5f;
+    }
+
 }
 
 public class StrategicExpansionGoal : Goal
@@ -94,6 +109,11 @@ public class StrategicExpansionGoal : Goal
         // Placeholder for strategic value calculation
         return node.Resources.Count * 1.0f + (node.IsUnderThreat ? 2.0f : 0);
     }
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        return .5f;
+    }
+
 }
 
 public class TacticalExpansionGoal : Goal
@@ -124,4 +144,9 @@ public class TacticalExpansionGoal : Goal
         // Normalize by the number of player nodes to prevent bias towards players with more nodes
         return utility / playerNodes.Count;
     }
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        return .5f;
+    }
+
 }
