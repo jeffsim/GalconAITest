@@ -31,6 +31,7 @@ public class AITestScene : MonoBehaviour
 #endif
 
     public static AITestScene Instance;
+    public List<PathStep> pathSteps = new();
 
     void OnEnable()
     {
@@ -56,7 +57,7 @@ public class AITestScene : MonoBehaviour
             nodeGO.InitializeForNodeData(nodeData);
             Nodes.Add(nodeGO);
         }
-
+        pathSteps.Clear();
         foreach (var nodeData in Town.Nodes)
             foreach (var conn in nodeData.NodeConnections)
                 addLineRenderer(conn.Start, conn.End);
@@ -86,8 +87,15 @@ public class AITestScene : MonoBehaviour
     {
         // move the world forward one turn
         Town.Debug_WorldTurn();
-        AITestScene.Instance.Town.Update(); // force an update to get latest AI
+        Town.Update(); // force an update to get latest AI
         AIDebuggerPanel.ShowBestClicked();
+    }
+
+    public class PathStep
+    {
+        public NodeData Start;
+        public NodeData End;
+        public LineRenderer LineRenderer;
     }
 
     private void addLineRenderer(NodeData startNode, NodeData endNode)
@@ -102,13 +110,61 @@ public class AITestScene : MonoBehaviour
 
         lineRenderer.positionCount = points.Count;
         lineRenderer.SetPositions(points.ToArray());
-        // lineRenderers.Add(lineRenderer);
+        pathSteps.Add(new PathStep { Start = startNode, End = endNode, LineRenderer = lineRenderer });
+    }
+
+    void DrawArrow(Vector3 start, Vector3 end, Color color, string label)
+    {
+
+        var draw = Drawing.Draw.ingame;
+        draw.PushLineWidth(6);
+        draw.Arrow(start, end, color);
+        draw.PopLineWidth();
+        var pos = (start + end) / 2;
+
+        draw.Label2D(pos, label, 30, Drawing.LabelAlignment.Center, Color.black);
+        draw.Label2D(pos + new Vector3(-.02f, 0.02f, .05f), label, 30, Drawing.LabelAlignment.Center, Color.white);
+
+    }
+    private void DrawNextAISteps(PlayerData player)
+    {
+        if (player == null) return;
+        var ai = player.AI;
+        if (ai == null || ai.BestNextActionToTake == null) return;
+        var action = ai.BestNextActionToTake;
+        switch (action.Type)
+        {
+            case AIActionType.SendWorkersToEmptyNode:
+                if (action.SourceNode != null && action.DestNode != null)
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, player.Color, "Send " + action.Count);
+                break;
+            case AIActionType.DoNothing:
+                break;
+            case AIActionType.ConstructBuildingInEmptyNode:
+                if (action.SourceNode != null && action.DestNode != null)
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, Color.yellow, "Send " + action.Count + " to construct\n" + action.BuildingToConstruct.Id);
+                else
+                    Debug.Log("Unknown asdfasdfasdfadf type: " + action.Type);
+                break;
+case AIActionType.AttackFromNode:
+                if (action.SourceNode != null && action.DestNode != null)
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, Color.red, "Attack, send " + action.Count);
+                break;
+            default:
+                Debug.Log("Unknown action type: " + action.Type);
+                break;
+        }
+
+        // if (action.SourceNode != null && action.DestNode != null)
+        // DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, player.Color,"Test");
     }
 
     void Update()
     {
         Town.Update();
 
+        foreach (var player in Town.Players)
+            DrawNextAISteps(player);
 #if DEBUG
         if (lastShowDebuggerAI != ShowDebuggerAI)
         {

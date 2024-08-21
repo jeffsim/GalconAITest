@@ -86,7 +86,7 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        var tryGOAP = true;
+        var tryGOAP = false;
         if (tryGOAP)
         {
             //        BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction_GOAP(0, 0));

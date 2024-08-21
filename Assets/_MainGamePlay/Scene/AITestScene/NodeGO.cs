@@ -37,5 +37,31 @@ public class NodeGO : MonoBehaviour
     void Update()
     {
         NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + ")";
+
+        // If this node is the target node of the best action in the current AI then add * to the nodeidetxt
+        // foreach (var player in AITestScene.Instance.Town.Players)
+        // {
+        //     if (player == null) continue;
+        //     var ai = player.AI;
+        //     if (ai != null && ai.BestNextActionToTake != null && ai.BestNextActionToTake.DestNode != null &&
+        //         Data == ai.BestNextActionToTake.DestNode.RealNode)
+        //     {
+        //         NodeIdText.text += " (" + player.Id + ")";
+        //         var color = new Color(player.Color.r, player.Color.g, player.Color.b, 0.5f);
+        //         BaseObject.material.color = color;
+
+        //         // get the path line from this node to the target node and set it to reed
+        //         var pathSteps = AITestScene.Instance.pathSteps;
+        //         foreach (var pathStep in pathSteps)
+        //         {
+        //             if (pathStep.Start == Data || pathStep.End == Data)
+        //             {
+        //                 if (pathStep.End == ai.BestNextActionToTake.DestNode.RealNode ||
+        //                 pathStep.End == ai.BestNextActionToTake.SourceNode.RealNode)
+        //                     pathStep.LineRenderer.material.color = Color.red;
+        //             }
+        //         }
+        //     }
+        // }
     }
 }

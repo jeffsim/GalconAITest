@@ -15,13 +15,13 @@ public class AIMap_State
 {
     public List<AINode_State> AllNodes { get; set; }
 
-    public AINode_State FindClosestResourceNode(int playerId, ResourceType resourceType)
-    {
-        // Find the nearest node with the resource, avoiding enemy-controlled nodes
-        return AllNodes.Where(n => n.Resources.ContainsKey(resourceType) && n.OwnerId == playerId)
-                       .OrderBy(n => n.DistanceTo(playerId)) // Assuming DistanceTo is a method to calculate distance
-                       .FirstOrDefault();
-    }
+    // public AINode_State FindClosestResourceNode(int playerId, ResourceType resourceType)
+    // {
+    //     // Find the nearest node with the resource, avoiding enemy-controlled nodes
+    //     return AllNodes.Where(n => n.Resources.ContainsKey(resourceType) && n.OwnerId == playerId)
+    //                    .OrderBy(n => n.DistanceTo(playerId)) // Assuming DistanceTo is a method to calculate distance
+    //                    .FirstOrDefault();
+    // }
 
     public float CalculatePathCost(int playerId, AINode_State targetNode)
     {
@@ -72,8 +72,8 @@ public partial class PlayerAI
     private void InitializeGoals()
     {
         goals = new List<Goal>  {
-            new ResourceExtractionGoal(),
-            new SpecificResourceCollectionGoal(ResourceType.Wood), // Example for a specific resource
+            // new ResourceExtractionGoal(),
+            // new SpecificResourceCollectionGoal(ResourceType.Wood), // Example for a specific resource
 
             new StrategicExpansionGoal(),
             new TacticalExpansionGoal(),
