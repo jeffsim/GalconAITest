@@ -30,6 +30,22 @@ public static class AIDebugger
            ));
     }
 
+    internal static AIDebuggerEntryData TrackPerformAction_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
+    {
+        if (!ShouldTrackEntries) return null;
+        return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
+                   AIActionType.ConstructBuildingInEmptyNode,
+                   fromNode,
+                   toNode,
+                   numSent,
+                   null,
+                   scoreAfterActionAndBeforeSubActions,
+                   actionNum,
+                   curDepth,
+                   curEntry
+           ));
+    }
+
     internal static AIDebuggerEntryData TrackPerformAction_Attack(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
     {
         if (!ShouldTrackEntries) return null;

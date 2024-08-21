@@ -1,32 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-
-public enum ResourceType
-{
-    Wood, Stone
-}
-
-public class EstablishAlliancesGoal : Goal
-{
-    public override float CalculateUtility(AIMap_State mapState, int playerId)
-    {
-        // Assuming a method to calculate potential allies
-        int potentialAlliesCount = CalculatePotentialAllies(mapState, playerId);
-        return potentialAlliesCount / 10.0f; // Normalize based on a hypothetical max potential allies
-    }
-
-    private int CalculatePotentialAllies(AIMap_State mapState, int playerId)
-    {
-        // Placeholder for actual potential allies calculation
-        return 3;
-    }
-    public override float EstimateCost(AIMap_State mapState, int playerId)
-    {
-        return .5f;
-    }
-
-}
 
 public class OffensiveFleetConstructionGoal : Goal
 {

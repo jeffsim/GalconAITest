@@ -89,7 +89,9 @@ public partial class PlayerAI
         var tryGOAP = false;
         if (tryGOAP)
         {
-            //        BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction_GOAP(0, 0));
+            var aiMapState = new AIMap_State(townData);
+            InitializeGOAP(aiMapState, 1);
+            var goal = DetermineBestGoal();
         }
         else
             BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
@@ -99,7 +101,6 @@ public partial class PlayerAI
         // performAction(BestNextActionToTake);
 
 #if DEBUG
-
         // for ALL entries, calculate the count of all child entries under it and store in entry.AllChildEntriesCount
         AIDebugger.topEntry.CalculateAllChildEntriesCount();
 

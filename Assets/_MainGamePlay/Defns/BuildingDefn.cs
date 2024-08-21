@@ -2,11 +2,25 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
+public enum BuildingType
+{
+    Barracks,
+    Camp,
+    Carpenter,
+    Forest,
+    GoldMind,
+    Outpost,
+    StoneMine,
+    StoneMiner,
+    TownStatue,
+    Woodcutter,
+}
 [CreateAssetMenu()]
 public class BuildingDefn : BaseDefn
 {
     public string Name;
     public string Description;
+    public BuildingType BuildingType;
     public Color Color = Color.white;
     public WorkerDefn WorkerDefn;
 
@@ -33,7 +47,7 @@ public class BuildingDefn : BaseDefn
     public bool CanCraftGoods = false;
     [ShowIf("CanCraftGoods")]
     public List<GoodDefn> CraftableGoods = new();
-    
+
     // Generating workers
     [Header("CanGenerateWorkers"), Space(10)]
     public bool CanGenerateWorkers = false;

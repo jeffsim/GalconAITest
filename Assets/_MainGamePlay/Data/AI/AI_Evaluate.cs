@@ -50,10 +50,22 @@ public partial class AI_TownState
                             // building built turn 5; currently on turn 10; multiply score by 5
                             score += (maxStateDepth - node.TurnBuildingWasBuilt) * .1f;
 
-
 #if DEBUG
                             scoreReasons?.ScoresFrom_ResourceGatherersCloseToResourceNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = 2f });
 #endif
+
+                            // The more of the resource that this building can gather we already own, the lower the utility of it
+                            var resourceType = node.ResourceThisNodeCanGoGather;
+                            if (PlayerTownInventory.TryGetValue(resourceType, out int resourceCount))
+                            {
+                                score -= resourceCount * .1f;
+                            }
+
+                            // The more we globally need the resource that this node can gather, the higher the utility of it
+                            // if (GlobalResourceNeeds.TryGetValue(resourceType, out int globalResourceNeed))
+                            // {
+                            //     score += globalResourceNeed * .1f;
+                            // }
                         }
                     }
 
@@ -73,9 +85,9 @@ public partial class AI_TownState
             else if (node.OwnedBy != null)
             {
                 // Subtract score for each node owned by another player
-    //            score -= .9f; // todo: weight this based on player's personality
+                //            score -= .9f; // todo: weight this based on player's personality
 #if DEBUG
-      //          scoreReasons?.ScoresFrom_EnemyOwnedNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = -.9f });
+                //          scoreReasons?.ScoresFrom_EnemyOwnedNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = -.9f });
 #endif
             }
         }

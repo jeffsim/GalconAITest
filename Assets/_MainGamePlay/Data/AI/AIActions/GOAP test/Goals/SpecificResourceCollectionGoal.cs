@@ -1,248 +1,263 @@
-// using System.Collections.Generic;
-// using System.Linq;
+using System.Collections.Generic;
+using System.Linq;
+using JetBrains.Annotations;
 
-// /*
-//     Purpose: The ResourceExtractionGoal generally focuses on optimizing the extraction and use of resources across all available nodes.
-//     This goal might encompass a broad strategy for maximizing the overall resource output or efficiency from all controlled territories.
+/*
+    Purpose: The ResourceExtractionGoal generally focuses on optimizing the extraction and use of resources across all available nodes.
+    The SpecificResourceCollectionGoal might encompass a broad strategy for maximizing the overall resource output or efficiency from all controlled territories.
 
-//     Utility Calculation: This goal might calculate utility based on how efficiently resources are being gathered, considering factors
-//     like resource abundance, node productivity, and overall balance of resource types in relation to the game's economic demands.
+    Utility Calculation: This goal might calculate utility based on how efficiently resources are being gathered, considering factors
+    like resource abundance, node productivity, and overall balance of resource types in relation to the game's economic demands.
 
-//     Examples:
-//     * Increasing the efficiency of resource nodes by upgrading extraction facilities.
-//     * Focusing on resources that are abundant but underutilized.
-//     * Balancing the resource output to meet the requirements of various other production or building goals.
-// */
-// public class SpecificResourceCollectionGoal : Goal
-// {
-//     private ResourceType targetedResource;
-//     private AIMap_State mapState;
-//     private int playerId;
-//     private int currentTurn;
-//     private List<BuildingType> playerConstructedBuildings;
-//     private int totalBuildingTypes;
-//     private int moderateThreatThreshold;
-//     private double currentEconomicGrowthRate;
-//     private double targetEconomicGrowthRate;
+    Examples:
+    * Increasing the efficiency of resource nodes by upgrading extraction facilities.
+    * Focusing on resources that are abundant but underutilized.
+    * Balancing the resource output to meet the requirements of various other production or building goals.
+*/
 
-//     public SpecificResourceCollectionGoal(ResourceType resource, AIMap_State mapState, int playerId)
-//     {
-//         targetedResource = resource;
-//         this.mapState = mapState;
-//         this.playerId = playerId;
-//     }
+public enum GoalType
+{
+    SpecificResourceCollectionGoal,
+}
+public class SpecificResourceCollectionGoal : Goal
+{
 
-//     public override float CalculateUtility(AIMap_State mapState, int playerId)
-//     {
-//         var playerNodes = GetPlayerNodes(mapState, playerId);
-//         if (playerNodes.Count == 0) return 0;
+    private GoodType targetedResource;
+    private int playerId;
+    private int currentTurn;
+    private List<BuildingType> playerConstructedBuildings;
+    private int totalBuildingTypes;
+    private int moderateThreatThreshold;
+    private double currentEconomicGrowthRate;
+    private double targetEconomicGrowthRate;
 
-//         float totalUtility = 0;
-//         foreach (var node in playerNodes)
-//         {
-//             totalUtility += CalculateResourceUtility(node, targetedResource);
-//         }
+    public float HighestUtilityValue;
+    public AINode_State HighestUtilityNode;
 
-//         return totalUtility / playerNodes.Count;
-//     }
+    public SpecificResourceCollectionGoal(GoodType resource)
+    {
+        GoalType = GoalType.SpecificResourceCollectionGoal;
+        targetedResource = resource;
+    }
 
-//     private float CalculateResourceUtility(AINode_State node, ResourceType resource)
-//     {
-//         float utility = 0;
+    public override float CalculateUtility(AIMap_State mapState, int playerId)
+    {
+        this.playerId = playerId;
+        var playerNodes = GetPlayerNodes(mapState, playerId);
+        if (playerNodes.Count == 0) return 0;
 
-//         // Resource Shortage
-//         int currentAmount = node.Resources.ContainsKey(resource) ? node.Resources[resource] : 0;
-//         int desiredAmount = CalculateDesiredAmount(resource);
-//         utility += (float)(desiredAmount - currentAmount) / desiredAmount;
+        // Determine which node has the highest utility (need) for our resource
+        HighestUtilityValue = -1;
+        foreach (var node in playerNodes)
+        {
+            var utility = CalculateResourceUtility(node, targetedResource);
+            if (utility > HighestUtilityValue)
+            {
+                HighestUtilityValue = utility;
+                HighestUtilityNode = node;
+            }
+        }
 
-//         // Strategic Importance
-//         utility += IsStrategicallyImportant(resource) ? 2.0f : 0;
+        return HighestUtilityValue;
+    }
 
-//         // Economic Chain Role
-//         utility += EvaluateEconomicChainImpact(resource, node);
+    private float CalculateResourceUtility(AINode_State node, GoodType resource)
+    {
+        float utility = 0;
 
-//         return utility;
-//     }
+        // Resource Shortage
+        int currentAmount = node.Resources.ContainsKey(resource) ? node.Resources[resource] : 0;
+        int desiredAmount = CalculateDesiredAmount(resource);
+        utility += (float)(desiredAmount - currentAmount) / desiredAmount;
 
-//     private bool IsStrategicallyImportant(ResourceType buildingType)
-//     {
-//         // Determine strategic importance, possibly varying by game stage or threats
-//         // Example: Early game, prioritize resource production; later, focus on defense or advanced production
-//         switch (buildingType)
-//         {
-//             case ResourceType.WoodcutterHut:
-//                 return node.Resources[ResourceType.Wood] < DesiredWoodLevel();
-//             case ResourceType.Bakery:
-//                 return node.Resources[ResourceType.Food] < DesiredFoodLevel();
-//                 // Add other cases as necessary
-//         }
+        // Strategic Importance
+        utility += IsStrategicallyImportant(node, resource) ? 2.0f : 0;
 
-//         return true;
-//     }
-//     private int CalculateDesiredAmount(ResourceType resource)
-//     {
-//         int baseAmount = 100;
+        // Economic Chain Role
+        utility += EvaluateEconomicChainImpact(resource, node);
 
-//         switch (resource)
-//         {
-//             case ResourceType.Wood:
-//                 if (IsEarlyGame())
-//                     return baseAmount + 150;
-//                 if (IsLateGame())
-//                     return baseAmount + 50;
-//                 break;
+        return utility;
+    }
 
-//             case ResourceType.Stone:
-//                 if (NeedsDefensiveStructures())
-//                     return baseAmount + 200;
-//                 if (IsEconomicExpansionPhase())
-//                     return baseAmount + 100;
-//                 break;
-//         }
+    private bool IsStrategicallyImportant(AINode_State node, GoodType resourceType)
+    {
+        // Determine strategic importance, possibly varying by game stage or threats
+        // Example: Early game, prioritize resource production; later, focus on defense or advanced production
+        switch (resourceType)
+        {
+            // case BuildingType.Woodcutter:
+            //     return node.Resources[resourceType] < DesiredWoodLevel();
+            // case ResourceType.Bakery:
+            //     return node.Resources[resourceType] < DesiredFoodLevel();
+            //     // Add other cases as necessary
+        }
 
-//         return baseAmount;
-//     }
+        return true;
+    }
+    private int CalculateDesiredAmount(GoodType resource)
+    {
+        int baseAmount = 100;
 
-//     private bool IsEarlyGame()
-//     {
-//         int earlyGameTurnThreshold = 20;
-//         return currentTurn <= earlyGameTurnThreshold;
-//     }
+        switch (resource)
+        {
+            case GoodType.Wood:
+                if (IsEarlyGame())
+                    return baseAmount + 150;
+                if (IsLateGame())
+                    return baseAmount + 50;
+                break;
 
-//     private bool IsLateGame()
-//     {
-//         int lateGameBuildingThreshold = (int)(totalBuildingTypes * 0.75);
-//         return playerConstructedBuildings.Count >= lateGameBuildingThreshold;
-//     }
+            case GoodType.Stone:
+                if (NeedsDefensiveStructures())
+                    return baseAmount + 200;
+                if (IsEconomicExpansionPhase())
+                    return baseAmount + 100;
+                break;
+        }
 
-//     private bool NeedsDefensiveStructures()
-//     {
-//         int enemyThreatLevel = CalculateEnemyThreatLevel();
-//         return enemyThreatLevel > moderateThreatThreshold;
-//     }
+        return baseAmount;
+    }
 
-//     private bool IsEconomicExpansionPhase()
-//     {
-//         return currentEconomicGrowthRate > targetEconomicGrowthRate && !HasReachedEconomicMilestones();
-//     }
+    private bool IsEarlyGame()
+    {
+        int earlyGameTurnThreshold = 20;
+        return currentTurn <= earlyGameTurnThreshold;
+    }
 
-//     private float EvaluateEconomicChainImpact(ResourceType resource, AINode_State node)
-//     {
-//         float impact = 0;
-//         foreach (var chain in mapState.EconomicChains)
-//         {
-//             if (chain.ProductionPath.Contains(resource))
-//             {
-//                 impact += 1.5f;
-//             }
-//         }
+    private bool IsLateGame()
+    {
+        int lateGameBuildingThreshold = (int)(totalBuildingTypes * 0.75);
+        return playerConstructedBuildings.Count >= lateGameBuildingThreshold;
+    }
 
-//         if (IsBottleneckInAnyChain(resource, node))
-//         {
-//             impact += 2.0f;
-//         }
+    private bool NeedsDefensiveStructures()
+    {
+        int enemyThreatLevel = CalculateEnemyThreatLevel();
+        return enemyThreatLevel > moderateThreatThreshold;
+    }
 
-//         return impact;
-//     }
+    private bool IsEconomicExpansionPhase()
+    {
+        return currentEconomicGrowthRate > targetEconomicGrowthRate && !HasReachedEconomicMilestones();
+    }
 
-//     private bool IsBottleneckInAnyChain(ResourceType resource, AINode_State node)
-//     {
-//         int requiredAmount = CalculateDesiredAmount(resource);
-//         return node.Resources[resource] < requiredAmount;
-//     }
+    private float EvaluateEconomicChainImpact(GoodType resource, AINode_State node)
+    {
+        float impact = 0;
+        // foreach (var chain in mapState.EconomicChains)
+        // {
+        //     if (chain.ProductionPath.Contains(resource))
+        //     {
+        //         impact += 1.5f;
+        //     }
+        // }
 
-//     private int CalculateEnemyThreatLevel()
-//     {
-//         // Example implementation of calculating enemy threat level based on proximity and strength of enemy forces
-//         return 10; // Example threat level
-//     }
+        // if (IsBottleneckInAnyChain(resource, node))
+        // {
+        //     impact += 2.0f;
+        // }
 
-//     private bool HasReachedEconomicMilestones()
-//     {
-//         // Example implementation of checking if economic milestones have been reached
-//         return false; // Example condition
-//     }
+        return impact;
+    }
+
+    private bool IsBottleneckInAnyChain(GoodType resource, AINode_State node)
+    {
+        int requiredAmount = CalculateDesiredAmount(resource);
+        return node.Resources[resource] < requiredAmount;
+    }
+
+    private int CalculateEnemyThreatLevel()
+    {
+        // Example implementation of calculating enemy threat level based on proximity and strength of enemy forces
+        return 10; // Example threat level
+    }
+
+    private bool HasReachedEconomicMilestones()
+    {
+        // Example implementation of checking if economic milestones have been reached
+        return false; // Example condition
+    }
 
 
-//     // Cost
+    // Cost
 
-    
-//     public override float EstimateCost(AIMap_State mapState, int playerId)
-//     {
-//         // Start with a base cost factor, which could be adjusted based on game specifics
-//         float cost = 0;
 
-//         // Find the closest node that has the required resource
-//         var closestResourceNode = FindClosestResourceNode(mapState, playerId, resourceType);
-//         if (closestResourceNode == null)
-//         {
-//             // Extremely high cost if no resource nodes are available
-//             return float.MaxValue;
-//         }
+    public override float EstimateCost(AIMap_State mapState, int playerId)
+    {
+        // Start with a base cost factor, which could be adjusted based on game specifics
+        float cost = 0;
 
-//         // Calculate distance to the nearest resource node
-//         var path = mapState.FindPathToResource(playerId, closestResourceNode);
-//         if (path == null)
-//         {
-//             // No path found, set extremely high cost
-//             return float.MaxValue;
-//         }
+        // // Find the closest node that has the required resource
+        // var closestResourceNode = FindClosestResourceNode(mapState, playerId, resourceType);
+        // if (closestResourceNode == null)
+        // {
+        //     // Extremely high cost if no resource nodes are available
+        //     return float.MaxValue;
+        // }
 
-//         cost += path.Distance; // Adding distance to cost
+        // // Calculate distance to the nearest resource node
+        // var path = mapState.FindPathToResource(playerId, closestResourceNode);
+        // if (path == null)
+        // {
+        //     // No path found, set extremely high cost
+        //     return float.MaxValue;
+        // }
 
-//         // Add cost based on enemy control and strength along the path
-//         cost += CalculateEnemyControlledPathCost(path);
+        // cost += path.Distance; // Adding distance to cost
 
-//         // Consider the defense of the resource node
-//         cost += CalculateDefenseCost(closestResourceNode);
+        // // Add cost based on enemy control and strength along the path
+        // cost += CalculateEnemyControlledPathCost(path);
 
-//         return cost;
-//     }
+        // // Consider the defense of the resource node
+        // cost += CalculateDefenseCost(closestResourceNode);
 
-//     private AINode_State FindClosestResourceNode(AIMap_State mapState, int playerId, ResourceType resourceType)
-//     {
-//         // Placeholder for finding the closest resource node that contains the required resource
-//         return mapState.AllNodes.FirstOrDefault(node => node.Resources.ContainsKey(resourceType) && !node.IsUnderEnemyControl(playerId));
-//     }
+        return cost;
+    }
 
-//     private PathResult FindPathToResource(int playerId, AINode_State resourceNode)
-//     {
-//         // Placeholder for pathfinding algorithm to find the shortest or safest path to the resource
-//         return new PathResult { Distance = 10 }; // Example path result
-//     }
+    private AINode_State FindClosestResourceNode(AIMap_State mapState, int playerId, GoodType resourceType)
+    {
+        // Placeholder for finding the closest resource node that contains the required resource
+        return mapState.AllNodes.FirstOrDefault(node => node.Resources.ContainsKey(resourceType) && node.OwnerId != playerId);
+    }
 
-//     private float CalculateEnemyControlledPathCost(PathResult path)
-//     {
-//         // Add cost based on enemy presence and strength
-//         float enemyCost = 0;
-//         foreach (var node in path.Nodes)
-//         {
-//             if (node.IsEnemyControlled(playerId))
-//             {
-//                 enemyCost += node.MilitaryStrength * 1.5f; // Example calculation
-//             }
-//         }
-//         return enemyCost;
-//     }
+    private PathResult FindPathToResource(int playerId, AINode_State resourceNode)
+    {
+        // Placeholder for pathfinding algorithm to find the shortest or safest path to the resource
+        return new PathResult { Distance = 10 }; // Example path result
+    }
 
-//     private float CalculateDefenseCost(AINode_State resourceNode)
-//     {
-//         // Higher cost if the resource node is well defended
-//         return resourceNode.IsUnderThreat ? resourceNode.MilitaryStrength : 0;
-//     }
-// }
+    private float CalculateEnemyControlledPathCost(PathResult path)
+    {
+        // Add cost based on enemy presence and strength
+        float enemyCost = 0;
+        foreach (var node in path.Nodes)
+        {
+            if (node.IsEnemyControlled(playerId))
+            {
+                enemyCost += node.MilitaryStrength * 1.5f; // Example calculation
+            }
+        }
+        return enemyCost;
+    }
 
-// // Supporting classes and methods
-// public class PathResult
-// {
-//     public float Distance { get; set; }
-//     public List<AINode_State> Nodes { get; set; } = new List<AINode_State>();
-// }
+    private float CalculateDefenseCost(AINode_State resourceNode)
+    {
+        // Higher cost if the resource node is well defended
+        return resourceNode.IsUnderThreat ? resourceNode.MilitaryStrength : 0;
+    }
+}
 
-// public static class ExtensionMethods
-// {
-//     public static bool IsEnemyControlled(this AINode_State node, int playerId)
-//     {
-//         return node.OwnerId != playerId && node.OwnerId != 0; // Assuming 0 means uncontrolled
-//     }
-// }
+// Supporting classes and methods
+public class PathResult
+{
+    public float Distance { get; set; }
+    public List<AINode_State> Nodes { get; set; } = new List<AINode_State>();
+}
+
+public static class ExtensionMethods
+{
+    public static bool IsEnemyControlled(this AINode_State node, int playerId)
+    {
+        return node.OwnerId != playerId && node.OwnerId != 0; // Assuming 0 means uncontrolled
+    }
+}

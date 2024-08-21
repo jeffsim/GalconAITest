@@ -109,7 +109,7 @@ public class TownData
                     // Can player still send enough workers from source node?
                     if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) continue;
 
-                    // Is target node still capturabl?
+                    // Is target node still capturable?
                     if (toNode.OwnedBy != null) continue;
 
                     // Does player still have the necessary resources to build the building?
@@ -146,6 +146,12 @@ public class TownData
                     break;
 
                 case AIActionType.SendWorkersToOwnedNode:
+
+                    // Can player still send enough workers from source node?
+                    if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) continue;
+
+                    fromNode.NumWorkers -= moveToMake.Count;
+                    toNode.NumWorkers += moveToMake.Count;
                     break;
             }
         }

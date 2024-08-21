@@ -138,18 +138,27 @@ public class AITestScene : MonoBehaviour
                 if (action.SourceNode != null && action.DestNode != null)
                     DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, player.Color, "Send " + action.Count);
                 break;
+
             case AIActionType.DoNothing:
                 break;
+
             case AIActionType.ConstructBuildingInEmptyNode:
                 if (action.SourceNode != null && action.DestNode != null)
                     DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, Color.yellow, "Send " + action.Count + " to construct\n" + action.BuildingToConstruct.Id);
                 else
                     Debug.Log("Unknown asdfasdfasdfadf type: " + action.Type);
                 break;
-case AIActionType.AttackFromNode:
+
+            case AIActionType.AttackFromNode:
                 if (action.SourceNode != null && action.DestNode != null)
                     DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, Color.red, "Attack, send " + action.Count);
                 break;
+
+            case AIActionType.SendWorkersToOwnedNode:
+                if (action.SourceNode != null && action.DestNode != null)
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, player.Color, "Support " + action.Count);
+                break;
+
             default:
                 Debug.Log("Unknown action type: " + action.Type);
                 break;
