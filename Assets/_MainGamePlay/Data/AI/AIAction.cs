@@ -11,7 +11,8 @@ public enum AIActionType
     ConstructBuildingInOwnedEmptyNode,
     AttackFromNode,
     NoAction_GameOver,
-    NoAction_MaxDepth
+    NoAction_MaxDepth,
+    RootAction
 };
 
 #if DEBUG
@@ -93,8 +94,8 @@ public class AIAction
         };
     }
 
-    public float Score;
-    public float ScoreBeforeSubActions;
+    public float ScoreAfterSubactions;
+    public float ThisActionScore;
 
     public AIActionType Type = AIActionType.DoNothing;
     public int Count;
@@ -116,8 +117,8 @@ public class AIAction
 
     public void Reset()
     {
-        Score = 0;
-        ScoreBeforeSubActions = 0;
+        ScoreAfterSubactions = 0;
+        ThisActionScore = 0;
         Count = 0;
         BuildingToConstruct = null;
         Type = AIActionType.DoNothing;
@@ -143,8 +144,8 @@ public class AIAction
 
     internal void CopyFrom(AIAction sourceAction)
     {
-        Score = sourceAction.Score;
-        ScoreBeforeSubActions = sourceAction.ScoreBeforeSubActions;
+        ScoreAfterSubactions = sourceAction.ScoreAfterSubactions;
+        ThisActionScore = sourceAction.ThisActionScore;
         Count = sourceAction.Count;
         BuildingToConstruct = sourceAction.BuildingToConstruct;
         Type = sourceAction.Type;

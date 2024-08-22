@@ -25,7 +25,7 @@ public partial class PlayerAI
             str += " | Recursion: " + actionToOutput.DebugOutput_RecursionNum;
             str += " | Action: " + actionToOutput.DebugOutput_TriedActionNum;
 
-            str += " | Score: " + actionToOutput.ScoreBeforeSubActions.ToString("0.0") + "=>" + actionToOutput.Score.ToString("0.0");
+            str += " | Score: " + actionToOutput.ThisActionScore.ToString("0.0") + "=>" + actionToOutput.ScoreAfterSubactions.ToString("0.0");
             str += " | Action: ";
             switch (actionToOutput.Type)
             {

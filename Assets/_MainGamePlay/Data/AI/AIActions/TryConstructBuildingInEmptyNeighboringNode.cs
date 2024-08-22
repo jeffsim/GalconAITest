@@ -24,11 +24,11 @@ public partial class PlayerAI
                 // ==== Verify we can perform the action
 
                 // Don't build resource gatherers if there are no resource nodes within reach.  
-                if (buildingDefn.CanGatherResources)
-                if (toNode.NodeId == 26)
-                {
-                    // Debug.Log("Debug");
-                }
+                if (!buildingDefn.CanGatherResources)
+                    if (toNode.NodeId == 11 && fromNode.NodeId == 12 && curDepth == 0)
+                    {
+                        // Debug.Log("Debug");
+                    }
                 if (buildingDefn.CanGatherResources && !(toNode.CanBeGatheredFrom && toNode.ResourceGatheredFromThisNode == buildingDefn.ResourceThisNodeCanGoGather.GoodType)) continue;
 
                 // Do we have resources to build this building?
@@ -47,24 +47,26 @@ public partial class PlayerAI
 
 #if DEBUG
                 Debug.Assert(buildingDefn != null);
-                var prevEntry = AIDebugger.TrackPerformAction_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried++, curDepth, recurseCount);
+                var prevEntry = AIDebugger.TrackPerformAction_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, 0, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried++, curDepth, recurseCount);
 #endif
 
                 // ==== Recursively determine what the best action is after this action is performed
-                var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
-                if (actionScore.Score > bestAction.Score)
+                var actionWithBestSubActions = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
+                prevEntry.TotalStrategyScore = actionWithBestSubActions.ScoreAfterSubactions;
+                if (actionWithBestSubActions.ScoreAfterSubactions > bestAction.ScoreAfterSubactions)
                 {
                     // This is the best action so far; save the action so we can return it
-                    bestAction.Score = actionScore.ScoreBeforeSubActions;
+                    bestAction.ThisActionScore = scoreAfterActionAndBeforeSubActions;
+                    bestAction.ScoreAfterSubactions = actionWithBestSubActions.ScoreAfterSubactions;
                     bestAction.Type = AIActionType.ConstructBuildingInEmptyNode;
                     bestAction.SourceNode = fromNode;
                     bestAction.Count = numSent;
                     bestAction.DestNode = toNode;
                     bestAction.BuildingToConstruct = buildingDefn;
 #if DEBUG
-                    bestAction.DebugOutput_NextAction = actionScore;
+                    bestAction.DebugOutput_NextAction = actionWithBestSubActions;
                     if (AIDebugger.ShouldTrackEntries) prevEntry.BestNextAction = AIDebugger.curEntry;
-                    bestAction.TrackStrategyDebugInfoInAction(actionScore, debugOutput_actionScoreReasons, actionNumberOnEntry, recurseCount, curDepth);
+                    bestAction.TrackStrategyDebugInfoInAction(actionWithBestSubActions, debugOutput_actionScoreReasons, actionNumberOnEntry, recurseCount, curDepth);
 #endif
                 }
 

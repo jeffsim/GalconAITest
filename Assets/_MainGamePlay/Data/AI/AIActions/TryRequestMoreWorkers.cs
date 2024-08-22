@@ -25,14 +25,15 @@ public partial class PlayerAI
             aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
 #if DEBUG
-            AIDebugger.TrackPerformAction_SendWorkersToOwnedNode(fromNode, toNode, numSent, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried++, curDepth, recurseCount);
+            var prevEntry = AIDebugger.TrackPerformAction_SendWorkersToOwnedNode(fromNode, toNode, numSent, 0, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried++, curDepth, recurseCount);
 #endif
             // Recursively determine what the best action is after this action is performed
             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
-            if (actionScore.Score > bestAction.Score)
+            prevEntry.TotalStrategyScore = actionScore.ScoreAfterSubactions;
+            if (actionScore.ScoreAfterSubactions > bestAction.ScoreAfterSubactions)
             {
                 // This is the best action so far in this 'level' of the AI stack; save the action so we can return it
-                bestAction.Score = actionScore.ScoreBeforeSubActions;
+                bestAction.ScoreAfterSubactions = actionScore.ThisActionScore;
                 bestAction.Type = AIActionType.SendWorkersToOwnedNode;
                 bestAction.Count = numSent;
                 bestAction.SourceNode = fromNode;

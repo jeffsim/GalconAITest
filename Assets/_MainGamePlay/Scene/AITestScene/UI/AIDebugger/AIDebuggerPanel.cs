@@ -25,18 +25,18 @@ public class AIDebuggerPanel : MonoBehaviour
 
         List.RemoveAllChildren();
 
-        initializeExpandedEntries(AIDebugger.topEntry);
+        initializeExpandedEntries(AIDebugger.rootEntry);
 
         if (ShowBestOnStart)
         {
-            initializeExpandedEntries(AIDebugger.topEntry, true, false);
+            initializeExpandedEntries(AIDebugger.rootEntry, true, false);
 
-            clearBestStrategyPaths(AIDebugger.topEntry);
-            identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
+            clearBestStrategyPaths(AIDebugger.rootEntry);
+            identifyBestStrategyPath(AIDebugger.rootEntry.BestNextAction);
             ShowBestOnStart = false;
         }
 
-        AddChildEntries(AIDebugger.topEntry.ChildEntries);
+        AddChildEntries(AIDebugger.rootEntry.ChildEntries);
         Debug.Log("Total actions: " +AITestScene.Instance.DebugPlayerToViewDetailsOn.AI.debugOutput_ActionsTried);
     }
 
@@ -78,8 +78,9 @@ public class AIDebuggerPanel : MonoBehaviour
     {
         if (playerId != AITestScene.Instance.DebugPlayerToViewDetailsOn.Id) return;
         //     recursivelyIdentifyHighestScoreAmongPeers(AIDebugger.topEntry);
-        clearBestStrategyPaths(AIDebugger.topEntry);
-        identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
+        ShowBestOnStart = true;
+        // clearBestStrategyPaths(AIDebugger.topEntry);
+        // identifyBestStrategyPath(AIDebugger.topEntry.BestNextAction);
         Refresh();
     }
 
@@ -112,27 +113,27 @@ public class AIDebuggerPanel : MonoBehaviour
         identifyBestStrategyPath(curEntry.BestNextAction);
     }
 
-    private void recursivelyIdentifyHighestScoreAmongPeers(AIDebuggerEntryData curEntry)
-    {
-        if (curEntry.ChildEntries.Count == 0) return;
-        var highestEntry = curEntry.ChildEntries[0];
-        foreach (var childEntry in curEntry.ChildEntries)
-        {
-            if (childEntry.Score > highestEntry.Score)
-                highestEntry = childEntry;
-        }
-        foreach (var childEntry in curEntry.ChildEntries)
-        {
-            ExpandedEntries[childEntry.ActionNumber] = childEntry == highestEntry;
-            childEntry.IsHighestOptionOfPeers = childEntry == highestEntry;
-            recursivelyIdentifyHighestScoreAmongPeers(childEntry);
-        }
-    }
+    // private void recursivelyIdentifyHighestScoreAmongPeers(AIDebuggerEntryData curEntry)
+    // {
+    //     if (curEntry.ChildEntries.Count == 0) return;
+    //     var highestEntry = curEntry.ChildEntries[0];
+    //     foreach (var childEntry in curEntry.ChildEntries)
+    //     {
+    //         if (childEntry.ActionScore > highestEntry.ActionScore)
+    //             highestEntry = childEntry;
+    //     }
+    //     foreach (var childEntry in curEntry.ChildEntries)
+    //     {
+    //         ExpandedEntries[childEntry.ActionNumber] = childEntry == highestEntry;
+    //         childEntry.IsHighestOptionOfPeers = childEntry == highestEntry;
+    //         recursivelyIdentifyHighestScoreAmongPeers(childEntry);
+    //     }
+    // }
 
     public void ExpandAllToggled()
     {
         ForceExpandAll = !ForceExpandAll;
-        initializeExpandedEntries(AIDebugger.topEntry, true, ForceExpandAll);
+        initializeExpandedEntries(AIDebugger.rootEntry, true, ForceExpandAll);
 
         Refresh();
     }
