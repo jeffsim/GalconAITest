@@ -87,11 +87,18 @@ public partial class PlayerAI
 #endif
 
         var tryGOAP = false;
+        var tryNewStrategy = true;
         if (tryGOAP)
         {
             var aiMapState = new AIMap_State(townData);
             InitializeGOAP(aiMapState, 1);
             var goal = DetermineBestGoal();
+        }
+        else if (tryNewStrategy)
+        {
+            var strategy = new NewStrategy(townData, player);
+            var action = strategy.DecideAction();
+            BestNextActionToTake.CopyFrom(action);
         }
         else
             BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));

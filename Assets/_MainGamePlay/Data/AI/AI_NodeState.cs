@@ -29,9 +29,12 @@ public class AI_NodeState
 
     public void ClearBuilding() => HasBuilding = false;
 
+    public BuildingDefn BuildingInNode;
+
     public void SetBuilding(BuildingDefn buildingDefn, int turnNumber)
     {
-        HasBuilding = true;
+        BuildingInNode = buildingDefn;
+        HasBuilding = BuildingInNode != null;
         TurnBuildingWasBuilt = turnNumber;
         CanGoGatherResources = buildingDefn.CanGatherResources;
         if (CanGoGatherResources)
