@@ -39,8 +39,8 @@ public partial class AI_TownState
                     if (node.CanGoGatherResources)
                     {
                         // Dictionaries are slow, and this is the innermost loop, so...
-                        int dist = node.DistanceToClosestGatherableResourceNode(node.ResourceThisNodeCanGoGather);
-                        if (dist == 1)
+                     //   int dist = node.DistanceToClosestGatherableResourceNode(node.ResourceThisNodeCanGoGather);
+                       // if (dist == 1)
                         {
                             score += 1.5f;
 

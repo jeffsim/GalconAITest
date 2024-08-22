@@ -14,23 +14,31 @@ public partial class PlayerAI
 
             // Verify we can perform the action
             if (toNode.OwnedBy != null) continue; // This task can't send workers to nodes owned by anyone (including this player).  Those are handled in other actions
-            if (toNode.IsResourceNode) continue; // Can't send to or construct in resource nodes
-            if (toNode.HasBuilding) continue; // Node already has a building
+            if (toNode.HasBuilding) continue; // Node already has a building. note: resource nodes e.g. forest don't count as having a building until e.g. woodcutter is built
 
             // If here then we can send workers to this node.  Now determine what building we can construct in this node
             for (int j = 0; j < numBuildingDefns; j++)
             {
                 var buildingDefn = buildableBuildingDefns[j];
 
-                // Verify we can perform the action
-                if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(toNode, buildingDefn.ConstructionRequirements)) continue;
+                // ==== Verify we can perform the action
 
                 // Don't build resource gatherers if there are no resource nodes within reach.  
-                // NOTE: This assumes that resource gatherers are single purpose; e.g. can't also generate workers
-                if (buildingDefn.CanGatherResources && toNode.DistanceToClosestGatherableResourceNode(buildingDefn.ResourceThisNodeCanGoGather.GoodType) > 1) continue;
+                if (buildingDefn.CanGatherResources)
+                if (toNode.NodeId == 26)
+                {
+                    // Debug.Log("Debug");
+                }
+                if (buildingDefn.CanGatherResources && !(toNode.CanBeGatheredFrom && toNode.ResourceGatheredFromThisNode == buildingDefn.ResourceThisNodeCanGoGather.GoodType)) continue;
+
+                // Do we have resources to build this building?
+                if (!aiTownState.ConstructionResourcesCanBeReachedFromNode(toNode, buildingDefn.ConstructionRequirements)) continue;
 
                 // Don't build barracks unless enemy is in neighboring node. NOTE: should instead check if enemy is within X nodes
-               // if (buildingDefn.CanGenerateWorkers && toNode.DistanceToClosestEnemyNode(player) > 1) continue;
+                // if (buildingDefn.CanGenerateWorkers && toNode.DistanceToClosestEnemyNode(player) > 1) continue;
+
+                // ... etc for other building types
+
 
                 // ==== Perform the action and get the score of the state after the action is performed
                 float percentOfWorkersToSend = .5f; // TODO: Try different #s?
@@ -38,6 +46,7 @@ public partial class PlayerAI
                 aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
 
 #if DEBUG
+                Debug.Assert(buildingDefn != null);
                 var prevEntry = AIDebugger.TrackPerformAction_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, scoreAfterActionAndBeforeSubActions, debugOutput_ActionsTried++, curDepth, recurseCount);
 #endif
 

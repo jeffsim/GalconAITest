@@ -29,7 +29,7 @@ public class AIDebuggerEntryData
     static AIDebuggerEntryData[] Pool;
     public AIDebuggerEntryData BestNextAction;
     public bool IsInBestStrategyPath;
-    
+
     public static void InitializePool()
     {
         Pool = new AIDebuggerEntryData[MaxPoolSize];
@@ -64,6 +64,9 @@ public class AIDebuggerEntryData
         entry.FromNode = fromNode;
         entry.ToNode = toNode;
         entry.NumSent = numSent;
+        if (actionType == AIActionType.ConstructBuildingInEmptyNode)
+            if (buildingDefn == null)
+                Debug.Assert(buildingDefn != null);
         entry.BuildingDefn = buildingDefn;
         entry.Score = scoreAfterActionAndBeforeSubActions;
         entry.ActionNumber = actionNum;

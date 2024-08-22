@@ -87,7 +87,7 @@ public partial class PlayerAI
 #endif
 
         var tryGOAP = false;
-        var tryNewStrategy = true;
+        var tryNewStrategy = false;
         if (tryGOAP)
         {
             var aiMapState = new AIMap_State(townData);

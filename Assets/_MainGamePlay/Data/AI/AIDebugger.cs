@@ -1,4 +1,6 @@
 #if DEBUG
+using System.Diagnostics;
+
 public static class AIDebugger
 {
     public static AIDebuggerEntryData topEntry = new();
@@ -16,6 +18,7 @@ public static class AIDebugger
 
     internal static AIDebuggerEntryData TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
     {
+        Debug.Assert(buildingDefn != null);
         if (!ShouldTrackEntries) return null;
         return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
                    AIActionType.ConstructBuildingInEmptyNode,
@@ -34,7 +37,7 @@ public static class AIDebugger
     {
         if (!ShouldTrackEntries) return null;
         return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
-                   AIActionType.ConstructBuildingInEmptyNode,
+                   AIActionType.SendWorkersToOwnedNode,
                    fromNode,
                    toNode,
                    numSent,

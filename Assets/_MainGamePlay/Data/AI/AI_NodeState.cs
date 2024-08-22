@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 public class AI_NodeState
 {
@@ -10,7 +11,7 @@ public class AI_NodeState
 
     public PlayerData OwnedBy;
     public int NodeId;
-    internal bool IsResourceNode => HasBuilding && CanBeGatheredFrom;
+    internal bool IsResourceNode => CanBeGatheredFrom;
 
     public Dictionary<GoodType, int> DistanceToGatherableResource = new();
 
@@ -29,12 +30,18 @@ public class AI_NodeState
 
     public void ClearBuilding() => HasBuilding = false;
 
-    public BuildingDefn BuildingInNode;
+    // public BuildingDefn BuildingInNode;
+    public void SetResourceNode(BuildingDefn buildingDefn, int turnNumber)
+    {
+        Debug.Assert(buildingDefn.CanBeGatheredFrom);
+        CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
+        ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
+    }
 
     public void SetBuilding(BuildingDefn buildingDefn, int turnNumber)
     {
-        BuildingInNode = buildingDefn;
-        HasBuilding = BuildingInNode != null;
+        Debug.Assert(!buildingDefn.CanBeGatheredFrom);
+        HasBuilding = true;
         TurnBuildingWasBuilt = turnNumber;
         CanGoGatherResources = buildingDefn.CanGatherResources;
         if (CanGoGatherResources)
@@ -42,9 +49,9 @@ public class AI_NodeState
 
         // This can only happen at start; e.g. this is a forest - don't need to handle every time a building is built
         // ^ that's only true if we don't allow resource nodes to be built
-        CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
-        if (CanBeGatheredFrom)
-            ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
+        // CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
+        // if (CanBeGatheredFrom)
+        //     ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
         // DistanceToClosestGatherableResourceNode = findClosestResourceNode(ResourceThisNodeCanGoGather);
 
         CanGenerateWorkers = buildingDefn.CanGenerateWorkers;
@@ -85,7 +92,12 @@ public class AI_NodeState
         if (RealNode.Building == null)
             ClearBuilding();
         else
-            SetBuilding(RealNode.Building.Defn, 0);
+        {
+            if (RealNode.Building.Defn.CanBeGatheredFrom)
+                SetResourceNode(RealNode.Building.Defn, 0);
+            else
+                SetBuilding(RealNode.Building.Defn, 0);
+        }
         NumWorkers = RealNode.NumWorkers;
         OwnedBy = RealNode.OwnedBy;
     }
