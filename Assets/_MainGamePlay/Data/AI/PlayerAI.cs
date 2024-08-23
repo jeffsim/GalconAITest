@@ -10,7 +10,7 @@ public partial class PlayerAI
 
     PlayerData player;
     AI_TownState aiTownState;
-    int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
+    int minWorkersInNodeBeforeConsideringSendingAnyOut = 8;
     int maxDepth;
     public int debugOutput_ActionsTried;
 
@@ -103,14 +103,13 @@ public partial class PlayerAI
             AIDebugger.rootEntry.BestNextAction = null;
             var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
             if (bestAction == null)
-                BestNextActionToTake = null; // nothing to do
+                BestNextActionToTake.Type = AIActionType.DoNothing;// = null; // nothing to do
             else
                 BestNextActionToTake.CopyFrom(bestAction);
         }
 
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried);
-        // performAction(BestNextActionToTake);
 
 #if DEBUG
         // for ALL entries, calculate the count of all child entries under it and store in entry.AllChildEntriesCount

@@ -30,9 +30,8 @@ public partial class PlayerAI
         {
             var node = aiTownState.Nodes[i];
             if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
-            
-            AIAction action = null;
-            action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+
+            var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
             if (action.Score > bestAction.Score)
             {
                 bestAction = action;

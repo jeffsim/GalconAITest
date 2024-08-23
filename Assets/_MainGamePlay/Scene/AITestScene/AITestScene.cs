@@ -132,16 +132,17 @@ public class AITestScene : MonoBehaviour
         if (player == null || player.AI == null || player.AI.BestNextActionToTake == null) return;
         var action = AIDebugger.rootEntry;
 
+        if (action.BestNextAction == null) return;
         var color = player.Color;
 
         if (!ShowFullActionPath)
-            drawActionArrow(0, action, player, color);
+            drawActionArrow(0, action.BestNextAction, player, color);
         else
         {
             int i = 1;
             while (action != null)
             {
-                drawActionArrow(i, action, player, i <=2 ? Color.red : Color.gray);
+                drawActionArrow(i, action, player, i <= 2 ? Color.red : Color.gray);
                 i++;
                 action = action.BestNextAction;
             }
