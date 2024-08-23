@@ -25,7 +25,7 @@ public class TownData
 
         // Create Nodes
         foreach (var nodeDefn in townDefn.Nodes)
-            if (nodeDefn.Enabled)
+            // if (nodeDefn.Enabled)
                 Nodes.Add(new NodeData(nodeDefn, Players[nodeDefn.OwnedByPlayerId]));
 
         // Create Node Connections
