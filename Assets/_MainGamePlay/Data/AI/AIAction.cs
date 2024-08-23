@@ -101,8 +101,9 @@ public class AIAction
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
 
+
     // public AIAction NextAction;
-    
+
     // Build building
     public BuildingDefn BuildingToConstruct;
 
@@ -113,6 +114,7 @@ public class AIAction
     public DebugAIStateReasons DebugOutput_ScoreReasonsBeforeSubActions = new();
     public int DebugOutput_TriedActionNum; // for debug output purposes
     public int DebugOutput_Depth; // for debug output purposes
+    public AIDebuggerEntryData AIDebuggerEntry;
 
     public void Reset()
     {
@@ -122,6 +124,7 @@ public class AIAction
         Type = AIActionType.DoNothing;
         SourceNode = null;
         DestNode = null;
+        AIDebuggerEntry = null;
         DebugOutput_ScoreReasonsBeforeSubActions.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;
@@ -149,11 +152,15 @@ public class AIAction
         DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
         DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
         DebugOutput_Depth = sourceAction.DebugOutput_Depth;
+        AIDebuggerEntry = sourceAction.AIDebuggerEntry;
     }
 #endif
 
-    internal void SetTo_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float score)
+    internal void SetTo_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent,
+                                                     BuildingDefn buildingDefn, float score, AIDebuggerEntryData debuggerEntry)
     {
+        AIDebuggerEntry = debuggerEntry;
+
         Score = score;
         Type = AIActionType.ConstructBuildingInEmptyNode;
         SourceNode = fromNode;

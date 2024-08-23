@@ -16,9 +16,14 @@ public partial class PlayerAI
         // }
 
         // Update inventory counts at the start of this 'recursive step'; e.g. woodcutters get +1 wood...
+        // TODO: Combine this with TownData.Debug_WorldTurn somehow
         foreach (var node in aiTownState.Nodes)
+        {
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += 3; // simple for now
+            if (node.CanGenerateWorkers)
+                node.NumWorkers += 1; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
+        }
 
         // bestAction is currently set to 'do nothing' -- see if taking any of our available actions results in a better score
         for (int i = 0; i < aiTownState.NumNodes; i++)
@@ -28,9 +33,22 @@ public partial class PlayerAI
 
             var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
             if (action.Score > bestAction.Score)
+            {
                 bestAction = action;
+                parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+            }
         }
 
+        // TODO: restore town state
+        foreach (var node in aiTownState.Nodes)
+        {
+            if (node.CanGoGatherResources && node.OwnedBy == player)
+                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= 3; // simple for now
+            if (node.CanGenerateWorkers)
+                node.NumWorkers -= 1; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
+        }
+        if (bestAction.Type == AIActionType.DoNothing)
+            return null;
         return bestAction;
     }
 }
