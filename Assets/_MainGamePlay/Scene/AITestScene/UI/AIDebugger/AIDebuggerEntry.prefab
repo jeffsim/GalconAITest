@@ -92,7 +92,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ActionNumber: {fileID: 1916432046243622708}
-  ActionType: {fileID: 0}
   Information: {fileID: 5641611255457062081}
   Score: {fileID: 2816302625516265135}
   Count: {fileID: 8096444684944609090}

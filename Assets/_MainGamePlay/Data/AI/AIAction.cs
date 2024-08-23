@@ -94,14 +94,15 @@ public class AIAction
         };
     }
 
-    public float ScoreAfterSubactions;
-    public float ThisActionScore;
+    public float Score;
 
     public AIActionType Type = AIActionType.DoNothing;
     public int Count;
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
 
+    public AIAction NextAction;
+    
     // Build building
     public BuildingDefn BuildingToConstruct;
 
@@ -111,14 +112,11 @@ public class AIAction
 #if DEBUG
     public DebugAIStateReasons DebugOutput_ScoreReasonsBeforeSubActions = new();
     public int DebugOutput_TriedActionNum; // for debug output purposes
-    public int DebugOutput_RecursionNum; // for debug output purposes
     public int DebugOutput_Depth; // for debug output purposes
-    public AIAction DebugOutput_NextAction; // Keep track of the optimal actions to perform after this one; only used for debugging
 
     public void Reset()
     {
-        ScoreAfterSubactions = 0;
-        ThisActionScore = 0;
+        Score = 0;
         Count = 0;
         BuildingToConstruct = null;
         Type = AIActionType.DoNothing;
@@ -127,16 +125,13 @@ public class AIAction
         DebugOutput_ScoreReasonsBeforeSubActions.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;
-        DebugOutput_NextAction = null;
     }
 
-    public void TrackStrategyDebugInfoInAction(AIAction actionScore, DebugAIStateReasons debugOutput_actionScoreReasons, int thisActionNum, int recurseCount, int curDepth)
+    public void TrackStrategyDebugInfoInAction(DebugAIStateReasons debugOutput_actionScoreReasons, int thisActionNum, int curDepth)
     {
         if (!AITestScene.Instance.DebugOutputStrategyToConsole) return;
 
-        DebugOutput_NextAction = actionScore;
         DebugOutput_TriedActionNum = thisActionNum;
-        DebugOutput_RecursionNum = recurseCount;
         DebugOutput_Depth = curDepth;
         if (AITestScene.Instance.DebugOutputStrategyReasons)
             DebugOutput_ScoreReasonsBeforeSubActions = debugOutput_actionScoreReasons;
@@ -144,18 +139,26 @@ public class AIAction
 
     internal void CopyFrom(AIAction sourceAction)
     {
-        ScoreAfterSubactions = sourceAction.ScoreAfterSubactions;
-        ThisActionScore = sourceAction.ThisActionScore;
+        Score = sourceAction.Score;
         Count = sourceAction.Count;
         BuildingToConstruct = sourceAction.BuildingToConstruct;
         Type = sourceAction.Type;
+        NextAction = sourceAction.NextAction;
         SourceNode = sourceAction.SourceNode;
         DestNode = sourceAction.DestNode;
         DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
         DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
-        DebugOutput_RecursionNum = sourceAction.DebugOutput_RecursionNum;
         DebugOutput_Depth = sourceAction.DebugOutput_Depth;
-        DebugOutput_NextAction = sourceAction.DebugOutput_NextAction;
     }
 #endif
+
+    internal void SetTo_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float score)
+    {
+        Score = score;
+        Type = AIActionType.ConstructBuildingInEmptyNode;
+        SourceNode = fromNode;
+        DestNode = toNode;
+        Count = numSent;
+        BuildingToConstruct = buildingDefn;
+    }
 }

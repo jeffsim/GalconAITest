@@ -16,55 +16,52 @@ public static class AIDebugger
         AIDebuggerEntryData.ResetPool();
     }
 
-    internal static AIDebuggerEntryData TrackPerformAction_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterSubactions, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
+    internal static AIDebuggerEntryData PushPerformedAction_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float finalActionScore, int actionNum, int curDepth)
     {
         Debug.Assert(buildingDefn != null);
         if (!ShouldTrackEntries) return null;
         return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
-                   AIActionType.ConstructBuildingInEmptyNode,
-                   fromNode,
-                   toNode,
-                   numSent,
-                   buildingDefn,
-                   scoreAfterSubactions,
-                   scoreAfterActionAndBeforeSubActions,
-                   actionNum,
-                   curDepth,
-                   curEntry
+                                    AIActionType.ConstructBuildingInEmptyNode,
+                                    fromNode,
+                                    toNode,
+                                    numSent,
+                                    buildingDefn,
+                                    finalActionScore,
+                                    actionNum,
+                                    curDepth,
+                                    curEntry
            ));
     }
 
-    internal static AIDebuggerEntryData TrackPerformAction_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float scoreAfterSubactions, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
+    internal static AIDebuggerEntryData TrackPerformAction_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float finalActionScore, int actionNum, int curDepth)
     {
         if (!ShouldTrackEntries) return null;
         return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
-                   AIActionType.SendWorkersToOwnedNode,
-                   fromNode,
-                   toNode,
-                   numSent,
-                   null,
-                   scoreAfterSubactions,
-                   scoreAfterActionAndBeforeSubActions,
-                   actionNum,
-                   curDepth,
-                   curEntry
+                                    AIActionType.SendWorkersToOwnedNode,
+                                    fromNode,
+                                    toNode,
+                                    numSent,
+                                    null,
+                                    finalActionScore,
+                                    actionNum,
+                                    curDepth,
+                                    curEntry
            ));
     }
 
-    internal static AIDebuggerEntryData TrackPerformAction_Attack(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float scoreAfterSubactions, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, int recurseCount)
+    internal static AIDebuggerEntryData TrackPerformAction_Attack(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float finalActionScore, int actionNum, int curDepth)
     {
         if (!ShouldTrackEntries) return null;
         return PushPerformedAction(AIDebuggerEntryData.GetFromPool(
-                  AIActionType.AttackFromNode,
-                  fromNode,
-                  toNode,
-                  numSent,
-                  null,
-                   scoreAfterSubactions,
-                  scoreAfterActionAndBeforeSubActions,
-                  actionNum,
-                  curDepth,
-                  curEntry
+                                    AIActionType.AttackFromNode,
+                                    fromNode,
+                                    toNode,
+                                    numSent,
+                                    null,
+                                    finalActionScore,
+                                    actionNum,
+                                    curDepth,
+                                    curEntry
           ));
     }
 

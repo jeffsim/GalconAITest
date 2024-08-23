@@ -1,9 +1,9 @@
 public partial class AI_TownState
 {
     // TODO: Add weights based on AI's personality
-    internal void EvaluateScore(int stateDepth, int maxStateDepth, out float score, out DebugAIStateReasons scoreReasons)
+    internal float EvaluateScore(int stateDepth, int maxStateDepth, out DebugAIStateReasons scoreReasons)
     {
-        score = 0;
+        float score = 0;
 
         scoreReasons = null;
 #if DEBUG
@@ -39,8 +39,8 @@ public partial class AI_TownState
                     if (node.CanGoGatherResources)
                     {
                         // Dictionaries are slow, and this is the innermost loop, so...
-                     //   int dist = node.DistanceToClosestGatherableResourceNode(node.ResourceThisNodeCanGoGather);
-                       // if (dist == 1)
+                        //   int dist = node.DistanceToClosestGatherableResourceNode(node.ResourceThisNodeCanGoGather);
+                        // if (dist == 1)
                         {
                             score += 1.5f;
 
@@ -48,7 +48,7 @@ public partial class AI_TownState
                             // where turn 0 is the first turn, and maxStateDepth is the last turn
                             // building built turn 0; currently on turn 10; multiply score by 10
                             // building built turn 5; currently on turn 10; multiply score by 5
-                            score += (maxStateDepth - node.TurnBuildingWasBuilt) * .1f;
+                            score += (maxStateDepth - node.TurnBuildingWasBuilt + 1) * .1f;
 
 #if DEBUG
                             scoreReasons?.ScoresFrom_ResourceGatherersCloseToResourceNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = 2f });
@@ -98,5 +98,6 @@ public partial class AI_TownState
         //float weight = 1 - stateDepth / maxStateDepth * 0.01f;
         //  score *= weight;
 
+        return score;
     }
 }

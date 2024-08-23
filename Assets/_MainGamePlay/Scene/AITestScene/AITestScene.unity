@@ -812,7 +812,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0.49531788, y: 0.14836921, z: -0.08629849, w: 0.8515864}
-  m_LocalPosition: {x: -8.84, y: 12.54, z: -7.967802}
+  m_LocalPosition: {x: 524.92926, y: 10.060367, z: 426.24118}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3718,7 +3718,7 @@ MonoBehaviour:
   WorkersFolder: {fileID: 832437443}
   TestWorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
   AIDebuggerPanel: {fileID: 134469009}
-  MaxAIDepth: 4
+  MaxAIDepth: 1
   ShowDebuggerAI: 1
   DebugOutputStrategyToConsole: 0
   DebugOutputStrategyReasons: 0
@@ -4220,8 +4220,8 @@ SceneRoots:
   m_Roots:
   - {fileID: 100949539}
   - {fileID: 806935602}
-  - {fileID: 330585546}
   - {fileID: 410087041}
   - {fileID: 2056783223}
   - {fileID: 1152963464}
   - {fileID: 1730651326}
+  - {fileID: 330585546}

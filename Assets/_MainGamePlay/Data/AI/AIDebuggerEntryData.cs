@@ -5,7 +5,7 @@ using UnityEngine;
 #if DEBUG
 public class AIDebuggerEntryData
 {
-    public override string ToString() => InformationString() + " (" + ActionScore.ToString("0.0") + ", " + TotalStrategyScore.ToString("0.0") + ")";
+    public override string ToString() => InformationString() + " (" + FinalActionScore.ToString("0.0") + ")";
 
     private string CurSpacing => new string(' ', Math.Max(0, RecurseDepth) * 4) + (RecurseDepth == 0 ? "" : "\u21B3");
     public int ActionNumber;
@@ -18,8 +18,7 @@ public class AIDebuggerEntryData
     public AttackResult AttackResult;
     public int NumSent;
     public BuildingDefn BuildingDefn;
-    public float ActionScore;
-    public float TotalStrategyScore;
+    public float FinalActionScore;
     public AIDebuggerEntryData ParentEntry;
 
     public List<AIDebuggerEntryData> ChildEntries = new(10);
@@ -46,7 +45,7 @@ public class AIDebuggerEntryData
         curPoolIndex = 0;
     }
 
-    internal static AIDebuggerEntryData GetFromPool(AIActionType actionType, AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float scoreAfterSubactions, float scoreAfterActionAndBeforeSubActions, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
+    internal static AIDebuggerEntryData GetFromPool(AIActionType actionType, AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float finalActionScore, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
     {
         if (Pool == null)
             InitializePool();
@@ -67,13 +66,11 @@ public class AIDebuggerEntryData
         entry.FromNode = fromNode;
         entry.ToNode = toNode;
         entry.NumSent = numSent;
-        if (actionType == AIActionType.ConstructBuildingInEmptyNode)
-            if (buildingDefn == null)
-                Debug.Assert(buildingDefn != null);
+        entry.AllChildEntriesCount = 0;
         entry.BuildingDefn = buildingDefn;
-        entry.ActionScore = scoreAfterActionAndBeforeSubActions;
-        entry.TotalStrategyScore = scoreAfterSubactions;
+        entry.FinalActionScore = finalActionScore;
         entry.ActionNumber = actionNum;
+        entry.BestNextAction = null;
         entry.RecurseDepth = curDepth;
         entry.ParentEntry = curEntry;
         entry.BestNextAction = null;
@@ -89,10 +86,10 @@ public class AIDebuggerEntryData
         switch (ActionType)
         {
             case AIActionType.ConstructBuildingInEmptyNode:
-                Debug.Log(CurSpacing + ActionNumber + ": Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to construct " + BuildingDefn.Id + ".  Score: " + ActionScore.ToString("0.0"));
+                Debug.Log(CurSpacing + ActionNumber + ": Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to construct " + BuildingDefn.Id + ".  Score: " + FinalActionScore.ToString("0.0"));
                 break;
             case AIActionType.AttackFromNode:
-                Debug.Log(CurSpacing + ActionNumber + ": Attack " + ToNode.NodeId + " with " + NumSent + " sent from " + FromNode.NodeId + ".  Score: " + ActionScore.ToString("0.0"));
+                Debug.Log(CurSpacing + ActionNumber + ": Attack " + ToNode.NodeId + " with " + NumSent + " sent from " + FromNode.NodeId + ".  Score: " + FinalActionScore.ToString("0.0"));
                 break;
             default:
                 Debug.Log("TODO: " + ActionType + "");

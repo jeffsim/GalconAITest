@@ -13,7 +13,6 @@ public partial class PlayerAI
     int minWorkersInNodeBeforeConsideringSendingAnyOut = 3;
     int maxDepth;
     public int debugOutput_ActionsTried;
-    int debugOutput_callsToRecursivelyDetermineBestAction;
 
     public AIAction BestNextActionToTake = new();
     static AIAction[] actionPool;
@@ -78,7 +77,6 @@ public partial class PlayerAI
 
         // Determine the best action to take, and then take it
         debugOutput_ActionsTried = -1;
-        debugOutput_callsToRecursivelyDetermineBestAction = -1;
         actionPoolIndex = 0;
 
 #if DEBUG
@@ -101,10 +99,10 @@ public partial class PlayerAI
             BestNextActionToTake.CopyFrom(action);
         }
         else
-            BestNextActionToTake.CopyFrom(RecursivelyDetermineBestAction(0, 0));
+            BestNextActionToTake.CopyFrom(DetermineBestActionToPerform(0));
 
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
-            Debug.Log("Actions Tried: " + debugOutput_ActionsTried + "; Recursions:" + debugOutput_callsToRecursivelyDetermineBestAction);
+            Debug.Log("Actions Tried: " + debugOutput_ActionsTried);
         // performAction(BestNextActionToTake);
 
 #if DEBUG
