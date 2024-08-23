@@ -98,6 +98,21 @@ public class AIDebuggerEntryData
         ChildEntries.Add(newEntry);
         return newEntry;
     }
+    internal AIDebuggerEntryData AddEntry_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float finalActionScore, int actionNum, int curDepth)
+    {
+        var newEntry = GetFromPool(
+                        AIActionType.SendWorkersToOwnedNode,
+                        fromNode,
+                        toNode,
+                        numSent,
+                        null,
+                        finalActionScore,
+                        actionNum,
+                        curDepth,
+                        this);
+        ChildEntries.Add(newEntry);
+        return newEntry;
+    }
     internal AIDebuggerEntryData AddEntry_AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float finalActionScore, int actionNum, int curDepth)
     {
         var newEntry = GetFromPool(

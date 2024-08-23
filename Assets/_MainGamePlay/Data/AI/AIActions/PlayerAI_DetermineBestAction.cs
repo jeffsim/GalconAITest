@@ -36,7 +36,15 @@ public partial class PlayerAI
                 bestAction = action;
                 parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
             }
+            
             action = TryAttackFromNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+            if (action.Score > bestAction.Score)
+            {
+                bestAction = action;
+                parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+            }
+
+            action = TryButtressOwnedNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
             if (action.Score > bestAction.Score)
             {
                 bestAction = action;

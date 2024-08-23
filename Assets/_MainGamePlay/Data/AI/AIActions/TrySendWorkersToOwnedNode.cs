@@ -1,56 +1,39 @@
-using UnityEngine;
-
 public partial class PlayerAI
 {
-    // used to e.g. buttress buildings that are near enemy nodes
-    private void TryRequestMoreWorkers(AI_NodeState fromNode, ref AIAction bestAction, int curDepth, int recurseCount, int thisActionNum)
+    private AIAction TryButtressOwnedNode(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
-        // Times when a Node may request more workers:
-        // 1. It has a building which could benefit from more workers
-        // 2. It is in imminent danger of being attacked
-        // 3. Player could expand from this node to capture a neighboring node if it had more workers
+        var bestAction = new AIAction() { Type = AIActionType.DoNothing };
 
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
-            return; // not enough workers in node to send any out
+            return bestAction; // not enough workers in node to send any out
 
-        // Do we have a building that could benefit from more workers?
-
-        // Are we in imminent danger of being attacked?
-
-        // Could we expand from this node to capture a neighboring node if we had more workers?
-        var count = fromNode.NumNeighbors;
-        for (int i = 0; i < count; i++)
+        // TODO: Support > 1 node away
+        foreach (var toNode in fromNode.NeighborNodes)
         {
-            var toNode = fromNode.NeighborNodes[i];
+            // ==== Verify we can perform the action
+            if (toNode.OwnedBy != player) continue;
 
-            //             // Verify we can perform the action
-            //             if (toNode.OwnedBy != player) continue; // This task can only send workers to nodes owned by this player
+            // ==== Perform the action and update the aiTownState to reflect the action
+            aiTownState.SendWorkersToOwnedNode(fromNode, toNode, .5f, out int numSent); // TODO: Try different #s?
+            var debuggerEntry = aiDebuggerParentEntry.AddEntry_SendWorkersToOwnedNode(fromNode, toNode, numSent, 0, debugOutput_ActionsTried++, curDepth);
+            // debuggerEntry.Debug_ActionScoreBeforeSubactions = aiTownState.EvaluateScore(curDepth, maxDepth, out _);
 
-            //             // Perform the action and get the score of the state after the action is performed
-            //             aiTownState.SendWorkersToOwnedNode(fromNode, toNode, .5f, out int numSent);
-            //             aiTownState.EvaluateScore(curDepth, maxDepth, out float scoreAfterActionAndBeforeSubActions, out DebugAIStateReasons debugOutput_actionScoreReasons);
+            // ==== Determine the score of the action we just performed; recurse down into subsequent actions if we're not at the max depth
+            float actionScore;
+            AIAction bestNextAction = curDepth < maxDepth ? DetermineBestActionToPerform(curDepth + 1, debuggerEntry) : null;
+            if (bestNextAction != null)
+                actionScore = bestNextAction.Score; // Score of the best action after this action
+            else
+                actionScore = aiTownState.EvaluateScore(curDepth, maxDepth, out _); // Evaluate score of the current state after this action
+            debuggerEntry.FinalActionScore = actionScore;
 
-            // #if DEBUG
-            //             AIDebugger.TrackPerformAction_SendWorkersToOwnedNode(toNode, numSent, scoreAfterActionAndBeforeSubActions);
-            // #endif
-            //             // Recursively determine what the best action is after this action is performed
-            //             var actionScore = RecursivelyDetermineBestAction(curDepth + 1, scoreAfterActionAndBeforeSubActions);
-            //             if (actionScore.Score > bestAction.Score)
-            //             {
-            //                 // This is the best action so far in this 'level' of the AI stack; save the action so we can return it
-            //                 bestAction.Score = actionScore.ScoreBeforeSubActions;
-            //                 bestAction.Type = AIActionType.SendWorkersToOwnedNode;
-            //                 bestAction.Count = numSent;
-            //                 bestAction.SourceNode = fromNode;
-            //                 bestAction.DestNode = toNode;
-            // #if DEBUG
-            //                 bestAction.TrackStrategyDebugInfoInAction(actionScore, debugOutput_actionScoreReasons, thisActionNum, recurseCount, curDepth);
-            // #endif
-            //             }
+            // ==== If this action is the best so far amongst our peers (in our parent node) then track it as the best action
+            if (actionScore > bestAction.Score)
+                bestAction.SetTo_SendWorkersToOwnedNode(fromNode, toNode, numSent, actionScore, debuggerEntry);
 
-            //             // Undo the action
-            //             aiTownState.Undo_SendWorkersToOwnedNode(fromNode, toNode, numSent);
-            //         }
+            // ==== Undo the action to reset the townstate to its original state
+            aiTownState.Undo_SendWorkersToOwnedNode(fromNode, toNode, numSent);
         }
+        return bestAction;
     }
 }

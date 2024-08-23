@@ -171,6 +171,16 @@ public class AIAction
         BuildingToConstruct = buildingDefn;
     }
 
+    internal void SetTo_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent,  float score, AIDebuggerEntryData debuggerEntry)
+    {
+        AIDebuggerEntry = debuggerEntry;
+        Score = score;
+        Type = AIActionType.SendWorkersToOwnedNode;
+        SourceNode = fromNode;
+        DestNode = toNode;
+        Count = numSent;
+    }
+
     internal void SetTo_AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent,
                                        AttackResult attackResult, float score, AIDebuggerEntryData debuggerEntry)
     {
