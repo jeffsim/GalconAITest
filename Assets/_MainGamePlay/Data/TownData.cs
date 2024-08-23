@@ -79,7 +79,7 @@ public class TownData
             {
                 // TODO: assume a resource node is nearby and not depleted
                 if (node.Inventory.ContainsKey(node.Building.Defn.ResourceThisNodeCanGoGather.GoodType))
-                    node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += 1; // TODO: node.Building.Defn.ResourceProducedPerTurn;
+                    node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += 3; // TODO: node.Building.Defn.ResourceProducedPerTurn;
             }
             if (node.Building.Defn.CanGenerateWorkers)
             {

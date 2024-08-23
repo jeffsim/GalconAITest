@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 public partial class PlayerAI
 {
-    private AIAction TrySendWorkersToConstructBuildingInEmptyNeighboringNode(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry)
+    private AIAction TrySendWorkersToConstructBuildingInEmptyNeighboringNode(AI_NodeState fromNode, int curDepth, float bestScoreAtDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry)
     {
         var bestAction = new AIAction() { Type = AIActionType.DoNothing };
 
@@ -25,34 +25,33 @@ public partial class PlayerAI
 
                 // ==== Perform the action
                 aiTownState.SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, buildingDefn, curDepth, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount, .5f, out int numSent); // TODO: Try different #s?
-
+                var actionScore = aiTownState.EvaluateScore(curDepth, maxDepth, out DebugAIStateReasons debug_actionScoreReasons);
+#if DEBUG
+                // In debug keep track of ALL actions tried, not just the best one; this is so we can see what the AI is considering in AIDebuggerPanel
+                var debuggerEntry = aiDebuggerParentEntry.AddEntry_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, actionScore, debugOutput_ActionsTried++, curDepth);
+#endif
                 if (curDepth == maxDepth)
                 {
-                    var actionScore = aiTownState.EvaluateScore(curDepth, maxDepth, out DebugAIStateReasons debug_actionScoreReasons);
-                    if (actionScore > bestAction.Score)
+                    if (actionScore > bestScoreAtDepth) {
                         bestAction.SetTo_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, actionScore);
+                        aiDebuggerParentEntry.BestNextAction = debuggerEntry;
+                        bestScoreAtDepth = actionScore;
+                    }
                 }
                 else
                 {
                     // ==== Recursively determine what the best action is to perform after we've performed this action
-                    var bestNextAction = DetermineBestActionToPerform(curDepth + 1);
-#if DEBUG
-                    // In debug keep track of ALL actions tried, not just the best one; this is so we can see what the AI is considering in AIDebuggerPanel
-                    var prevEntry = AIDebugger.PushPerformedAction_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, bestNextAction.Score, debugOutput_ActionsTried++, curDepth);
-#endif
+                    var bestNextAction = DetermineBestActionToPerform(curDepth + 1, bestScoreAtDepth, debuggerEntry);
                     if (bestNextAction.Score > bestAction.Score)
                     {
                         // The gamestate resulting from this action AND the best series of actions AFTER this action is the best we've seen; save this action
                         bestAction.SetTo_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, bestNextAction.Score);
 #if DEBUG
                         bestAction.NextAction = bestNextAction;
-                        prevEntry.BestNextAction = AIDebugger.curEntry;
+                        aiDebuggerParentEntry.BestNextAction = debuggerEntry;
                         // bestAction.TrackStrategyDebugInfoInAction(debug_actionScoreReasons, actionNumberOnEntry, curDepth);
 #endif
                     }
-#if DEBUG
-                    AIDebugger.PopPerformedAction(prevEntry);
-#endif
                 }
                 // ==== Undo the action to reset the townstate to its original state
                 aiTownState.Undo_SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, res1Id, resource1Amount, res2Id, resource2Amount, numSent);

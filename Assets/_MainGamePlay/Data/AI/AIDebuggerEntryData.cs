@@ -5,7 +5,7 @@ using UnityEngine;
 #if DEBUG
 public class AIDebuggerEntryData
 {
-    public override string ToString() => InformationString() + " (" + FinalActionScore.ToString("0.0") + ")";
+    public override string ToString() => ActionNumber + ": " + InformationString() + " (" + FinalActionScore.ToString("0.0") + ")";
 
     private string CurSpacing => new string(' ', Math.Max(0, RecurseDepth) * 4) + (RecurseDepth == 0 ? "" : "\u21B3");
     public int ActionNumber;
@@ -78,6 +78,22 @@ public class AIDebuggerEntryData
         entry.IsHighestOptionOfPeers = false;
         entry.ChildEntries.Clear();
         return entry;
+    }
+
+    internal AIDebuggerEntryData AddEntry_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float finalActionScore, int actionNum, int curDepth)
+    {
+        var newEntry = GetFromPool(
+                        AIActionType.ConstructBuildingInEmptyNode,
+                        fromNode,
+                        toNode,
+                        numSent,
+                        buildingDefn,
+                        finalActionScore,
+                        actionNum,
+                        curDepth,
+                        this);
+        ChildEntries.Add(newEntry);
+        return newEntry;
     }
 
     public void DebugOutput()

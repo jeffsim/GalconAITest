@@ -22,6 +22,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: redmond
+  IsEnabled: 1
   Nodes:
   - NodeId: 0
     WorldLoc: {x: 535.95, y: 0, z: 429.08}
@@ -128,7 +129,7 @@ MonoBehaviour:
     StartingInventory:
       exported_Keys:
       - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
-      exported_Values: 08000000
+      exported_Values: 02000000
   - NodeId: 13
     WorldLoc: {x: 541.76, y: 0, z: 439.84}
     OwnedByPlayerId: 0

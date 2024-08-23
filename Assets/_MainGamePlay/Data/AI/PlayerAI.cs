@@ -54,7 +54,7 @@ public partial class PlayerAI
 
     internal void Update(TownData townData)
     {
-        maxDepth = AITestScene.Instance.MaxAIDepth;
+        maxDepth = AITestScene.Instance.MaxAIDepth - 1;
 
         aiTownState.UpdateState(townData);
 
@@ -99,7 +99,10 @@ public partial class PlayerAI
             BestNextActionToTake.CopyFrom(action);
         }
         else
-            BestNextActionToTake.CopyFrom(DetermineBestActionToPerform(0));
+        {
+            var bestAction = DetermineBestActionToPerform(0, 0, AIDebugger.rootEntry);
+            BestNextActionToTake.CopyFrom(bestAction);
+        }
 
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried);

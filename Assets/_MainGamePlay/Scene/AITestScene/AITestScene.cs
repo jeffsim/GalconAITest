@@ -25,6 +25,7 @@ public class AITestScene : MonoBehaviour
     public AIDebuggerPanel AIDebuggerPanel;
     public int MaxAIDepth = 7;
     public bool ShowDebuggerAI = true;
+    public bool ShowFullActionPath = true;
     bool lastShowDebuggerAI;
     public bool DebugOutputStrategyToConsole = false;
     public bool DebugOutputStrategyReasons = false;
@@ -128,44 +129,51 @@ public class AITestScene : MonoBehaviour
     }
     private void DrawNextAISteps(PlayerData player)
     {
-        if (player == null) return;
-        var ai = player.AI;
-        if (ai == null || ai.BestNextActionToTake == null) return;
-        var action = ai.BestNextActionToTake;
+        if (player == null || player.AI == null || player.AI.BestNextActionToTake == null) return;
+        var action = player.AI.BestNextActionToTake;
+
+        var color = player.Color;
+
+        if (!ShowFullActionPath)
+            drawActionArrow(0, action, player, color);
+        else
+        {
+            int i = 1;
+            while (action != null)
+            {
+                drawActionArrow(i++, action, player, color);
+                color = Color.gray;
+                action = action.NextAction;
+            }
+        }
+    }
+
+    private void drawActionArrow(int actionIndex, AIAction action, PlayerData player, Color color)
+    {
         switch (action.Type)
         {
-            case AIActionType.SendWorkersToEmptyNode:
-                if (action.SourceNode != null && action.DestNode != null)
-                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, player.Color, "Send " + action.Count);
-                break;
-
             case AIActionType.DoNothing:
                 break;
 
             case AIActionType.ConstructBuildingInEmptyNode:
                 if (action.SourceNode != null && action.DestNode != null)
-                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, Color.yellow, "Send " + action.Count + " to construct\n" + action.BuildingToConstruct.Id);
-                else
-                    Debug.Log("Unknown asdfasdfasdfadf type: " + action.Type);
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color, actionIndex + ". Send " + action.Count + ", build\n" + action.BuildingToConstruct.Id);
                 break;
 
             case AIActionType.AttackFromNode:
                 if (action.SourceNode != null && action.DestNode != null)
-                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, Color.red, "Attack, send " + action.Count);
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color, actionIndex + ". Attack " + action.Count);
                 break;
 
             case AIActionType.SendWorkersToOwnedNode:
                 if (action.SourceNode != null && action.DestNode != null)
-                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, player.Color, "Support " + action.Count);
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color, actionIndex + ". Support " + action.Count);
                 break;
 
             default:
                 Debug.Log("Unknown action type: " + action.Type);
                 break;
         }
-
-        // if (action.SourceNode != null && action.DestNode != null)
-        // DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, player.Color,"Test");
     }
 
     void Update()

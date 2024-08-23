@@ -25,8 +25,6 @@ public class AIDebuggerPanel : MonoBehaviour
 
         List.RemoveAllChildren();
 
-        initializeExpandedEntries(AIDebugger.rootEntry);
-
         if (ShowBestOnStart)
         {
             initializeExpandedEntries(AIDebugger.rootEntry, true, false);
@@ -35,9 +33,12 @@ public class AIDebuggerPanel : MonoBehaviour
             identifyBestStrategyPath(AIDebugger.rootEntry.BestNextAction);
             ShowBestOnStart = false;
         }
+        else
+            initializeExpandedEntries(AIDebugger.rootEntry);
+
 
         AddChildEntries(AIDebugger.rootEntry.ChildEntries);
-        Debug.Log("Total actions: " +AITestScene.Instance.DebugPlayerToViewDetailsOn.AI.debugOutput_ActionsTried);
+        Debug.Log("Total actions: " + AITestScene.Instance.DebugPlayerToViewDetailsOn.AI.debugOutput_ActionsTried);
     }
 
     private void initializeExpandedEntries(AIDebuggerEntryData curEntry, bool forceValue = false, bool value = false)
