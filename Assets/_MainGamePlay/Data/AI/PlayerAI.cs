@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using NUnit.Framework.Constraints;
 using UnityEngine;
 
 public partial class PlayerAI
@@ -19,12 +21,14 @@ public partial class PlayerAI
     static int actionPoolIndex;
     static int maxPoolSize = 25000;
 
-    BuildingDefn[] buildableBuildingDefns;
-    int numBuildingDefns;
+    public BuildingDefn[] buildableBuildingDefns;
+    public int numBuildingDefns;
 
 #if DEBUG
     int lastMaxDepth = -1;
 #endif
+
+    public List<AITask> Tasks = new();
 
     public PlayerAI(PlayerData playerData)
     {
@@ -84,29 +88,34 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        var tryGOAP = false;
-        var tryNewStrategy = false;
-        if (tryGOAP)
-        {
-            var aiMapState = new AIMap_State(townData);
-            InitializeGOAP(aiMapState, 1);
-            var goal = DetermineBestGoal();
-        }
-        else if (tryNewStrategy)
-        {
-            var strategy = new NewStrategy(townData, player);
-            var action = strategy.DecideAction();
-            BestNextActionToTake.CopyFrom(action);
-        }
+        // var tryGOAP = false;
+        // var tryNewStrategy = false;
+        // if (tryGOAP)
+        // {
+        //     var aiMapState = new AIMap_State(townData);
+        //     InitializeGOAP(aiMapState, 1);
+        //     var goal = DetermineBestGoal();
+        // }
+        // else if (tryNewStrategy)
+        // {
+        //     var strategy = new NewStrategy(townData, player);
+        //     var action = strategy.DecideAction();
+        //     BestNextActionToTake.CopyFrom(action);
+        // }
+        // else
+        
+        // TODO: Only do once, not each time
+        Tasks.Clear();
+        // Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+        Tasks.Add(new AITask_AttackFromNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+        Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+
+        AIDebugger.rootEntry.BestNextAction = null;
+        var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
+        if (bestAction == null)
+            BestNextActionToTake.Type = AIActionType.DoNothing;
         else
-        {
-            AIDebugger.rootEntry.BestNextAction = null;
-            var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
-            if (bestAction == null)
-                BestNextActionToTake.Type = AIActionType.DoNothing;// = null; // nothing to do
-            else
-                BestNextActionToTake.CopyFrom(bestAction);
-        }
+            BestNextActionToTake.CopyFrom(bestAction);
 
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried);

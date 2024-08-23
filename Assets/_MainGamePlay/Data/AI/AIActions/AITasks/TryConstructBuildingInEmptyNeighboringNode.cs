@@ -1,8 +1,8 @@
-using NUnit.Framework;
-
-public partial class PlayerAI
+public class AITask_ConstructBuilding : AITask
 {
-    private AIAction TrySendWorkersToConstructBuildingInEmptyNeighboringNode(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
+    public AITask_ConstructBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
+
+    override public AIAction TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
         var bestAction = new AIAction() { Type = AIActionType.DoNothing };
 
@@ -16,28 +16,19 @@ public partial class PlayerAI
             if (toNode.HasBuilding) continue; // Node already has a building. note: resource nodes e.g. forest don't count as having a building until e.g. woodcutter is built
 
             // If here then we can send workers to this node.  Now determine what building we can construct in this node
-            for (int j = 0; j < numBuildingDefns; j++)
+            for (int i = 0; i < player.AI.numBuildingDefns; i++)
             {
-                var buildingDefn = buildableBuildingDefns[j];
+                var buildingDefn = player.AI.buildableBuildingDefns[i];
 
                 // ==== Verify we can perform the action
                 if (!canBuildBuilding(buildingDefn, toNode)) continue;
 
                 // ==== Perform the action and update the aiTownState to reflect the action
                 aiTownState.SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, buildingDefn, curDepth, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount, .5f, out int numSent); // TODO: Try different #s?
-                var debuggerEntry = aiDebuggerParentEntry.AddEntry_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, 0, debugOutput_ActionsTried++, curDepth);
-                // debuggerEntry.Debug_ActionScoreBeforeSubactions = aiTownState.EvaluateScore(curDepth, maxDepth, out _);
+                var debuggerEntry = aiDebuggerParentEntry.AddEntry_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
-                // ==== Determine the score of the action we just performed; recurse down into subsequent actions if we're not at the max depth
-                float actionScore;
-                AIAction bestNextAction = curDepth < maxDepth ? DetermineBestActionToPerform(curDepth + 1, debuggerEntry) : null;
-                if (bestNextAction != null)
-                    actionScore = bestNextAction.Score; // Score of the best action after this action
-                else
-                    actionScore = aiTownState.EvaluateScore(curDepth, maxDepth, out _); // Evaluate score of the current state after this action
-                debuggerEntry.FinalActionScore = actionScore;
-
-                // ==== If this action is the best so far amongst our peers (in our parent node) then track it as the best action
+                // ==== Determine the score of the action we just performed (recurse down); if this is the best so far amongst our peers (in our parent node) then track it as the best action
+                var actionScore = GetActionScore(curDepth, debuggerEntry);
                 if (actionScore > bestAction.Score)
                     bestAction.SetTo_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, actionScore, debuggerEntry);
 

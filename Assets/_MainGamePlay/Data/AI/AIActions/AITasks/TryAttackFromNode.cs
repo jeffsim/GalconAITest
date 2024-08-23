@@ -1,8 +1,10 @@
 public enum AttackResult { Undefined, AttackerWon, DefenderWon, BothSidesDied };
 
-public partial class PlayerAI
+public class AITask_AttackFromNode : AITask
 {
-    private AIAction TryAttackFromNode(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
+    public AITask_AttackFromNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
+
+    override public AIAction TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
         var bestAction = new AIAction() { Type = AIActionType.DoNothing };
 
@@ -19,19 +21,10 @@ public partial class PlayerAI
 
             // ==== Perform the action and update the aiTownState to reflect the action
             aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner);
-            var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackFromNode(fromNode, toNode, attackResult, numSent, 0, debugOutput_ActionsTried++, curDepth);
-            // debuggerEntry.Debug_ActionScoreBeforeSubactions = aiTownState.EvaluateScore(curDepth, maxDepth, out _);
+            var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackFromNode(fromNode, toNode, attackResult, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
-            // ==== Determine the score of the action we just performed; recurse down into subsequent actions if we're not at the max depth
-            float actionScore;
-            AIAction bestNextAction = curDepth < maxDepth ? DetermineBestActionToPerform(curDepth + 1, debuggerEntry) : null;
-            if (bestNextAction != null)
-                actionScore = bestNextAction.Score; // Score of the best action after this action
-            else
-                actionScore = aiTownState.EvaluateScore(curDepth, maxDepth, out _); // Evaluate score of the current state after this action
-            debuggerEntry.FinalActionScore = actionScore;
-
-            // ==== If this action is the best so far amongst our peers (in our parent node) then track it as the best action
+            // ==== Determine the score of the action we just performed (recurse down); if this is the best so far amongst our peers (in our parent node) then track it as the best action
+            var actionScore = GetActionScore(curDepth, debuggerEntry);
             if (actionScore > bestAction.Score)
                 bestAction.SetTo_AttackFromNode(fromNode, toNode, numSent, attackResult, actionScore, debuggerEntry);
 

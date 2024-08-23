@@ -1,10 +1,8 @@
-using System;
-
 public partial class PlayerAI
 {
     // Determine the best action that can be taken given the current aiTownState and return that action, ensuring
     // that aiTownState is fully restored to its original state before returning.
-    AIAction DetermineBestActionToPerform(int curDepth, AIDebuggerEntryData parentDebuggerEntry)
+    public AIAction DetermineBestActionToPerform(int curDepth, AIDebuggerEntryData parentDebuggerEntry)
     {
         // we'll return the best action from all possible actions at this 'recursive step/turn'
         AIAction bestAction = new();
@@ -30,26 +28,42 @@ public partial class PlayerAI
         {
             if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
 
-            var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            if (action.Score > bestAction.Score)
+            foreach (var task in Tasks)
             {
-                bestAction = action;
-                parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-            }
-            
-            action = TryAttackFromNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            if (action.Score > bestAction.Score)
-            {
-                bestAction = action;
-                parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+                var action = task.TryTask(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+                if (action.Score > bestAction.Score)
+                {
+                    bestAction = action;
+                    parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+                }
             }
 
-            action = TryButtressOwnedNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            if (action.Score > bestAction.Score)
-            {
-                bestAction = action;
-                parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-            }
+            // var action = TrySendWorkersToOwnedNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+            // if (action.Score > bestAction.Score)
+            // {
+            //     bestAction = action;
+            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+            // }
+            // var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+            // if (action.Score > bestAction.Score)
+            // {
+            //     bestAction = action;
+            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+            // }
+
+            // action = TryAttackFromNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+            // if (action.Score > bestAction.Score)
+            // {
+            //     bestAction = action;
+            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+            // }
+
+            // action = TryButtressOwnedNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+            // if (action.Score > bestAction.Score)
+            // {
+            //     bestAction = action;
+            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+            // }
         }
 
         // Attacking AI needs to take into account abiliyt to send workers from multiple nodes to 'pincer' attack
