@@ -26,7 +26,7 @@ public class TownData
         // Create Nodes
         foreach (var nodeDefn in townDefn.Nodes)
             // if (nodeDefn.Enabled)
-                Nodes.Add(new NodeData(nodeDefn, Players[nodeDefn.OwnedByPlayerId]));
+            Nodes.Add(new NodeData(nodeDefn, Players[nodeDefn.OwnedByPlayerId]));
 
         // Create Node Connections
         foreach (var nodeConnectionDefn in townDefn.NodeConnections)
@@ -103,6 +103,24 @@ public class TownData
             switch (moveToMake.Type)
             {
                 case AIActionType.AttackFromNode:
+                    // TODO: Use same code path as AITownState.AttackFromNode to avoid diverging
+                    fromNode.NumWorkers -= moveToMake.Count;
+                    switch (moveToMake.AttackResult)
+                    {
+                        case AttackResult.AttackerWon:
+                            toNode.OwnedBy = fromNode.OwnedBy;
+                            toNode.NumWorkers = -(toNode.NumWorkers - moveToMake.Count);
+                            break;
+                            
+                        case AttackResult.DefenderWon:
+                            toNode.NumWorkers -= moveToMake.Count;
+                            break;
+
+                        case AttackResult.BothSidesDied:
+                            toNode.OwnedBy = null;
+                            toNode.NumWorkers = 0;
+                            break;
+                    }
                     break;
 
                 case AIActionType.ConstructBuildingInEmptyNode:

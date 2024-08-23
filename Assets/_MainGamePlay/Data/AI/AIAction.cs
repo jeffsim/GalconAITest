@@ -125,6 +125,7 @@ public class AIAction
         SourceNode = null;
         DestNode = null;
         AIDebuggerEntry = null;
+        AttackResult = AttackResult.Undefined;
         DebugOutput_ScoreReasonsBeforeSubActions.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;
@@ -149,6 +150,7 @@ public class AIAction
         // NextAction = sourceAction.NextAction;
         SourceNode = sourceAction.SourceNode;
         DestNode = sourceAction.DestNode;
+        AttackResult = sourceAction.AttackResult;
         DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
         DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
         DebugOutput_Depth = sourceAction.DebugOutput_Depth;
@@ -167,5 +169,18 @@ public class AIAction
         DestNode = toNode;
         Count = numSent;
         BuildingToConstruct = buildingDefn;
+    }
+
+    internal void SetTo_AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent,
+                                       AttackResult attackResult, float score, AIDebuggerEntryData debuggerEntry)
+    {
+        AIDebuggerEntry = debuggerEntry;
+
+        Score = score;
+        AttackResult = attackResult;
+        Type = AIActionType.AttackFromNode;
+        SourceNode = fromNode;
+        DestNode = toNode;
+        Count = numSent;
     }
 }
