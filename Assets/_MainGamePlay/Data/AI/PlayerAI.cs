@@ -100,8 +100,12 @@ public partial class PlayerAI
         }
         else
         {
+            AIDebugger.rootEntry.BestNextAction = null;
             var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
-            BestNextActionToTake.CopyFrom(bestAction);
+            if (bestAction == null)
+                BestNextActionToTake = null; // nothing to do
+            else
+                BestNextActionToTake.CopyFrom(bestAction);
         }
 
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
