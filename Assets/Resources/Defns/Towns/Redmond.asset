@@ -127,9 +127,9 @@ MonoBehaviour:
   - NodeId: 11
     Enabled: 1
     WorldLoc: {x: 532, y: 0, z: 431}
-    OwnedByPlayerId: 0
+    OwnedByPlayerId: 2
     StartingBuilding: {fileID: 0}
-    NumStartingWorkers: 0
+    NumStartingWorkers: 12
     StartingInventory:
       exported_Keys: []
       exported_Values: 

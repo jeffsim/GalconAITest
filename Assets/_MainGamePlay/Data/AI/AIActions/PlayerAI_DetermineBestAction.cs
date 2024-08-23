@@ -26,9 +26,8 @@ public partial class PlayerAI
         }
 
         // bestAction is currently set to 'do nothing' -- see if taking any of our available actions results in a better score
-        for (int i = 0; i < aiTownState.NumNodes; i++)
+        foreach (var node in aiTownState.Nodes)
         {
-            var node = aiTownState.Nodes[i];
             if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
 
             var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
@@ -44,6 +43,22 @@ public partial class PlayerAI
                 parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
             }
         }
+
+        // Attacking AI needs to take into account abiliyt to send workers from multiple nodes to 'pincer' attack
+        // a node.  The above loop starts from sourceNode so it won't work.  Need a different loop that starts from destNode
+        foreach (var node in aiTownState.Nodes)
+        {
+            if (node.OwnedBy == player || node.OwnedBy == null) continue;
+            var action = TryAttackToNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+            if (action.Score > bestAction.Score)
+            {
+                bestAction = action;
+                parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+            }
+        }
+
+
+
 
         // TODO: restore town state
         foreach (var node in aiTownState.Nodes)

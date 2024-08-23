@@ -3720,7 +3720,7 @@ MonoBehaviour:
   AIDebuggerPanel: {fileID: 134469009}
   MaxAIDepth: 3
   ShowDebuggerAI: 1
-  ShowFullActionPath: 1
+  ShowFullActionPath: 0
   DebugOutputStrategyToConsole: 0
   DebugOutputStrategyReasons: 0
 --- !u!114 &227787908341963640
