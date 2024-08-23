@@ -25,13 +25,15 @@ public class TownData
 
         // Create Nodes
         foreach (var nodeDefn in townDefn.Nodes)
-            Nodes.Add(new NodeData(nodeDefn, Nodes.Count, Players[nodeDefn.OwnedByPlayerId]));
+            if (nodeDefn.Enabled)
+                Nodes.Add(new NodeData(nodeDefn, Players[nodeDefn.OwnedByPlayerId]));
 
         // Create Node Connections
         foreach (var nodeConnectionDefn in townDefn.NodeConnections)
         {
             var fromNode = GetNodeById(nodeConnectionDefn.Nodes.x);
             var toNode = GetNodeById(nodeConnectionDefn.Nodes.y);
+            if (fromNode == null || toNode == null) continue;
             fromNode.NodeConnections.Add(new NodeConnection() { Start = fromNode, End = toNode, TravelCost = 1, IsBidirectional = nodeConnectionDefn.IsBidirectional });
         }
 

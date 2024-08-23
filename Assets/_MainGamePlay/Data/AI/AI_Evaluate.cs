@@ -8,14 +8,14 @@ public partial class AI_TownState
         float score = 0;
 
         scoreReasons = null;
+        
 #if DEBUG
         if (AITestScene.Instance.DebugOutputStrategyReasons)
             scoreReasons = new();
 #endif
 
-        for (int i = 0; i < NumNodes; i++)
+        foreach (var node in Nodes)
         {
-            var node = Nodes[i];
             if (node.OwnedBy == player)
             {
                 // Add score for each node we own

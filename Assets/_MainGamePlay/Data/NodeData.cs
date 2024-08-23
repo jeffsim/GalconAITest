@@ -24,11 +24,11 @@ public class NodeData
 
     public SerializedDictionary<GoodType, int> Inventory = new();
 
-    public NodeData(NodeDefn nodeDefn, int nodeId, PlayerData player)
+    public NodeData(NodeDefn nodeDefn, PlayerData player)
     {
         OwnedBy = player;
         WorldLoc = nodeDefn.WorldLoc;
-        NodeId = nodeId;
+        NodeId = nodeDefn.NodeId;
         NumWorkers = nodeDefn.NumStartingWorkers;
         if (nodeDefn.StartingBuilding != null)
             Building = new BuildingData(nodeDefn.StartingBuilding);

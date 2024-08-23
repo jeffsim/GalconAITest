@@ -1,13 +1,13 @@
 
 using System;
 using System.Collections.Generic;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 [Serializable]
 public class NodeDefn
 {
     public int NodeId; // TODO: Not using this right
+    public bool Enabled = true;
     public Vector3 WorldLoc;
     public int OwnedByPlayerId = -1;
     public BuildingDefn StartingBuilding;

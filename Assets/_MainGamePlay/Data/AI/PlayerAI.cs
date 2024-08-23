@@ -100,7 +100,7 @@ public partial class PlayerAI
         }
         else
         {
-            var bestAction = DetermineBestActionToPerform(0, 0, AIDebugger.rootEntry);
+            var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
             BestNextActionToTake.CopyFrom(bestAction);
         }
 

@@ -29,7 +29,10 @@ public class AIDebuggerEntry : MonoBehaviour
                 break;
         }
         Information.text = entry.InformationString();
-        Score.text = entry.FinalActionScore.ToString("0.0");
+        if (entry.BestNextAction != null)
+            Score.text = entry.Debug_ActionScoreBeforeSubactions.ToString("0.0") + ", " + entry.FinalActionScore.ToString("0.0");
+        else
+            Score.text = entry.FinalActionScore.ToString("0.0");
 
         // Count shows "(X,Y)" where X is the # of immediate children and Y is the # of all children
         Count.text = "(" + entry.ChildEntries.Count + ", " + entry.AllChildEntriesCount + ")";

@@ -18,6 +18,9 @@ public class AIDebuggerEntryData
     public AttackResult AttackResult;
     public int NumSent;
     public BuildingDefn BuildingDefn;
+#if DEBUG
+    public float Debug_ActionScoreBeforeSubactions;
+#endif
     public float FinalActionScore;
     public AIDebuggerEntryData ParentEntry;
 

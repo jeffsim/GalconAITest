@@ -4,7 +4,7 @@ public partial class PlayerAI
 {
     // Determine the best action that can be taken given the current aiTownState and return that action, ensuring
     // that aiTownState is fully restored to its original state before returning.
-    AIAction DetermineBestActionToPerform(int curDepth, float bestScoreAtDepth, AIDebuggerEntryData aiDebuggerEntry)
+    AIAction DetermineBestActionToPerform(int curDepth, AIDebuggerEntryData parentDebuggerEntry)
     {
         // we'll return the best action from all possible actions at this 'recursive step/turn'
         AIAction bestAction = new();
@@ -26,12 +26,9 @@ public partial class PlayerAI
             var node = aiTownState.Nodes[i];
             if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
 
-            var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, bestScoreAtDepth, debugOutput_ActionsTried++, aiDebuggerEntry);
+            var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
             if (action.Score > bestAction.Score)
-            {
                 bestAction = action;
-                bestScoreAtDepth = action.Score;
-            }
         }
 
         return bestAction;

@@ -101,7 +101,7 @@ public class AIAction
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
 
-    public AIAction NextAction;
+    // public AIAction NextAction;
     
     // Build building
     public BuildingDefn BuildingToConstruct;
@@ -143,7 +143,7 @@ public class AIAction
         Count = sourceAction.Count;
         BuildingToConstruct = sourceAction.BuildingToConstruct;
         Type = sourceAction.Type;
-        NextAction = sourceAction.NextAction;
+        // NextAction = sourceAction.NextAction;
         SourceNode = sourceAction.SourceNode;
         DestNode = sourceAction.DestNode;
         DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
