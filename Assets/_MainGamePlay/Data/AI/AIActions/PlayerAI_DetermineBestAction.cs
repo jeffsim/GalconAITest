@@ -1,3 +1,5 @@
+using System;
+
 public partial class PlayerAI
 {
     // Determine the best action that can be taken given the current aiTownState and return that action, ensuring
@@ -20,9 +22,12 @@ public partial class PlayerAI
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += 3; // simple for now
             node.aiOrigNumWorkers = node.NumWorkers;
-            if (node.CanGenerateWorkers && node.NumWorkers < node.MaxWorkers)
+            if (node.CanGenerateWorkers)
             {
-                node.NumWorkers += node.WorkersGeneratedPerTurn; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
+                if (node.NumWorkers < node.MaxWorkers)
+                    node.NumWorkers = Math.Min(node.MaxWorkers, node.NumWorkers + node.WorkersGeneratedPerTurn);
+                else if (node.NumWorkers > node.MaxWorkers)
+                    node.NumWorkers--;
             }
         }
 

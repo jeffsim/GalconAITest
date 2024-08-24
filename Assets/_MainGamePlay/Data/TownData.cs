@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using UnityEngine;
 
 public class TownData
@@ -83,7 +84,12 @@ public class TownData
                     node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += 3; // TODO: node.Building.Defn.ResourceProducedPerTurn;
             }
             if (node.Building.Defn.CanGenerateWorkers)
-                node.NumWorkers += node.Building.WorkersGeneratedPerTurn;
+            {
+                if (node.NumWorkers < node.Building.MaxWorkers)
+                    node.NumWorkers = Math.Min(node.Building.MaxWorkers, node.NumWorkers + node.Building.WorkersGeneratedPerTurn);
+                else if (node.NumWorkers > node.Building.MaxWorkers)
+                    node.NumWorkers--;
+            }
         }
 
         // not how this will normally be done, but fine for testing purposes
