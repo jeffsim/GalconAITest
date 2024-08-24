@@ -37,7 +37,7 @@ public partial class AI_TownState
                 {
                     // upgraded buildings are more useful than non-upgraded buildings
                     // todo: temp - should be based on building type, game state, how much we need the building, etc.
-                    float buildingUpgradeModifier = .5f; // set this to 'value' of upgrades. 
+                    float buildingUpgradeModifier = .75f; // set this to 'value' of upgrades. 
                     score += buildingUpgradeModifier * (node.BuildingLevel - 1);
 
                     // Resource gathering buildings are useful if they can reach a resource node.

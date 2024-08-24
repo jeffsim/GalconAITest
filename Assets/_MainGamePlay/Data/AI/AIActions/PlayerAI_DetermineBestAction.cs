@@ -19,8 +19,11 @@ public partial class PlayerAI
         {
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += 3; // simple for now
-            if (node.CanGenerateWorkers)
+            node.aiOrigNumWorkers = node.NumWorkers;
+            if (node.CanGenerateWorkers && node.NumWorkers < node.MaxWorkers)
+            {
                 node.NumWorkers += node.WorkersGeneratedPerTurn; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
+            }
         }
 
         // bestAction is currently set to 'do nothing' -- see if taking any of our available actions results in a better score
@@ -60,8 +63,7 @@ public partial class PlayerAI
         {
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= 3; // simple for now
-            if (node.CanGenerateWorkers)
-                node.NumWorkers -= node.WorkersGeneratedPerTurn;
+            node.NumWorkers = node.aiOrigNumWorkers;
         }
         if (bestAction.Type == AIActionType.DoNothing)
             return null;

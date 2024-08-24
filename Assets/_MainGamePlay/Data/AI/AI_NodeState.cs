@@ -9,6 +9,7 @@ public class AI_NodeState
     public int NumWorkers;
     public int MaxWorkers;
     public int WorkersGeneratedPerTurn = 1;
+    public int aiOrigNumWorkers;
 
     public PlayerData OwnedBy;
     public int NodeId;
@@ -107,7 +108,7 @@ public class AI_NodeState
 
         NumWorkers = RealNode.NumWorkers;
         MaxWorkers = RealNode.Building?.MaxWorkers ?? 0;
-        WorkersGeneratedPerTurn =  RealNode.Building?.WorkersGeneratedPerTurn ?? 0;
+        WorkersGeneratedPerTurn = RealNode.Building?.WorkersGeneratedPerTurn ?? 0;
         OwnedBy = RealNode.OwnedBy;
     }
 

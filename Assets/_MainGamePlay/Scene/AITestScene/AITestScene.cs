@@ -185,7 +185,7 @@ public class AITestScene : MonoBehaviour
 
             case AIActionType.UpgradeBuilding:
                 if (action.FromNode != null)
-                    DrawCircle(action.FromNode.RealNode.WorldLoc, 2, color, actionIndex + ". Upgrade");
+                    DrawCircle(action.FromNode.RealNode.WorldLoc, 1, color, actionIndex + ". Upgrade");
                 break;
                 
             default:
