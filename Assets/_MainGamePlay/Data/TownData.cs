@@ -84,10 +84,7 @@ public class TownData
                     node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += 3; // TODO: node.Building.Defn.ResourceProducedPerTurn;
             }
             if (node.Building.Defn.CanGenerateWorkers)
-            {
-                node.NumWorkers += 1; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
-            }
-
+                node.NumWorkers += node.Building.WorkersGeneratedPerTurn;
         }
 
         // not how this will normally be done, but fine for testing purposes
@@ -98,10 +95,15 @@ public class TownData
             if (moveToMake == null || moveToMake.Type == AIActionType.DoNothing) continue; // wasn't updated
 
             // Convert from ai node data to real node data
-            var fromNode = moveToMake.SourceNode.RealNode;
-            var toNode = moveToMake.DestNode.RealNode;
+            var fromNode = moveToMake.SourceNode?.RealNode;
+            var toNode = moveToMake.DestNode?.RealNode;
             switch (moveToMake.Type)
             {
+                case AIActionType.UpgradeBuilding:
+                    fromNode.Building.Upgrade();
+                    fromNode.NumWorkers /= 2;
+                    break;
+
                 case AIActionType.AttackFromNode:
                     // TODO: Use same code path as AITownState.AttackFromNode to avoid diverging
                     fromNode.NumWorkers -= moveToMake.Count;
@@ -111,7 +113,7 @@ public class TownData
                             toNode.OwnedBy = fromNode.OwnedBy;
                             toNode.NumWorkers = -(toNode.NumWorkers - moveToMake.Count);
                             break;
-                            
+
                         case AttackResult.DefenderWon:
                             toNode.NumWorkers -= moveToMake.Count;
                             break;

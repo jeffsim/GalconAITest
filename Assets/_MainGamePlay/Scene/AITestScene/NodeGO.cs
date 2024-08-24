@@ -36,10 +36,19 @@ public class NodeGO : MonoBehaviour
 
     void Update()
     {
-        NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + ")";
         if (Data.OwnedBy != null)
             BaseObject.material.color = Data.OwnedBy.Color;
 
+        if (Data.Building == null)
+        {
+            BuildingText.text = "";
+            NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + ")";
+        }
+        else
+        {
+            BuildingText.text = Data.Building.Defn.Name + " " + Data.Building.Level;
+            NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + "/" + Data.Building.MaxWorkers + ")";
+        }
         // If this node is the target node of the best action in the current AI then add * to the nodeidetxt
         // foreach (var player in AITestScene.Instance.Town.Players)
         // {

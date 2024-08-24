@@ -151,13 +151,14 @@ public partial class AI_TownState
         fromNode.NumWorkers -= numSent;
         toNode.NumWorkers -= numSent;
 
-        if (toNode.NumWorkers == 0)
-        {
-            // attackers and defenders both died
-            toNode.OwnedBy = null;
-            attackResult = AttackResult.BothSidesDied;
-        }
-        else if (toNode.NumWorkers < 0)
+        // if (toNode.NumWorkers == 0)
+        // {
+        //     // attackers and defenders both died
+        //     toNode.OwnedBy = null;
+        //     attackResult = AttackResult.BothSidesDied;
+        // }
+        // else 
+        if (toNode.NumWorkers <= 0)
         {
             // we captured the node
             toNode.OwnedBy = player;
@@ -175,6 +176,20 @@ public partial class AI_TownState
         fromNode.NumWorkers = origNumInSourceNode;
         toNode.OwnedBy = origToNodeOwner;
         toNode.NumWorkers = origNumInDestNode;
+    }
+
+    internal void UpgradeBuilding(AI_NodeState node, out int origLevel, out int origNumWorkers)
+    {
+        origLevel = node.BuildingLevel;
+        origNumWorkers = node.NumWorkers;
+        node.BuildingLevel++;
+        node.NumWorkers /= 2;
+    }
+
+    internal void Undo_UpgradeBuilding(AI_NodeState node, int origLevel, int origNumWorkers)
+    {
+        node.BuildingLevel = origLevel;
+        node.NumWorkers = origNumWorkers;
     }
 
     internal bool IsGameOver()

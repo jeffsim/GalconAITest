@@ -20,7 +20,7 @@ public partial class PlayerAI
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += 3; // simple for now
             if (node.CanGenerateWorkers)
-                node.NumWorkers += 1; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
+                node.NumWorkers += node.WorkersGeneratedPerTurn; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
         }
 
         // bestAction is currently set to 'do nothing' -- see if taking any of our available actions results in a better score
@@ -37,47 +37,20 @@ public partial class PlayerAI
                     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
                 }
             }
-
-            // var action = TrySendWorkersToOwnedNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            // if (action.Score > bestAction.Score)
-            // {
-            //     bestAction = action;
-            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-            // }
-            // var action = TrySendWorkersToConstructBuildingInEmptyNeighboringNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            // if (action.Score > bestAction.Score)
-            // {
-            //     bestAction = action;
-            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-            // }
-
-            // action = TryAttackFromNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            // if (action.Score > bestAction.Score)
-            // {
-            //     bestAction = action;
-            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-            // }
-
-            // action = TryButtressOwnedNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            // if (action.Score > bestAction.Score)
-            // {
-            //     bestAction = action;
-            //     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-            // }
         }
 
         // Attacking AI needs to take into account abiliyt to send workers from multiple nodes to 'pincer' attack
         // a node.  The above loop starts from sourceNode so it won't work.  Need a different loop that starts from destNode
-        foreach (var node in aiTownState.Nodes)
-        {
-            if (node.OwnedBy == player || node.OwnedBy == null) continue;
-            var action = TryAttackToNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-            if (action.Score > bestAction.Score)
-            {
-                bestAction = action;
-                parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-            }
-        }
+        // foreach (var node in aiTownState.Nodes)
+        // {
+        //     if (node.OwnedBy == player || node.OwnedBy == null) continue;
+        //     var action = TryAttackToNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
+        //     if (action.Score > bestAction.Score)
+        //     {
+        //         bestAction = action;
+        //         parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+        //     }
+        // }
 
 
 
@@ -88,7 +61,7 @@ public partial class PlayerAI
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= 3; // simple for now
             if (node.CanGenerateWorkers)
-                node.NumWorkers -= 1; // TODO: node.Building.Defn.WorkersGeneratedPerTurn; 
+                node.NumWorkers -= node.WorkersGeneratedPerTurn;
         }
         if (bestAction.Type == AIActionType.DoNothing)
             return null;

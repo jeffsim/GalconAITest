@@ -19,6 +19,15 @@ public class AITask_AttackFromNode : AITask
             // ==== Verify we can perform the action
             if (toNode.OwnedBy == null || toNode.OwnedBy == player) continue;
 
+            // depending on AI strategy, do/don't attack if it's hopeless to win
+            if (toNode.NumWorkers > fromNode.NumWorkers)
+                continue; // TODO: Need coordinated attacks
+
+            // TODO: Cull other possible attacks to reduce search space.
+            // * Don't attack if not at war?
+            // * Don't attack if we don't need the building
+
+
             // ==== Perform the action and update the aiTownState to reflect the action
             aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner);
             var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackFromNode(fromNode, toNode, attackResult, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);

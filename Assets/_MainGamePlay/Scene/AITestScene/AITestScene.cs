@@ -116,17 +116,29 @@ public class AITestScene : MonoBehaviour
 
     void DrawArrow(Vector3 start, Vector3 end, Color color, string label)
     {
-
         var draw = Drawing.Draw.ingame;
         draw.PushLineWidth(6);
         draw.Arrow(start, end, color);
         draw.PopLineWidth();
         var pos = (start + end) / 2;
 
-        draw.Label2D(pos, label, 30, Drawing.LabelAlignment.Center, Color.black);
-        draw.Label2D(pos + new Vector3(-.02f, 0.02f, .05f), label, 30, Drawing.LabelAlignment.Center, Color.white);
-
+        draw.Label2D(pos, label, 20, Drawing.LabelAlignment.Center, Color.black);
+        draw.Label2D(pos + new Vector3(-.02f, 0.02f, .05f), label, 20, Drawing.LabelAlignment.Center, Color.white);
     }
+
+    void DrawCircle(Vector3 pos, float radius, Color color, string label)
+    {
+        var draw = Drawing.Draw.ingame;
+        draw.PushLineWidth(6);
+        draw.PushColor(color);
+        draw.Circle(pos, Vector3.up, radius);
+        draw.PopColor();
+        draw.PopLineWidth();
+
+        draw.Label2D(pos, label, 20, Drawing.LabelAlignment.Center, Color.black);
+        draw.Label2D(pos + new Vector3(-.02f, 0.02f, .05f), label, 20, Drawing.LabelAlignment.Center, Color.white);
+    }
+
     private void DrawNextAISteps(PlayerData player)
     {
         if (player == null || player.AI == null || player.AI.BestNextActionToTake == null) return;
@@ -171,6 +183,11 @@ public class AITestScene : MonoBehaviour
                     DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Support " + action.NumSent);
                 break;
 
+            case AIActionType.UpgradeBuilding:
+                if (action.FromNode != null)
+                    DrawCircle(action.FromNode.RealNode.WorldLoc, 2, color, actionIndex + ". Upgrade");
+                break;
+                
             default:
                 Debug.Log("Unknown action type: " + action.ActionType);
                 break;

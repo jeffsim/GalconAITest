@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -8,6 +7,8 @@ public class AI_NodeState
     public List<AI_NodeState> NeighborNodes = new();
     public int NumNeighbors;
     public int NumWorkers;
+    public int MaxWorkers;
+    public int WorkersGeneratedPerTurn = 1;
 
     public PlayerData OwnedBy;
     public int NodeId;
@@ -18,9 +19,10 @@ public class AI_NodeState
     // Buildings
     public bool HasBuilding;
     public int TurnBuildingWasBuilt;    // used to determine how long we've owned the building; e.g. building a woodcutter sooner rahter than later is better
-
+    public BuildingDefn BuildingDefn;
     public bool CanGoGatherResources;
     public GoodType ResourceThisNodeCanGoGather;
+    public int BuildingLevel;
 
     public bool CanBeGatheredFrom;
     public GoodType ResourceGatheredFromThisNode;
@@ -33,6 +35,7 @@ public class AI_NodeState
     // public BuildingDefn BuildingInNode;
     public void SetResourceNode(BuildingDefn buildingDefn, int turnNumber)
     {
+        BuildingDefn = buildingDefn;
         Debug.Assert(buildingDefn.CanBeGatheredFrom);
         CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
         ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;
@@ -41,7 +44,9 @@ public class AI_NodeState
     public void SetBuilding(BuildingDefn buildingDefn, int turnNumber)
     {
         Debug.Assert(!buildingDefn.CanBeGatheredFrom);
+        BuildingDefn = buildingDefn;
         HasBuilding = true;
+        BuildingLevel = 1;
         TurnBuildingWasBuilt = turnNumber;
         CanGoGatherResources = buildingDefn.CanGatherResources;
         if (CanGoGatherResources)
@@ -62,7 +67,7 @@ public class AI_NodeState
     public AI_NodeState(NodeData nodeData)
     {
         // set static fields
-        this.RealNode = nodeData;
+        RealNode = nodeData;
         NodeId = nodeData.NodeId;
         Update();
     }
@@ -97,8 +102,12 @@ public class AI_NodeState
                 SetResourceNode(RealNode.Building.Defn, 0);
             else
                 SetBuilding(RealNode.Building.Defn, 0);
+            BuildingLevel = RealNode.Building.Level;
         }
+
         NumWorkers = RealNode.NumWorkers;
+        MaxWorkers = RealNode.Building?.MaxWorkers ?? 0;
+        WorkersGeneratedPerTurn =  RealNode.Building?.WorkersGeneratedPerTurn ?? 0;
         OwnedBy = RealNode.OwnedBy;
     }
 
@@ -117,20 +126,3 @@ public class AI_NodeState
 
     internal int DistanceToClosestGatherableResourceNode(GoodType goodType) => DistanceToGatherableResource[goodType];
 }
-
-// public int DistanceToClosestEnemyNode
-//     {
-//         // TODO: cache; but: need to update on various actions
-//         get
-//         {
-//             // TODO: Only looks at neighbors, not neighbors of neighbors, etc
-//             for (int i = 0; i < NumNeighbors; i++)
-//             {
-//                 var neighbor = NeighborNodes[i];
-//                 // if neighbor isn't owned, or is owned by someone other than OwnedBy, then return 1
-//                 if (neighbor.OwnedBy == null || neighbor.OwnedBy != OwnedBy)
-//                     return 1;
-//             }
-//             return int.MaxValue;
-//         }
-//     }

@@ -24,6 +24,8 @@ public class BuildingDefn : BaseDefn
     public Color Color = Color.white;
     public WorkerDefn WorkerDefn;
 
+    public bool CanBeUpgraded = true;
+    
     // Construction
     [Header("Construction"), Space(10)]
     public bool CanBeBuiltByPlayer = true;

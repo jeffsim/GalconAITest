@@ -8,7 +8,7 @@ public partial class AI_TownState
         float score = 0;
 
         scoreReasons = null;
-        
+
 #if DEBUG
         if (AITestScene.Instance.DebugOutputStrategyReasons)
             scoreReasons = new();
@@ -35,6 +35,11 @@ public partial class AI_TownState
                 }
                 else
                 {
+                    // upgraded buildings are more useful than non-upgraded buildings
+                    // todo: temp - should be based on building type, game state, how much we need the building, etc.
+                    float buildingUpgradeModifier = .5f; // set this to 'value' of upgrades. 
+                    score += buildingUpgradeModifier * (node.BuildingLevel - 1);
+
                     // Resource gathering buildings are useful if they can reach a resource node.
                     // These buildings are more useful the close to the resource node they are.
                     // TODO: Increase usefulness score based on how much we need the resource vs how much we have

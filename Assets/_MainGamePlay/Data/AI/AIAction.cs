@@ -12,7 +12,8 @@ public enum AIActionType
     AttackFromNode,
     NoAction_GameOver,
     NoAction_MaxDepth,
-    RootAction
+    RootAction,
+    UpgradeBuilding
 };
 
 #if DEBUG
@@ -171,7 +172,7 @@ public class AIAction
         BuildingToConstruct = buildingDefn;
     }
 
-    internal void SetTo_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent,  float score, AIDebuggerEntryData debuggerEntry)
+    internal void SetTo_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float score, AIDebuggerEntryData debuggerEntry)
     {
         AIDebuggerEntry = debuggerEntry;
         Score = score;
@@ -185,12 +186,19 @@ public class AIAction
                                        AttackResult attackResult, float score, AIDebuggerEntryData debuggerEntry)
     {
         AIDebuggerEntry = debuggerEntry;
-
         Score = score;
         AttackResult = attackResult;
         Type = AIActionType.AttackFromNode;
         SourceNode = fromNode;
         DestNode = toNode;
         Count = numSent;
+    }
+    
+    internal void SetTo_UpgradeBuilding(AI_NodeState fromNode, float score, AIDebuggerEntryData debuggerEntry)
+    {
+        AIDebuggerEntry = debuggerEntry;
+        Score = score;
+        Type = AIActionType.UpgradeBuilding;
+        SourceNode = fromNode;
     }
 }

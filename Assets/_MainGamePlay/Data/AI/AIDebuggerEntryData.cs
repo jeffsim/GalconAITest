@@ -130,6 +130,22 @@ public class AIDebuggerEntryData
         return newEntry;
     }
 
+    internal AIDebuggerEntryData AddEntry_UpgradeBuilding(AI_NodeState fromNode, float finalActionScore, int actionNum, int curDepth)
+    {
+        var newEntry = GetFromPool(
+                         AIActionType.UpgradeBuilding,
+                        fromNode,
+                        null,
+                        0,
+                        null,
+                        finalActionScore,
+                        actionNum,
+                        curDepth,
+                        this);
+        ChildEntries.Add(newEntry);
+        return newEntry;
+    }
+
     public void DebugOutput()
     {
         if (!AITestScene.Instance.DebugOutputStrategyToConsole) return;
@@ -151,7 +167,7 @@ public class AIDebuggerEntryData
     {
         switch (ActionType)
         {
-            case AIActionType.AttackFromNode: return "Attack " + ToNode.NodeId + " with " + NumSent + " sent from " + FromNode.NodeId;
+            case AIActionType.AttackFromNode: return "Attack " + ToNode.NodeId + " with " + NumSent + " sent from " + FromNode.NodeId + " (" + AttackResultString() + ")";
             // case AIActionType.ConstructBuildingInOwnedEmptyNode: return BuildingDefn.Id + " in owned node " + ToNode.NodeId;
             case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
@@ -159,7 +175,17 @@ public class AIDebuggerEntryData
             default: return "TODO: " + ActionType + "";
         }
     }
-
+    string AttackResultString()
+    {
+        return AttackResult switch
+        {
+            AttackResult.AttackerWon => "Won",
+            AttackResult.DefenderWon => "Lost",
+            AttackResult.BothSidesDied => "Tie",
+            _ => "Undefined",
+        };
+    }
+    
     internal void CalculateAllChildEntriesCount()
     {
         // for ALL entries, calculate the count of all child entries under it and store in entry.AllChildEntriesCount
