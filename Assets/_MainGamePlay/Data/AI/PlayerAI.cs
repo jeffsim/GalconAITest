@@ -103,7 +103,7 @@ public partial class PlayerAI
         //     BestNextActionToTake.CopyFrom(action);
         // }
         // else
-        
+
         // TODO: Only do once, not each time
         Tasks.Clear();
         // Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
@@ -114,7 +114,7 @@ public partial class PlayerAI
         AIDebugger.rootEntry.BestNextAction = null;
         var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
         if (bestAction == null)
-            BestNextActionToTake.Type = AIActionType.DoNothing;
+            BestNextActionToTake.SetToNothing();
         else
             BestNextActionToTake.CopyFrom(bestAction);
 

@@ -141,14 +141,15 @@ public class AITestScene : MonoBehaviour
 
     private void DrawNextAISteps(PlayerData player)
     {
-        if (player == null || player.AI == null || player.AI.BestNextActionToTake == null) return;
+        if (player == null || player.AI == null || player.AI.BestNextActionToTake == null || player.AI.BestNextActionToTake.Type == AIActionType.DoNothing) return;
         var action = AIDebugger.rootEntry;
+        action = player.AI.BestNextActionToTake.AIDebuggerEntry;
 
-        if (action.BestNextAction == null) return;
+        if (action == null) return;
         var color = player.Color;
 
         if (!ShowFullActionPath)
-            drawActionArrow(0, action.BestNextAction, player, color);
+            drawActionArrow(0, action, player, color);
         else
         {
             int i = 1;
@@ -187,7 +188,7 @@ public class AITestScene : MonoBehaviour
                 if (action.FromNode != null)
                     DrawCircle(action.FromNode.RealNode.WorldLoc, 1, color, actionIndex + ". Upgrade");
                 break;
-                
+
             default:
                 Debug.Log("Unknown action type: " + action.ActionType);
                 break;

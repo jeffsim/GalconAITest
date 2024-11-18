@@ -148,6 +148,7 @@ public class AIAction
         Count = sourceAction.Count;
         BuildingToConstruct = sourceAction.BuildingToConstruct;
         Type = sourceAction.Type;
+        
         // NextAction = sourceAction.NextAction;
         SourceNode = sourceAction.SourceNode;
         DestNode = sourceAction.DestNode;
@@ -156,6 +157,23 @@ public class AIAction
         DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
         DebugOutput_Depth = sourceAction.DebugOutput_Depth;
         AIDebuggerEntry = sourceAction.AIDebuggerEntry;
+    }
+
+    internal void SetToNothing()
+    {
+        Score = 0;
+        Count = 0;
+        BuildingToConstruct = null;
+        Type = AIActionType.DoNothing;
+        
+        // NextAction = sourceAction.NextAction;
+        SourceNode = null;
+        DestNode = null;
+        AttackResult = AttackResult.Undefined;
+        DebugOutput_ScoreReasonsBeforeSubActions = null;
+        DebugOutput_TriedActionNum = 0;
+        DebugOutput_Depth = 0;
+        AIDebuggerEntry = null;
     }
 #endif
 

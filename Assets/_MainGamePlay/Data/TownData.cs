@@ -11,7 +11,7 @@ public class TownData
     public List<WorkerData> Workers = new();
 
     public Action<int> OnAIDebuggerUpdate { get; internal set; }
-    public int TestOnePlayerId = 1;
+    public int TestOnePlayerId = 0;
 
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
     {
