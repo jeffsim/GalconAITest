@@ -209,6 +209,6 @@ public class AITestScene : MonoBehaviour
             if (lastShowDebuggerAI)
                 AIDebuggerPanel.Refresh();
         }
-    }
 #endif
+    }
 }
