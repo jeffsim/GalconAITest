@@ -3,7 +3,7 @@ using NUnit.Framework.Constraints;
 using UnityEngine;
 
 public partial class PlayerAI
-{
+{ 
     public override string ToString()
     {
         if (BestNextActionToTake == null) return "null BestNextActionToTake";
