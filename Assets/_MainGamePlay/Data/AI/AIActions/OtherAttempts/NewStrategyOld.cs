@@ -380,10 +380,10 @@ public class NewStrategyOld
         return false;
     }
 
-    private bool IsCriticalNode(AINode_State node)
-    {
-        return false;
-        // Determine if this node is strategically important (e.g., it's a chokepoint or resource-rich)
-        // return node.IsChokepoint || node.HasRareResources;
-    }
+    // private bool IsCriticalNode(AINode_State node)
+    // {
+    //     return false;
+    //     // Determine if this node is strategically important (e.g., it's a chokepoint or resource-rich)
+    //     // return node.IsChokepoint || node.HasRareResources;
+    // }
 }

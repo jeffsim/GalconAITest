@@ -18,7 +18,6 @@ public partial class PlayerAI
 
     public AIAction BestNextActionToTake = new();
     static AIAction[] actionPool;
-    static int actionPoolIndex;
     static int maxPoolSize = 25000;
 
     public BuildingDefn[] buildableBuildingDefns;
@@ -83,7 +82,7 @@ public partial class PlayerAI
 
         // Determine the best action to take, and then take it
         debugOutput_ActionsTried = -1;
-        actionPoolIndex = 0;
+        // actionPoolIndex = 0;
 
 #if DEBUG
         AIDebugger.TrackForCurrentPlayer = player == AITestScene.Instance.DebugPlayerToViewDetailsOn;
