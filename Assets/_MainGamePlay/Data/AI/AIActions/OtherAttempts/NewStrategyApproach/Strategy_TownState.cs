@@ -1,11 +1,10 @@
-using UnityEngine;
-
 public struct Strategy_TownState
 {
     private const int MAX_TOWN_NODES = 30;
     private const int MAX_CONSTRUCTIBLE_BUILDINGS = 30;
     public Strategy_Node[] Nodes;
     public BuildingDefn[] ConstructibleBuildings;
+    public int NumConstructibleBuildings;
 
     public void Initialize()
     {
@@ -14,5 +13,6 @@ public struct Strategy_TownState
             Nodes[i] = Strategy_Node.CreateInitialized();
 
         ConstructibleBuildings = new BuildingDefn[MAX_CONSTRUCTIBLE_BUILDINGS];
+        NumConstructibleBuildings = 0;
     }
 }
