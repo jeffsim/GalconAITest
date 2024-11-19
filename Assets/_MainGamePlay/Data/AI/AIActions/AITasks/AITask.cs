@@ -28,7 +28,7 @@ public abstract class AITask
             actionScore = aiTownState.EvaluateScore(curDepth, maxDepth, out _); // Evaluate score of the current state after this action
         debuggerEntry.FinalActionScore = actionScore;
         return actionScore;
-    }
+    } 
 
     public abstract AIAction TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions);
 }
