@@ -56,6 +56,8 @@ public partial class PlayerAI
         aiTownState.InitializeStaticData(townData);
     }
 
+    NewStrategy strategy;
+
     internal void Update(TownData townData)
     {
         maxDepth = AITestScene.Instance.MaxAIDepth - 1;
@@ -89,35 +91,40 @@ public partial class PlayerAI
 #endif
 
         // var tryGOAP = false;
-        // var tryNewStrategy = false;
+        var tryNewStrategy = true;
         // if (tryGOAP)
         // {
         //     var aiMapState = new AIMap_State(townData);
         //     InitializeGOAP(aiMapState, 1);
         //     var goal = DetermineBestGoal();
         // }
-        // else if (tryNewStrategy)
-        // {
-        //     var strategy = new NewStrategy(townData, player);
-        //     var action = strategy.DecideAction();
-        //     BestNextActionToTake.CopyFrom(action);
-        // }
-        // else
-
-        // TODO: Only do once, not each time
-        Tasks.Clear();
-        // Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-        Tasks.Add(new AITask_AttackFromNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-        Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-        Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-
-        AIDebugger.rootEntry.BestNextAction = null;
-        var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
-        if (bestAction == null)
+        if (tryNewStrategy)
+        {
+            if (player.Id != 1) return;
+            strategy ??= new NewStrategy(player);
+            var action = strategy.DecideAction(townData);
+            
+            // BestNextActionToTake.CopyFrom(townData, action);
+            Debug.Log(strategy.NumActionsConsidered);
             BestNextActionToTake.SetToNothing();
+            return;
+        }
         else
-            BestNextActionToTake.CopyFrom(bestAction);
+        {
+            // TODO: Only do once, not each time
+            Tasks.Clear();
+            // Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_AttackFromNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
 
+            AIDebugger.rootEntry.BestNextAction = null;
+            var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
+            if (bestAction == null)
+                BestNextActionToTake.SetToNothing();
+            else
+                BestNextActionToTake.CopyFrom(bestAction);
+        }
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried);
 

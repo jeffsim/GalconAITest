@@ -39,7 +39,7 @@ public class AITestScene : MonoBehaviour
         Instance = this;
         ResetTown();
 
-        Application.targetFrameRate = 60;
+        // Application.targetFrameRate = 60;
     }
 
     void ResetTown()
