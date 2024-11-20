@@ -15,6 +15,12 @@ public enum BuildingType
     StoneMiner,
     TownStatue,
     Woodcutter,
+
+    LumberjackHut,
+    Sawmill,
+    StoneQuarry,
+    StoneMason,
+
 }
 [CreateAssetMenu()]
 public class BuildingDefn : BaseDefn

@@ -5,7 +5,7 @@ public partial class AI_TownState
 {
     public AI_NodeState[] Nodes;
     public int NumNodes;
-    PlayerData player;
+    public PlayerData player;
 
     public Dictionary<GoodType, int> PlayerTownInventory = new();
 

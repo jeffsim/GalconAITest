@@ -56,7 +56,7 @@ public partial class PlayerAI
     }
 
     RecursiveStrategy2 strategyRecursive;
-    Strategy_NonRecursive strategyNonrecursive;
+    //Strategy_NonRecursive strategyNonrecursive;
 
     internal void Update(TownData townData)
     {
@@ -90,18 +90,33 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        int aiApproach = 2;
+        int aiApproach = 1;
         switch (aiApproach)
         {
-            case 0: // GAOP
+            case 0: // GOAP approach
                 {
-                    var aiMapState = new AIMap_State(townData);
-                    InitializeGOAP(aiMapState, playerId);
-                    var goal = DetermineBestGoal();
+                    // var aiMapState = new AIMap_State(townData);
+                    // InitializeGOAP(aiMapState, playerId);
+                    // var goal = DetermineBestGoal();
                 }
                 break;
-                
-            case 1: // Another recursive approach
+
+            case 1: // GOAP approach2
+                {
+                    // DO ONCE  vv
+                    var townState = new AI_TownState(player);
+                    townState.InitializeStaticData(townData);
+                    var aiAgent = new AIAgent(player.Id, townState);
+                    // DO ONCE  ^^
+
+                    // DO PER UPDATE
+                    townState.UpdateState(townData);
+                    aiAgent.Update();
+                    Debug.Log(aiAgent.CurrentGoal);
+                    Debug.Log(aiAgent.CurrentPlan);
+                }
+                break;
+            case 2: // Another recursive approach
                 {
                     strategyRecursive ??= new RecursiveStrategy2(player);
                     var bestAction = strategyRecursive.DecideAction(townData);
@@ -114,18 +129,18 @@ public partial class PlayerAI
                 }
                 break;
 
-            case 2: // trying a nonrecursive approach because FFFS
+            case 3: // trying a nonrecursive approach because FFFS
                 {
-                    strategyNonrecursive ??= new Strategy_NonRecursive(townData, player);
-                    var bestAction = strategyNonrecursive.DecideAction();
-                    if (bestAction == null)
-                        BestNextActionToTake.SetToNothing();
-                    else
-                        BestNextActionToTake.CopyFrom(bestAction);
+                    // strategyNonrecursive ??= new Strategy_NonRecursive(townData, player);
+                    // var bestAction = strategyNonrecursive.DecideAction();
+                    // if (bestAction == null)
+                    //     BestNextActionToTake.SetToNothing();
+                    // else
+                    //     BestNextActionToTake.CopyFrom(bestAction);
                 }
                 break;
 
-            case 3: // Main working approach
+            case 4: // Main working approach
                 {
                     // TODO: Only do once, not each time
                     Tasks.Clear();
