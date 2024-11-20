@@ -34,6 +34,13 @@ public class NodeGO : MonoBehaviour
         };
     }
 
+    int lastNumWorkers = -1;
+    int lastNodeId = -1;
+    int lastMaxWorkers = -1;
+    int lastLevel = -1;
+    string lastBuildingText = "asdfawefwef";
+    string lastBuildingName = "asdfawefwef";
+    
     void Update()
     {
         if (Data.OwnedBy != null)
@@ -41,13 +48,36 @@ public class NodeGO : MonoBehaviour
 
         if (Data.Building == null)
         {
-            BuildingText.text = "";
-            NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + ")";
+            if (lastBuildingText != BuildingText.text)
+            {
+                BuildingText.text = "";
+                lastBuildingText = BuildingText.text;
+            }
+
+            if (Data.NodeId != lastNodeId || Data.NumWorkers != lastNumWorkers)
+            {
+                lastNodeId = Data.NodeId;
+                lastNumWorkers = Data.NumWorkers;
+                NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + ")";
+            }
         }
         else
         {
-            BuildingText.text = Data.Building.Defn.Name + " " + Data.Building.Level;
-            NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + "/" + Data.Building.MaxWorkers + ")";
+            if (lastBuildingName != Data.Building.Defn.Name || Data.Building.Level != lastLevel)
+            {
+                lastBuildingName = Data.Building.Defn.Name;
+                lastLevel = Data.Building.Level;
+                BuildingText.text = Data.Building.Defn.Name + " " + Data.Building.Level;
+                lastBuildingText = BuildingText.text;
+            }
+
+            if (Data.NodeId != lastNodeId || Data.NumWorkers != lastNumWorkers || Data.Building.MaxWorkers != lastMaxWorkers)
+            {
+                lastNodeId = Data.NodeId;
+                lastNumWorkers = Data.NumWorkers;
+                lastMaxWorkers = Data.Building.MaxWorkers;
+                NodeIdText.text = Data.NodeId + " (" + Data.NumWorkers + "/" + Data.Building.MaxWorkers + ")";
+            }
         }
         // If this node is the target node of the best action in the current AI then add * to the nodeidetxt
         // foreach (var player in AITestScene.Instance.Town.Players)

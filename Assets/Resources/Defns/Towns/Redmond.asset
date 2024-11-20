@@ -127,8 +127,8 @@ MonoBehaviour:
   - NodeId: 11
     Enabled: 1
     WorldLoc: {x: 532, y: 0, z: 431}
-    OwnedByPlayerId: 2
-    StartingBuilding: {fileID: 11400000, guid: 69c39a93c23a7374b87b786f99793e16, type: 2}
+    OwnedByPlayerId: 0
+    StartingBuilding: {fileID: 0}
     NumStartingWorkers: 12
     StartingInventory:
       exported_Keys: []
@@ -138,7 +138,7 @@ MonoBehaviour:
     WorldLoc: {x: 530.11, y: 0, z: 428.25}
     OwnedByPlayerId: 1
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
-    NumStartingWorkers: 10
+    NumStartingWorkers: 30
     StartingInventory:
       exported_Keys:
       - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}

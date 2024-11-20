@@ -1,4 +1,3 @@
-
 public struct Strategy_Node
 {
     public int NodeId;
@@ -8,7 +7,7 @@ public struct Strategy_Node
     public BuildingType BuildingType;
     public bool IsUpgradableBuilding;
     public int NumNeighbors;
-    public Strategy_Node[] Neighbors;
+    public int[] NeighborIndices; // Changed from Strategy_Node[] to int[]
 
     public const int MAX_NEIGHBORS = 8;
 
@@ -22,7 +21,7 @@ public struct Strategy_Node
             BuildingType = BuildingType.None,
             IsUpgradableBuilding = false,
             BuildingLevel = 0,
-            Neighbors = new Strategy_Node[MAX_NEIGHBORS],
+            NeighborIndices = new int[MAX_NEIGHBORS],
             NumNeighbors = 0
         };
     }
