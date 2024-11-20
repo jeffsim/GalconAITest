@@ -32,6 +32,8 @@ using UnityEngine;
 
     create list of all subgoals from the above goals
 
+    goals.SortBy(priority)
+    List subGoals = goals.AllSubgoals
     foreach (subgoal)
         determine priority
         determine feasibility

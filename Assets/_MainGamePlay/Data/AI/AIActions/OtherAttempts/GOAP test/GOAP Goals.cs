@@ -1,4 +1,4 @@
-// using System;
+using System;
 
 // public class OffensiveFleetConstructionGoal : Goal
 // {
@@ -13,14 +13,12 @@
 //             int desiredStrength = 50; // Example
 //             totalStrengthDeficit += Math.Max(0, desiredStrength - node.MilitaryStrength);
 //         }
-
 //         return totalStrengthDeficit / (playerNodes.Count * 50.0f);
 //     }
 //     public override float EstimateCost(AIMap_State mapState, int playerId)
 //     {
 //         return .5f;
 //     }
-
 // }
 
 // public class ResourceGatheringGoal : Goal
@@ -50,7 +48,6 @@
 //     {
 //         return .5f;
 //     }
-
 // }
 
 // public class StrategicExpansionGoal : Goal

@@ -94,9 +94,9 @@ public partial class PlayerAI
         {
             case 0: // GAOP
                 {
-                    // var aiMapState = new AIMap_State(townData);
-                    // InitializeGOAP(aiMapState, 1);
-                    // var goal = DetermineBestGoal();
+                    var aiMapState = new AIMap_State(townData);
+                    InitializeGOAP(aiMapState, playerId);
+                    var goal = DetermineBestGoal();
                 }
                 break;
             case 1: // Another recursive approach
