@@ -22,10 +22,13 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: Outpost
+  IsEnabled: 1
   Name: Outpost
   Description: 
+  BuildingType: 6
   Color: {r: 0, g: 1, b: 0.8925357, a: 1}
   WorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 1
   ConstructionRequirements:
   - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}

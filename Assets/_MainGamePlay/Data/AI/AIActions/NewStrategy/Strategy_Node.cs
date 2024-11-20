@@ -10,7 +10,7 @@ public struct Strategy_Node
     public int NumNeighbors;
     public Strategy_Node[] Neighbors;
 
-    public const int MAX_NEIGHBORS = 4;
+    public const int MAX_NEIGHBORS = 8;
 
     public static Strategy_Node CreateInitialized()
     {

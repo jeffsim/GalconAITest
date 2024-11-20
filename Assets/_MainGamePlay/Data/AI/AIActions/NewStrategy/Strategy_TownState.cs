@@ -5,6 +5,8 @@ public struct Strategy_TownState
     public Strategy_Node[] Nodes;
     public BuildingDefn[] ConstructibleBuildings;
     public int NumConstructibleBuildings;
+    
+    public ulong NodesVisited;
 
     public void Initialize()
     {

@@ -1,9 +1,11 @@
 using System;
+using UnityEditorInternal;
 using UnityEngine;
 
 public struct Strategy_AIAction
 {
     public ActionType Type;
+    public int SourceNodeIndex;
     public int TargetNodeIndex;
     public int NumWorkers;
     public BuildingType BuildingType;
@@ -16,21 +18,23 @@ public struct Strategy_AIAction
 
 public enum ActionType
 {
-    CaptureNode,
-    ConstructBuilding,
+    CaptureNodeAndConstructBuilding,
+    AttackEnemyNode,
+    ButtressBuilding,
     UpgradeBuilding
 }
 
 public class NewStrategy
 {
-    private const int MAX_ACTIONS = 250;
-    private const int MAX_BUILDING_UPGRADE_LEVEL = 4; // todo: per building
+    const int MAX_DEPTH = 3;
+    const int MAX_ACTIONS = 250;
+    const int MAX_BUILDING_UPGRADE_LEVEL = 4; // todo: per building
 
-    private Strategy_AIAction[] preallocatedActions;
-    private int actionCount;
+    Strategy_AIAction[] actions;
+    public int NumActionsConsidered, NumNodesConsidered;
 
-    private Strategy_TownState Town;
-    private PlayerData Player;
+    Strategy_TownState Town;
+    PlayerData Player;
 
     public NewStrategy(PlayerData player)
     {
@@ -38,8 +42,7 @@ public class NewStrategy
         Town = new Strategy_TownState();
         Town.Initialize();
 
-        preallocatedActions = new Strategy_AIAction[MAX_ACTIONS];
-        actionCount = 0;
+        actions = new Strategy_AIAction[MAX_ACTIONS];
     }
 
     void InitializeToTown(TownData sourceTownData)
@@ -57,7 +60,7 @@ public class NewStrategy
             strategyNode.BuildingLevel = sourceNode.Building?.Level ?? 0;
 
             strategyNode.NumNeighbors = sourceNode.NodeConnections.Count;
-            for (int j = 0; j < sourceNode.NodeConnections.Count && j < Strategy_Node.MAX_NEIGHBORS; j++)
+            for (int j = 0; j < sourceNode.NodeConnections.Count; j++)
             {
                 var connection = sourceNode.NodeConnections[j];
                 strategyNode.Neighbors[j] = Town.Nodes[connection.End.NodeId];
@@ -66,32 +69,33 @@ public class NewStrategy
             Town.Nodes[i] = strategyNode;
         }
     }
-    public int NumActionsConsidered, NumNodesConsidered;
 
     public Strategy_AIAction DecideAction(TownData sourceTownData)
     {
         InitializeToTown(sourceTownData);
         NumActionsConsidered = 0;
         NumNodesConsidered = 0;
-        const int MAX_DEPTH = 4;
+        Town.NodesVisited = 0UL;
         Strategy_AIAction bestAction = default;
         float bestValue = float.MinValue;
 
-        EvaluateActions(Town, Player, 0, MAX_DEPTH, ref bestAction, ref bestValue);
+        EvaluateActions(Town, 0, ref bestAction, ref bestValue);
 
         return bestAction;
     }
 
-    private void EvaluateActions(Strategy_TownState state, PlayerData player, int currentDepth, int maxDepth, ref Strategy_AIAction bestAction, ref float bestValue)
+    private void EvaluateActions(Strategy_TownState state, int currentDepth, ref Strategy_AIAction bestAction, ref float bestValue)
     {
         if (NumActionsConsidered > 1000000)
             return;
 
-        if (currentDepth >= maxDepth)
+        if (currentDepth >= MAX_DEPTH)
         {
-            bestValue = Math.Max(EvaluateState(state, player), bestValue);
+            bestValue = Math.Max(EvaluateState(state), bestValue);
             return;
         }
+
+        // TODO: Need to 'tick' resource gathering once per step.  here?
 
         // create list of buildings that player can currently construct
         // TODO: precalc (building.CanBeBuiltByPlayer && building.IsEnabled) and only update Resources here
@@ -99,31 +103,29 @@ public class NewStrategy
         foreach (var building in GameDefns.Instance.BuildingDefns.Values)
             if (building.CanBeBuiltByPlayer && building.IsEnabled)
             {
-                var resourcesNeeded = building.ConstructionRequirements;
                 bool canBuild = true;
+                // var resourcesNeeded = building.ConstructionRequirements;
                 // foreach (var rn in resourcesNeeded)
                 // canBuild &= state.Resources[rn.Good.GoodType] < rn.Amount;
                 if (canBuild)
                     state.ConstructibleBuildings[state.NumConstructibleBuildings++] = building;
             }
 
-
-        EnumerateActions(state, player);
-
+        var actionCount = EnumerateActions(state);
         for (int i = 0; i < actionCount; i++)
         {
             NumActionsConsidered++;
-            var action = preallocatedActions[i];
+            var action = actions[i];
 
             Strategy_TownState newState = state;
 
-            ApplyAction(ref newState, action, player);
+            ApplyAction(ref newState, action);
 
-            EvaluateActions(newState, player, currentDepth + 1, maxDepth, ref bestAction, ref bestValue);
+            EvaluateActions(newState, currentDepth + 1, ref bestAction, ref bestValue);
 
             if (currentDepth == 0)
             {
-                float actionValue = EvaluateState(newState, player);
+                float actionValue = EvaluateState(newState);
                 if (actionValue > bestValue)
                 {
                     bestValue = actionValue;
@@ -133,138 +135,194 @@ public class NewStrategy
         }
     }
 
-    private void EnumerateActions(Strategy_TownState state, PlayerData player)
+    private int EnumerateActions(Strategy_TownState state)
     {
-        actionCount = 0;
+        int actionCount = 0;
 
         foreach (var node in state.Nodes)
         {
+            // NodesVisited is a 64bit flag field used to disallow pingponging between nodes.  if recurse from node 2 to 4 then don't allow recursing back to 2
+            // so: track which nodes have been visited in this path
+            if ((state.NodesVisited & (1UL << node.NodeId)) != 0) continue;
+
             NumNodesConsidered++;
             Debug.Assert(actionCount < MAX_ACTIONS);
 
-            if (node.OwnerId == player.Id)
+            if (node.OwnerId != Player.Id) continue; // TODO: Keep list of player's nodes
+
+            // consider actions which move workers from node to another node
+            // TODO: Pincher attacks
+            // TODO: send workers from non-neighor (e.g. 3 away) to attack or construct or enable to uplevel
+            //  don't want to do A* in this perf-critical loop though
+            for (int n = 0; n < node.NumNeighbors && actionCount < MAX_ACTIONS; n++)
             {
-                // consider nodes that (a) the player does not own and (b) neighbors the player's nodes
-                for (int n = 0; n < node.NumNeighbors && actionCount < MAX_ACTIONS; n++)
+                var neighbor = node.Neighbors[n];
+                if (neighbor.OwnerId == 0 && neighbor.BuildingType == BuildingType.None) // e.g.  forest has no owner and buildingtype=none
                 {
-                    var neighbor = node.Neighbors[n];
-                    if (neighbor.OwnerId == 0)
+                    // Unowned.  Construct building on it.
+                    for (var b = 0; b < state.NumConstructibleBuildings && actionCount < MAX_ACTIONS; b++)
                     {
-                        // Unowned.  Construct building on it.
-                        for (var b = 0; b < state.NumConstructibleBuildings; b++)
-                        {
-                            var building = state.ConstructibleBuildings[b];
-                            // TODO: Prefilter buildings here to reduce search space.  e.g. don't consider woodcutter if have surplus of wood?
-                            preallocatedActions[actionCount++] = new Strategy_AIAction(ActionType.ConstructBuilding)
+                        var building = state.ConstructibleBuildings[b];
+                        if (WantToConstructBuildingOnEmptyNode(node, neighbor, building, out int numWorkers))
+                            actions[actionCount++] = new Strategy_AIAction(ActionType.CaptureNodeAndConstructBuilding)
                             {
+                                SourceNodeIndex = node.NodeId,
                                 TargetNodeIndex = neighbor.NodeId,
-                                BuildingType = building.BuildingType
+                                BuildingType = building.BuildingType,
+                                NumWorkers = numWorkers
                             };
-                        }
                     }
-                    else if (neighbor.OwnerId != player.Id)
-                    {
-                        // owned by enemy.  Capture it.
-                        // TODO: Prefilter; e.g. don't consider capture if node doesn't have enough workers to win.
-                        // TODO: This approach fails on pincer movement.
-                        // TODO: calculate number of workers to send.  base on # in node and # in neighbor
-                        int numWorkers = node.NumWorkers / 2;
-                        preallocatedActions[actionCount++] = new Strategy_AIAction(ActionType.CaptureNode)
+                }
+                else if (neighbor.OwnerId != Player.Id)
+                {
+                    // owned by enemy.  Capture it.
+                    if (false && WantToAttackEnemyNode(node, neighbor, out int numWorkers))
+                        actions[actionCount++] = new Strategy_AIAction(ActionType.AttackEnemyNode)
                         {
+                            SourceNodeIndex = node.NodeId,
                             TargetNodeIndex = neighbor.NodeId,
                             NumWorkers = numWorkers
                         };
-                    }
-                    else
-                    {
-                        // player owns neighboring node; should we send workers to buttress it?
-                        // if neighboringNode.neighbors is owned by enemy and needs help, send workers
-                        var neighborsOfNeighbor = neighbor.Neighbors;
-                        for (int nn = 0; nn < neighbor.NumNeighbors; nn++)
-                        {
-                            var neighborOfNeighbor = neighborsOfNeighbor[nn];
-                            if (neighborOfNeighbor.OwnerId != player.Id)
-                            {
-                                // owned by enemy.  Capture it.
-                                // TODO: calculate number of workers to send
-                                int numWorkers = node.NumWorkers / 2;
-                                preallocatedActions[actionCount++] = new Strategy_AIAction(ActionType.CaptureNode)
-                                {
-                                    TargetNodeIndex = neighbor.NodeId,
-                                    NumWorkers = numWorkers
-                                };
-                            }
-                        }
-                    }
                 }
+                else
+                {
+                    // player owns neighboring node; should we send workers to buttress it?
+                    if (false && WantToButtressBuilding(node, neighbor, out int numWorkers))
+                        actions[actionCount++] = new Strategy_AIAction(ActionType.ButtressBuilding)
+                        {
+                            SourceNodeIndex = node.NodeId,
+                            TargetNodeIndex = neighbor.NodeId,
+                            NumWorkers = numWorkers
+                        };
+                }
+            }
 
-                // Check if should/can upgrade building
-                if (WantToUpgradeBuilding(node))
-                    preallocatedActions[actionCount++] = new Strategy_AIAction(ActionType.UpgradeBuilding);
+            // Check if should/can upgrade building in node
+            if (false && WantToUpgradeBuilding(node))
+                actions[actionCount++] = new Strategy_AIAction(ActionType.UpgradeBuilding);
+        }
+
+        return actionCount;
+    }
+
+    private bool WantToConstructBuildingOnEmptyNode(Strategy_Node node, Strategy_Node neighbor, BuildingDefn building, out int numWorkers)
+    {
+        // TODO: Prefilter buildings here to reduce search space.  e.g. don't consider woodcutter if have surplus of wood?
+        numWorkers = node.NumWorkers / 2;
+        return true;
+    }
+
+    private bool WantToAttackEnemyNode(Strategy_Node nodeFrom, Strategy_Node nodeTo, out int numWorkers)
+    {
+        numWorkers = 0;
+
+        // don't attack if nodeFrom has fewer workers than nodeTo
+        // todo: other logic too
+        if (nodeFrom.NumWorkers < nodeTo.NumWorkers) return false;
+
+        return true;
+    }
+
+    bool WantToButtressBuilding(Strategy_Node nodeFrom, Strategy_Node nodeTo, out int numWorkers)
+    {
+        numWorkers = 0;
+
+        // don't buttress if nodeFrom doesn't have enough workers
+        if (nodeFrom.NumWorkers < 4) return false; // TODO: magic #
+
+        // if enemies near nodeTo then buttress it from nodeFrom
+        for (int n = 0; n < nodeTo.NumNeighbors; n++)
+        {
+            var neighbor = nodeTo.Neighbors[n];
+            if (neighbor.OwnerId != Player.Id && neighbor.NumWorkers > nodeTo.NumWorkers)
+            {
+                // buttress nodeTo using workers from nodeFrom to defend against attacks from neighbor
+                // TODO: Smarter logic here.  e.g. if enemy has 2x workers, send 2x workers etc
+                // TODO: The logic here should be to either (a) defend from enemies or (b) enable upgrade of building
+                numWorkers = nodeFrom.NumWorkers / 2;
+                return true;
             }
         }
+        return false;
     }
 
     bool WantToUpgradeBuilding(Strategy_Node node)
     {
         // Filter out any buildings we shouldn't upgrade
-        if (node.BuildingType == BuildingType.None ||
-            node.OwnerId != Player.Id ||
-            !node.IsUpgradableBuilding ||
-            node.BuildingLevel == MAX_BUILDING_UPGRADE_LEVEL)
+        // to get here, player must own the node which means there must be a building on it - so no need to check those
+        if (!node.IsUpgradableBuilding || node.BuildingLevel == MAX_BUILDING_UPGRADE_LEVEL)
             return false;
 
         // 1. Ensure building has enough workers to do it.  Must have Level ^ 2 workers
         if (node.NumWorkers < node.BuildingLevel * node.BuildingLevel) return false;
 
         // 2. Ensure building isn't under immediate threat (no neighbors owned by enemy w/ > N workers)
-        for (int n = 0; n < node.NumNeighbors; n++)
-        {
-            var neighbor = node.Neighbors[n];
-            if (neighbor.OwnerId != Player.Id && neighbor.NumWorkers > node.NumWorkers)
-                return false; // is under threat, don't upgrade yet
-        }
+        // for (int n = 0; n < node.NumNeighbors; n++)
+        // {
+        //     var neighbor = node.Neighbors[n];
+        //     if (neighbor.OwnerId != Player.Id && neighbor.NumWorkers > node.NumWorkers)
+        //         return false; // is under threat, don't upgrade yet
+        // }
 
         // TODO: Other prefilters?  Some buildings don't make sense to upgrade given various global states.
 
         return true; // safe to upgrade
     }
 
-    private void ApplyAction(ref Strategy_TownState state, Strategy_AIAction action, PlayerData player)
+    private void ApplyAction(ref Strategy_TownState state, Strategy_AIAction action)
     {
-        ref Strategy_Node targetNode = ref state.Nodes[action.TargetNodeIndex];
+        ref Strategy_Node fromNode = ref state.Nodes[action.SourceNodeIndex];
+        ref Strategy_Node toNode = ref state.Nodes[action.TargetNodeIndex];
+        int numWorkers = action.NumWorkers;
 
+        // Simulate action
         switch (action.Type)
         {
-            case ActionType.CaptureNode:
-                targetNode.OwnerId = player.Id;
-                targetNode.NumWorkers = 1;
+            case ActionType.AttackEnemyNode:
+                // simulate attack; send workers from fromNode to toNode and assume 1:1 attack/defend
+                bool attackerWonBattle = fromNode.NumWorkers > toNode.NumWorkers;
+                toNode.NumWorkers = fromNode.NumWorkers - toNode.NumWorkers;
+                fromNode.NumWorkers -= numWorkers;
+                if (attackerWonBattle)
+                    toNode.OwnerId = Player.Id;
+                state.NodesVisited |= 1UL << toNode.NodeId;
                 break;
 
-            case ActionType.ConstructBuilding:
-                targetNode.BuildingType = action.BuildingType;
-                targetNode.BuildingLevel = 1;
+            case ActionType.CaptureNodeAndConstructBuilding:
+                toNode.BuildingType = action.BuildingType;
+                toNode.BuildingLevel = 1;
+                toNode.OwnerId = Player.Id;
+                toNode.NumWorkers = numWorkers;
+                fromNode.NumWorkers -= numWorkers;
+
+                state.NodesVisited |= 1UL << toNode.NodeId;
+                break;
+
+            case ActionType.ButtressBuilding:
+                toNode.NumWorkers += numWorkers;
+                fromNode.NumWorkers -= numWorkers;
                 break;
 
             case ActionType.UpgradeBuilding:
-                if (targetNode.BuildingLevel < 3)
-                {
-                    targetNode.BuildingLevel++;
-                }
+                toNode.BuildingLevel++;
                 break;
         }
     }
 
-    private float EvaluateState(Strategy_TownState state, PlayerData player)
+    private float EvaluateState(Strategy_TownState state)
     {
         float score = 0;
 
         foreach (var node in state.Nodes)
         {
-            if (node.OwnerId == player.Id)
+            if (node.OwnerId == Player.Id)
             {
                 score += node.NumWorkers * 10;
                 score += node.BuildingLevel * 20;
+            }
+            else if (node.OwnerId != 0)
+            {
+                score -= node.NumWorkers * 5;
             }
         }
 

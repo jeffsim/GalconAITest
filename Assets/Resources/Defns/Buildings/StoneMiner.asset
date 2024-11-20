@@ -22,10 +22,13 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: StoneMiner
+  IsEnabled: 1
   Name: StoneMiner
   Description: 
+  BuildingType: 8
   Color: {r: 0.52865785, g: 0.5660378, b: 0.5325584, a: 1}
   WorkerDefn: {fileID: 0}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 1
   ConstructionRequirements:
   - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}

@@ -22,9 +22,13 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: StoneMine
+  IsEnabled: 1
   Name: StoneMine
+  Description: 
+  BuildingType: 7
   Color: {r: 0.21698111, g: 0.21698111, b: 0.21698111, a: 1}
   WorkerDefn: {fileID: 0}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 0
   ConstructionRequirements: []
   CanGatherResources: 0
@@ -34,3 +38,5 @@ MonoBehaviour:
     type: 2}
   CanCraftGoods: 0
   CraftableGoods: []
+  CanGenerateWorkers: 0
+  GeneratableWorker: {fileID: 0}

@@ -22,10 +22,13 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: Camp
+  IsEnabled: 1
   Name: Camp
   Description: 
+  BuildingType: 2
   Color: {r: 0.5529971, g: 0, b: 1, a: 1}
   WorkerDefn: {fileID: 0}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 0
   ConstructionRequirements: []
   CanGatherResources: 0

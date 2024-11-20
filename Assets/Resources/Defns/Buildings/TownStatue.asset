@@ -25,8 +25,10 @@ MonoBehaviour:
   IsEnabled: 0
   Name: TownStatue
   Description: 
+  BuildingType: 9
   Color: {r: 0, g: 1, b: 0.97757244, a: 1}
   WorkerDefn: {fileID: 0}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 1
   ConstructionRequirements:
   - Good: {fileID: 11400000, guid: f0ae232d3a3389349b7e36df1345973d, type: 2}

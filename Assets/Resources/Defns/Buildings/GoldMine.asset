@@ -22,10 +22,13 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: GoldMine
+  IsEnabled: 1
   Name: GoldMine
   Description: 
+  BuildingType: 5
   Color: {r: 0.21698111, g: 0.21698111, b: 0.21698111, a: 1}
   WorkerDefn: {fileID: 0}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 0
   ConstructionRequirements: []
   CanGatherResources: 0

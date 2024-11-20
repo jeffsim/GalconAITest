@@ -22,9 +22,13 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: Forest
+  IsEnabled: 1
   Name: Forest
+  Description: 
+  BuildingType: 4
   Color: {r: 0.0016909974, g: 0.3584906, b: 0.023184955, a: 1}
   WorkerDefn: {fileID: 0}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 0
   ConstructionRequirements: []
   CanGatherResources: 0
@@ -34,3 +38,5 @@ MonoBehaviour:
     type: 2}
   CanCraftGoods: 0
   CraftableGoods: []
+  CanGenerateWorkers: 0
+  GeneratableWorker: {fileID: 0}

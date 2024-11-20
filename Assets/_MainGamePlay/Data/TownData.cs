@@ -35,6 +35,8 @@ public class TownData
             var toNode = GetNodeById(nodeConnectionDefn.Nodes.y);
             if (fromNode == null || toNode == null) continue;
             fromNode.NodeConnections.Add(new NodeConnection() { Start = fromNode, End = toNode, TravelCost = 1, IsBidirectional = nodeConnectionDefn.IsBidirectional });
+            if (nodeConnectionDefn.IsBidirectional)
+                toNode.NodeConnections.Add(new NodeConnection() { Start = toNode, End = fromNode, TravelCost = 1, IsBidirectional = true });
         }
 
         // Create Workers

@@ -22,10 +22,13 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: Woodcutter
+  IsEnabled: 1
   Name: Woodcutter
   Description: 
+  BuildingType: 10
   Color: {r: 0, g: 0.4528302, b: 0.048278306, a: 1}
   WorkerDefn: {fileID: 0}
+  CanBeUpgraded: 1
   CanBeBuiltByPlayer: 1
   ConstructionRequirements:
   - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
