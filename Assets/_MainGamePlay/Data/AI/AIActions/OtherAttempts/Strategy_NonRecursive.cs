@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public class NewStrategyOld
+public class Strategy_NonRecursive
 {
     TownData SourceTownData;
     PlayerData player;
@@ -10,7 +10,7 @@ public class NewStrategyOld
     List<AI_NodeState> PlayerNodes;
     AI_TownState Town;
 
-    public NewStrategyOld(TownData townData, PlayerData player)
+    public Strategy_NonRecursive(TownData townData, PlayerData player)
     {
         SourceTownData = townData;
         Town = new(player);

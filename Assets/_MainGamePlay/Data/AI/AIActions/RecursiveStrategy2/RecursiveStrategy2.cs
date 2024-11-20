@@ -44,7 +44,7 @@ using UnityEngine;
     pick the best, and take the first step towards doing it
 */
 
-public class NewStrategy
+public class RecursiveStrategy2
 {
     const int MAX_DEPTH = 4;
     const int MAX_ACTIONS = 250;
@@ -69,7 +69,7 @@ public class NewStrategy
 
     private ActionUndoData[] actionUndoData = new ActionUndoData[MAX_DEPTH];
 
-    public NewStrategy(PlayerData player)
+    public RecursiveStrategy2(PlayerData player)
     {
         Player = player;
         Town = new Strategy_TownState();

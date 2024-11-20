@@ -55,7 +55,8 @@ public partial class PlayerAI
         aiTownState.InitializeStaticData(townData);
     }
 
-    NewStrategy strategy;
+    RecursiveStrategy2 strategyRecursive;
+    Strategy_NonRecursive strategyNonrecursive;
 
     internal void Update(TownData townData)
     {
@@ -89,7 +90,7 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        int aiApproach = 0;
+        int aiApproach = 2;
         switch (aiApproach)
         {
             case 0: // GAOP
@@ -99,18 +100,32 @@ public partial class PlayerAI
                     var goal = DetermineBestGoal();
                 }
                 break;
+                
             case 1: // Another recursive approach
                 {
-                    if (player.Id != 1) return;
-                    strategy ??= new NewStrategy(player);
-                    var action = strategy.DecideAction(townData);
+                    strategyRecursive ??= new RecursiveStrategy2(player);
+                    var bestAction = strategyRecursive.DecideAction(townData);
 
                     // BestNextActionToTake.CopyFrom(townData, action);
-                    Debug.Log(strategy.NumActionsConsidered);
+                    Debug.Log(strategyRecursive.NumActionsConsidered);
                     BestNextActionToTake.SetToNothing();
+
+                    // NOTE: This approach doesn't currently set BestNextActionToTake since I'm just trying to get it to work.
                 }
                 break;
-            case 2: // Main working approach
+
+            case 2: // trying a nonrecursive approach because FFFS
+                {
+                    strategyNonrecursive ??= new Strategy_NonRecursive(townData, player);
+                    var bestAction = strategyNonrecursive.DecideAction();
+                    if (bestAction == null)
+                        BestNextActionToTake.SetToNothing();
+                    else
+                        BestNextActionToTake.CopyFrom(bestAction);
+                }
+                break;
+
+            case 3: // Main working approach
                 {
                     // TODO: Only do once, not each time
                     Tasks.Clear();
