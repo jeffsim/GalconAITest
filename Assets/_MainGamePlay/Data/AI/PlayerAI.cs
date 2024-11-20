@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using NUnit.Framework.Constraints;
 using UnityEngine;
 
 public partial class PlayerAI
@@ -56,7 +55,7 @@ public partial class PlayerAI
     }
 
     RecursiveStrategy2 strategyRecursive;
-    //Strategy_NonRecursive strategyNonrecursive;
+    Strategy_NonRecursive strategyNonrecursive;
 
     internal void Update(TownData townData)
     {
@@ -90,32 +89,9 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        int aiApproach = 1;
+        int aiApproach = 4;
         switch (aiApproach)
         {
-            case 0: // GOAP approach
-                {
-                    // var aiMapState = new AIMap_State(townData);
-                    // InitializeGOAP(aiMapState, playerId);
-                    // var goal = DetermineBestGoal();
-                }
-                break;
-
-            case 1: // GOAP approach2
-                {
-                    // DO ONCE  vv
-                    var townState = new AI_TownState(player);
-                    townState.InitializeStaticData(townData);
-                    var aiAgent = new AIAgent(player.Id, townState);
-                    // DO ONCE  ^^
-
-                    // DO PER UPDATE
-                    townState.UpdateState(townData);
-                    aiAgent.Update();
-                    Debug.Log(aiAgent.CurrentGoal);
-                    Debug.Log(aiAgent.CurrentPlan);
-                }
-                break;
             case 2: // Another recursive approach
                 {
                     strategyRecursive ??= new RecursiveStrategy2(player);
@@ -131,12 +107,12 @@ public partial class PlayerAI
 
             case 3: // trying a nonrecursive approach because FFFS
                 {
-                    // strategyNonrecursive ??= new Strategy_NonRecursive(townData, player);
-                    // var bestAction = strategyNonrecursive.DecideAction();
-                    // if (bestAction == null)
-                    //     BestNextActionToTake.SetToNothing();
-                    // else
-                    //     BestNextActionToTake.CopyFrom(bestAction);
+                    strategyNonrecursive ??= new Strategy_NonRecursive(townData, player);
+                    var bestAction = strategyNonrecursive.DecideAction();
+                    if (bestAction == null)
+                        BestNextActionToTake.SetToNothing();
+                    else
+                        BestNextActionToTake.CopyFrom(bestAction);
                 }
                 break;
 

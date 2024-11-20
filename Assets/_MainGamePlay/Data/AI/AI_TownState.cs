@@ -212,4 +212,35 @@ public partial class AI_TownState
         }
         return true;
     }
+
+    public Dictionary<GoodType, int> PlayerInventory = new Dictionary<GoodType, int>();
+
+    internal int GetNumGood(GoodType good) => PlayerInventory.ContainsKey(good) ? PlayerInventory[good] : 0;
+
+    internal bool HasSufficientGoods(List<Good_CraftingRequirements> requirements)
+    {
+        for (int i = 0; i < requirements.Count; i++)
+        {
+            var req = requirements[i];
+            if (GetNumGood(req.Good.GoodType) < req.Amount)
+                return false;
+        }
+        return true;
+    }
+
+    internal void ConsumeGoods(List<Good_CraftingRequirements> requirements)
+    {
+        for (int i = 0; i < requirements.Count; i++)
+        {
+            var req = requirements[i];
+            PlayerInventory[req.Good.GoodType] -= req.Amount;
+        }
+    }
+
+    internal void ProduceGood(GoodType good, int amount)
+    {
+        if (!PlayerInventory.ContainsKey(good))
+            PlayerInventory[good] = 0;
+        PlayerInventory[good] += amount;
+    }
 }
