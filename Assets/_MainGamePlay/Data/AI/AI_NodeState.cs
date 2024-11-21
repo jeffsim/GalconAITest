@@ -5,7 +5,7 @@ public class AI_NodeState
 {
     public NodeData RealNode;
     public List<AI_NodeState> NeighborNodes = new();
-    public int NumNeighbors => NeighborNodes.Count;
+    public int NumNeighbors;
     public int NumWorkers;
     public int MaxWorkers;
     public int WorkersGeneratedPerTurn = 1;
