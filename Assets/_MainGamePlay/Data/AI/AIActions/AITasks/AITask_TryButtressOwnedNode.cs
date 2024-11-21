@@ -12,7 +12,6 @@ public class AITask_TryButtressOwnedNode : AITask
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return bestAction; // not enough workers in node to send any out
 
-        // TODO: Support > 1 node away.  Consider AttackToNode approach and apply here
         foreach (var toNode in fromNode.NeighborNodes)
         {
             // ==== Verify we can perform the action

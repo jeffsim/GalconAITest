@@ -28,6 +28,7 @@ public partial class AI_TownState
                 // Add score for each building in a node we own that is "useful"
                 if (!node.HasBuilding)
                 {
+                    // TODO: No longer possible?
                     score += .1f; // some score for owning empty nodes.  Base this on AI personality's "desire to expand"
 #if DEBUG
                     scoreReasons?.ScoresFrom_NumEmptyNodesOwned.Add(new DebugAIStateReason() { Node = node, ScoreValue = .1f });
@@ -37,7 +38,7 @@ public partial class AI_TownState
                 {
                     // upgraded buildings are more useful than non-upgraded buildings
                     // todo: temp - should be based on building type, game state, how much we need the building, etc.
-                    float buildingUpgradeModifier = .75f; // set this to 'value' of upgrades. 
+                    float buildingUpgradeModifier = .5f; // set this to 'value' of upgrades. 
                     score += buildingUpgradeModifier * (node.BuildingLevel - 1);
 
                     // Resource gathering buildings are useful if they can reach a resource node.
@@ -51,6 +52,7 @@ public partial class AI_TownState
                         // where turn 0 is the first turn, and maxStateDepth is the last turn
                         // building built turn 0; currently on turn 10; multiply score by 10
                         // building built turn 5; currently on turn 10; multiply score by 5
+                        // TODO: Change turnbuildingwasbuilt into max of [4] turns ago; otherwise this becomes huge.  Can't just use min, need to subtract from curturn#
                         addedScore += (maxStateDepth - node.TurnBuildingWasBuilt + 1) * .1f;
 
 #if DEBUG
@@ -84,6 +86,20 @@ public partial class AI_TownState
 
                     // Storage buildings are useful if...
                     // Crafting buildings are useful if...
+
+                    // If player-owned building has an enemy-owned node nearby, it's more useful to have more workers in it
+                    int countEnemyWorkersInNeighborNodes = 0;
+                    foreach (var neighborNode in node.NeighborNodes)
+                        if (neighborNode.OwnedBy != null && neighborNode.OwnedBy.Hates(player))
+                            countEnemyWorkersInNeighborNodes += neighborNode.NumWorkers;
+                    if (countEnemyWorkersInNeighborNodes > node.NumWorkers)
+                    {
+                        float scoreValue = (node.NumWorkers - countEnemyWorkersInNeighborNodes) * .5f;
+                        score += scoreValue;
+#if DEBUG
+                        scoreReasons?.ScoresFrom_BuildingsNearEnemyNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = score });
+#endif
+                    }
                 }
             }
             else if (node.OwnedBy != null)

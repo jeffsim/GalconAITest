@@ -120,7 +120,7 @@ public partial class PlayerAI
                 {
                     // TODO: Only do once, not each time
                     Tasks.Clear();
-                    // Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+                    Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
               //      Tasks.Add(new AITask_AttackFromNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
                     Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
                     Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));

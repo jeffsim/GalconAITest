@@ -28,6 +28,6 @@ public class PlayerData
     internal bool Hates(PlayerData player)
     {
         // For now everyone hates everyone (except for themselves)
-        return player != this;
+        return player != this && player != null;
     }
 }
