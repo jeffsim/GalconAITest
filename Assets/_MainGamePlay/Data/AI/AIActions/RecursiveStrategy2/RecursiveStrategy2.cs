@@ -1,49 +1,6 @@
 using System;
 using UnityEngine;
 
-/*
-    sigh.  different approach
-    
-    identify strategic needs (goals). DON'T do it recursively because FUCKME
-    MAYBE do one-level deep goals => subgoals
-        I need wood
-            nothing drives this need except it's just hardcoded. you always need wood
-            could be somewhat heuristic; e.g. start of game don't need iron; end of game don't need wood as much
-            priority is impacted by how much you have
-            IDEALLY it's impacted by how much you need e.g. to build a barracks - but I don't want to recurse
-        
-        I want to capture more territory / kill enemy
-            subgoals
-                need a barracks to generate warriors
-                need an archery range to counteract the enemies' mages
-
-                // GOAP version:
-                need warriors to attack/defend
-                    need a barracks to train them
-                        need stone to build barracks
-                        need to capture empty node to build barracks
-                            need to ...
-
-
-
-        I want to build a barracks
-            subgoals
-                need stone to build the barracks
-
-    create list of all subgoals from the above goals
-
-    goals.SortBy(priority)
-    List subGoals = goals.AllSubgoals
-    foreach (subgoal)
-        determine priority
-        determine feasibility
-            can I do it now?
-            if not, what's the very first step towards doing it?
-                (I need wood but don't have a path to it - find the forest nearest to me and build towards it)
-                (I want a barracks but can't build one wihtout stone - this is NOT handled here but above. economic chain not in here.
-    pick the best, and take the first step towards doing it
-*/
-
 public class RecursiveStrategy2
 {
     const int MAX_DEPTH = 4;
