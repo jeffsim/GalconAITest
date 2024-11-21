@@ -29,14 +29,18 @@ public partial class AI_TownState
             {
                 var endIndex = townData.Nodes.IndexOf(nodeConn.End);
                 var endNode = Nodes[endIndex];
-                Nodes[i].NeighborNodes.Add(endNode);
+                if (!Nodes[i].NeighborNodes.Contains(endNode))
+                    Nodes[i].NeighborNodes.Add(endNode);
                 if (nodeConn.IsBidirectional)
-                    endNode.NeighborNodes.Add(Nodes[i]);
+                {
+                    if (!endNode.NeighborNodes.Contains(Nodes[i]))
+                        endNode.NeighborNodes.Add(Nodes[i]);
+                }
             }
         }
         for (int i = 0; i < NumNodes; i++)
         {
-            Nodes[i].NumNeighbors = Nodes[i].NeighborNodes.Count;
+            // Nodes[i].NumNeighbors = Nodes[i].NeighborNodes.Count;
             Nodes[i].SetDistanceToResources();
         }
     }
