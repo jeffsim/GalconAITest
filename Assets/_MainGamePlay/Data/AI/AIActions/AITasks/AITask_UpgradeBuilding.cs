@@ -9,6 +9,9 @@ public class AITask_UpgradeBuilding : AITask
     {
         var bestAction = new AIAction() { Type = AIActionType.DoNothing };
 
+        if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
+            return bestAction;
+
         // ==== Verify we can perform the action
         var buildingInNode = fromNode.BuildingDefn;
         if (buildingInNode == null || !buildingInNode.CanBeUpgraded)

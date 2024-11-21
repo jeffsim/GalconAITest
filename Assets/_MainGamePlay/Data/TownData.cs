@@ -132,6 +132,61 @@ public class TownData
                     }
                     break;
 
+                case AIActionType.AttackFromMultipleNodes:
+                    // Implementing the AttackFromMultipleNodes case
+                    {
+                        // List of source nodes and their corresponding real nodes
+                        var sourceNodes = moveToMake.SourceNodes;
+                        var realSourceNodes = new List<NodeData>();
+                        foreach (var aiSourceNode in sourceNodes)
+                            realSourceNodes.Add(aiSourceNode.RealNode);
+
+                        // Mapping from AI_NodeState to int (number of units sent)
+                        var numSentFromEachNode = moveToMake.NumSentFromEachNode;
+                        Debug.Assert(numSentFromEachNode != null);
+
+                        // List of attack results for each attack
+                        var attackResults = moveToMake.AttackResults;
+
+                        // We need to perform the attacks in the same order as they were executed in the AI simulation
+                        // The state of the destination node may change after each attack
+
+                        for (int i = 0; i < realSourceNodes.Count; i++)
+                        {
+                            var sourceNode = realSourceNodes[i];
+                            var numSent = numSentFromEachNode[moveToMake.SourceNodes[i]];
+                            var attackResult = attackResults[i];
+
+                            // Subtract units sent from the source node
+                            sourceNode.NumWorkers -= numSent;
+
+                            // Perform the attack on the destination node based on the attack result
+                            switch (attackResult)
+                            {
+                                case AttackResult.AttackerWon:
+                                    // If the attacker won, the destination node becomes owned by the attacker
+                                    toNode.OwnedBy = sourceNode.OwnedBy;
+                                    // The remaining workers are the attackers that survived
+                                    toNode.NumWorkers = numSent - Math.Max(0, toNode.NumWorkers);
+                                    break;
+
+                                case AttackResult.DefenderWon:
+                                    // If the defender won, reduce the destination node's workers by the number of attackers
+                                    toNode.NumWorkers -= numSent;
+                                    break;
+
+                                case AttackResult.BothSidesDied:
+                                    // If both sides died, the destination node becomes neutral
+                                    toNode.OwnedBy = null;
+                                    toNode.NumWorkers = 0;
+                                    break;
+                            }
+
+                            // Note: After each attack, the state of toNode changes, which affects the next attack
+                            // Ensure the next iteration uses the updated state of toNode
+                        }
+                    }
+                    break;
                 case AIActionType.ConstructBuildingInEmptyNode:
                     // First verify that the action is still valid; e.g. another player hasn't captured the target node, the source node still has workers and is owned by player, etc
 

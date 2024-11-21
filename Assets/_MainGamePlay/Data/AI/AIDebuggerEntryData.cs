@@ -12,11 +12,16 @@ public class AIDebuggerEntryData
     public int RecurseDepth;
     public AIActionType ActionType;
     public AI_NodeState FromNode;
+    public List<AI_NodeState> FromNodes; // for AttackFromMultipleNodes
 
     // optional based on actiontype:
     public AI_NodeState ToNode;
     public AttackResult AttackResult;
+    public List<AttackResult> AttackResults; //for AttackFromMultipleNodes
     public int NumSent;
+
+    public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(); // for AttackFromMultipleNodes
+
     public BuildingDefn BuildingDefn;
 #if DEBUG
     public float Debug_ActionScoreBeforeSubactions;
@@ -79,6 +84,50 @@ public class AIDebuggerEntryData
         entry.BestNextAction = null;
         entry.IsInBestStrategyPath = false;
         entry.IsHighestOptionOfPeers = false;
+        entry.AttackResult = AttackResult.Undefined;
+        entry.AttackResults = new List<AttackResult>();
+        entry.FromNodes = new List<AI_NodeState>();
+        entry.ChildEntries.Clear();
+        return entry;
+    }
+
+    // HACK
+    internal static AIDebuggerEntryData GetFromPool2(AIActionType actionType, List<AI_NodeState> fromNodes, AI_NodeState toNode, Dictionary<AI_NodeState, int> numSentFromEachNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
+    {
+        if (Pool == null)
+            InitializePool();
+        if (curPoolIndex >= MaxPoolSize)
+        {
+            // resize pool.  TODO: More performant way?  Only for debugging scenarios so :shrug:
+            MaxPoolSize *= 2;
+            var newPool = new AIDebuggerEntryData[MaxPoolSize];
+            for (int i = 0; i < Pool.Length; i++)
+                newPool[i] = Pool[i];
+            for (int i = Pool.Length; i < newPool.Length; i++)
+                newPool[i] = new AIDebuggerEntryData();
+            Pool = newPool;
+        }
+
+        var entry = Pool[curPoolIndex++];
+        entry.ActionType = actionType;
+        entry.FromNode = null;
+        entry.ToNode = toNode;
+        entry.NumSent = -1;
+        entry.NumSentFromEachNode = new(numSentFromEachNode);
+        entry.AllChildEntriesCount = 0;
+        entry.BuildingDefn = null;
+        entry.FinalActionScore = finalActionScore;
+        entry.ActionNumber = actionNum;
+        entry.BestNextAction = null;
+        entry.RecurseDepth = curDepth;
+        entry.ParentEntry = curEntry;
+        entry.BestNextAction = null;
+        entry.IsInBestStrategyPath = false;
+        entry.IsHighestOptionOfPeers = false;
+        entry.AttackResult = AttackResult.Undefined;
+        entry.AttackResults = new List<AttackResult>();
+        entry.AttackResults.AddRange(attackResults);
+        entry.FromNodes = fromNodes;
         entry.ChildEntries.Clear();
         return entry;
     }
@@ -126,6 +175,24 @@ public class AIDebuggerEntryData
                         curDepth,
                         this);
         newEntry.AttackResult = attackResult;
+        ChildEntries.Add(newEntry);
+        return newEntry;
+    }
+
+    internal AIDebuggerEntryData AddEntry_AttackFromMultipleNodes(List<AI_NodeState> fromNodes, AI_NodeState toNode, List<AttackResult> attackResults, Dictionary<AI_NodeState, int> numSentFromEachNode, float finalActionScore, int actionNum, int curDepth)
+    {
+        Debug.Assert(numSentFromEachNode != null);
+
+        var newEntry = GetFromPool2(
+                        AIActionType.AttackFromMultipleNodes,
+                        fromNodes,
+                        toNode,
+                        numSentFromEachNode,
+                        attackResults,
+                        finalActionScore,
+                        actionNum,
+                        curDepth,
+                        this);
         ChildEntries.Add(newEntry);
         return newEntry;
     }
@@ -185,7 +252,7 @@ public class AIDebuggerEntryData
             _ => "Undefined",
         };
     }
-    
+
     internal void CalculateAllChildEntriesCount()
     {
         // for ALL entries, calculate the count of all child entries under it and store in entry.AllChildEntriesCount

@@ -6,6 +6,9 @@ public class AITask_ConstructBuilding : AITask
     {
         var bestAction = new AIAction() { Type = AIActionType.DoNothing };
 
+        if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
+            return bestAction;
+
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return bestAction; // not enough workers in node to send any out
 

@@ -6,10 +6,13 @@ public class AITask_TryButtressOwnedNode : AITask
     {
         var bestAction = new AIAction() { Type = AIActionType.DoNothing };
 
+        if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
+            return bestAction;
+
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
             return bestAction; // not enough workers in node to send any out
 
-        // TODO: Support > 1 node away
+        // TODO: Support > 1 node away.  Consider AttackToNode approach and apply here
         foreach (var toNode in fromNode.NeighborNodes)
         {
             // ==== Verify we can perform the action

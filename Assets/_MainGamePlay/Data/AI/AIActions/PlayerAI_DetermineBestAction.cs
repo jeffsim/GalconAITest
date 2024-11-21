@@ -34,8 +34,6 @@ public partial class PlayerAI
         // bestAction is currently set to 'do nothing' -- see if taking any of our available actions results in a better score
         foreach (var node in aiTownState.Nodes)
         {
-            if (node.OwnedBy != player) continue; // only process actions from/in nodes that we own
-
             foreach (var task in Tasks)
             {
                 var action = task.TryTask(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);

@@ -179,6 +179,13 @@ public class AITestScene : MonoBehaviour
                     DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Attack " + action.NumSent);
                 break;
 
+            case AIActionType.AttackFromMultipleNodes:
+                if (action.FromNodes != null && action.ToNode != null)
+                {
+                    foreach (var node in action.FromNodes)
+                        DrawArrow(node.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Attack " + action.NumSentFromEachNode[node]);
+                }
+                break;
             case AIActionType.SendWorkersToOwnedNode:
                 if (action.FromNode != null && action.ToNode != null)
                     DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Support " + action.NumSent);
