@@ -17,7 +17,7 @@ public class AITask_AttackToNode : AITask
 
     public override AIAction TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
-        var bestAction = new AIAction() { Type = AIActionType.DoNothing };
+        var bestAction = player.AI.GetAIAction();
 
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return bestAction;
 

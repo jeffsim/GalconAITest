@@ -71,13 +71,11 @@ public class Strategy_NonRecursive
                     {
                         if (neighbor.BuildingDefn.BuildingType == BuildingType.Forest && node.NumWorkers > 5)
                         {
-                            BestAction = new AIAction
-                            {
-                                SourceNode = node,
-                                DestNode = neighbor,
-                                Type = AIActionType.ConstructBuildingInEmptyNode,
-                                BuildingToConstruct = tempWoodcutter
-                            };
+                            BestAction = player.AI.GetAIAction();
+                            BestAction.SourceNode = node;
+                            BestAction.DestNode = neighbor;
+                            BestAction.Type = AIActionType.ConstructBuildingInEmptyNode;
+                            BestAction.BuildingToConstruct = tempWoodcutter;
                             return;
                         }
                     }

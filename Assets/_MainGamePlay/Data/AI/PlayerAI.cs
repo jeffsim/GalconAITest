@@ -16,8 +16,11 @@ public partial class PlayerAI
     public int debugOutput_ActionsTried;
 
     public AIAction BestNextActionToTake = new();
-    static AIAction[] actionPool;
-    static int maxPoolSize = 25000;
+    AIAction[] actionPool;
+    int actionPoolIndex;
+    // public AIAction GetAIAction() { return new AIAction(); }
+    public AIAction GetAIAction() => actionPool[actionPoolIndex++].Reset();
+    int maxPoolSize = 25000;
 
     public BuildingDefn[] buildableBuildingDefns;
     public int numBuildingDefns;
@@ -82,7 +85,7 @@ public partial class PlayerAI
 
         // Determine the best action to take, and then take it
         debugOutput_ActionsTried = -1;
-        // actionPoolIndex = 0;
+        actionPoolIndex = 0;
 
 #if DEBUG
         AIDebugger.TrackForCurrentPlayer = player == AITestScene.Instance.DebugPlayerToViewDetailsOn;
@@ -118,14 +121,14 @@ public partial class PlayerAI
 
             case 4: // Main working approach
                 {
-                    // TODO: Only do once, not each time
-                    Tasks.Clear();
-                    Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-              //      Tasks.Add(new AITask_AttackFromNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-                    Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-                    Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-                    Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-
+                    if (Tasks.Count == 0)
+                    {
+                        Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+                        Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+                        Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+                        Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+                        // Tasks.Add(new AITask_AttackFromNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+                    }
                     AIDebugger.rootEntry.BestNextAction = null;
                     var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
                     if (bestAction == null)

@@ -128,7 +128,7 @@ public class AIAction
     public int DebugOutput_Depth; // for debug output purposes
     public AIDebuggerEntryData AIDebuggerEntry;
 
-    public void Reset()
+    public AIAction Reset()
     {
         Score = 0;
         Count = 0;
@@ -144,6 +144,7 @@ public class AIAction
         DebugOutput_ScoreReasonsBeforeSubActions.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;
+        return this;
     }
 
     public void TrackStrategyDebugInfoInAction(DebugAIStateReasons debugOutput_actionScoreReasons, int thisActionNum, int curDepth)

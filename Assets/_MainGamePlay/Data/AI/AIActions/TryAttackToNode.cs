@@ -5,7 +5,7 @@ public partial class PlayerAI
 {
     private AIAction TryAttackToNode(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
-        var bestAction = new AIAction() { Type = AIActionType.DoNothing };
+        var bestAction = player.AI.GetAIAction();
 
         // toNode is owned by an enemy of 'player'.  We can attack the node if there's a path to the node AND
         // we either have one node with enough workers to attack, or we have multiple nodes that can together send workers to attack

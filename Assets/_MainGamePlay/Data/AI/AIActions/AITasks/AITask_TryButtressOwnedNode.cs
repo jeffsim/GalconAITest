@@ -4,7 +4,7 @@ public class AITask_TryButtressOwnedNode : AITask
 
     override public AIAction TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
-        var bestAction = new AIAction() { Type = AIActionType.DoNothing };
+        var bestAction = player.AI.GetAIAction();
 
         if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
             return bestAction;
