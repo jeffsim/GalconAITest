@@ -15,6 +15,8 @@ public partial class PlayerAI
     int maxDepth;
     public int debugOutput_ActionsTried;
 
+    public AIDebuggerEntryData DebugRootEntry;
+
     public AIAction BestNextActionToTake = new();
     AIAction[] actionPool;
     int actionPoolIndex;
@@ -135,6 +137,7 @@ public partial class PlayerAI
                         BestNextActionToTake.SetToNothing();
                     else
                         BestNextActionToTake.CopyFrom(bestAction);
+                        player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
                 }
                 break;
         }

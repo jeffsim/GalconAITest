@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 #if DEBUG
@@ -235,11 +236,21 @@ public class AIDebuggerEntryData
         switch (ActionType)
         {
             case AIActionType.AttackFromNode: return "Attack " + ToNode.NodeId + " with " + NumSent + " sent from " + FromNode.NodeId + " (" + AttackResultString() + ")";
-            // case AIActionType.ConstructBuildingInOwnedEmptyNode: return BuildingDefn.Id + " in owned node " + ToNode.NodeId;
             case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
             case AIActionType.UpgradeBuilding: return "Upgrade " + FromNode.NodeId + " (" + FromNode.BuildingDefn.Id + ") to " + FromNode.BuildingLevel;
-            // case AIActionType.SendWorkersToEmptyNode: return NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
+            case AIActionType.AttackFromMultipleNodes:
+                var numSent = NumSentFromEachNode.Values.Sum();
+                var sentFrom = string.Join(",", FromNodes.Select(n => n.NodeId));
+                // same as above but replace "AttackerWon" with "A" and "DefenderWon" with "D"
+                var attackResults = string.Join(",", AttackResults.Select(r => r switch
+                {
+                    AttackResult.AttackerWon => "A",
+                    AttackResult.DefenderWon => "D",
+                    _ => "U",
+                }));
+                return "Attack " + ToNode.NodeId + " with " + numSent + " sent from " + sentFrom + " (" + attackResults + ")";
+
             default: return "TODO: " + ActionType + "";
         }
     }

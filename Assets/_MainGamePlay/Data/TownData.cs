@@ -62,8 +62,12 @@ public class TownData
     {
         if (TestOnePlayerId == 0)
         {
+            //hack: process current player last so that it RootEntry is valid for debuggerpanel
+            var debugPlayer = AITestScene.Instance.DebugPlayerToViewDetailsOn;
             foreach (var player in Players)
-                player?.Update(this);
+                if (player != debugPlayer)
+                    player?.Update(this);
+            debugPlayer?.Update(this);
         }
         else
         {
