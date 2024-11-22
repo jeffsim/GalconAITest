@@ -27,6 +27,7 @@ public class AITask_AttackToNode : AITask
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return bestAction;
 
         // Collect all neighbor nodes up to N levels deep that are owned by the player and have more than [10] workers
+        // note that nDeepNeighbors will be sorted by distance from toNode (since it's a BFS process)
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
         // Generate all combinations of the neighbor nodes to simulate multiple attacks
@@ -130,11 +131,20 @@ public class AITask_AttackToNode : AITask
 
     private List<List<AI_NodeState>> GenerateNodeCombinations(AI_NodeState[] nodes, int num, int numEnemies)
     {
-        // All 'num' nodes in Nodes have more than 10 workers
+        // Notes:
+        //  * All of the nodes in the incoming nodes array have more than 10 workers; i.e. are valid to pull from.
+        //  * The nodes in the incoming nodes array are sorted by distance from target node.  We want to prioritize closer nodes;
+
         // Find combinations that result in > numEnemies (TODO: real heuristic.  TODO: Optimize for one)
         List<List<AI_NodeState>> combinations = new();
 
-        // TODO: if num=10 then 1024 combos!  Need to limit this.  Sort by numWorkers then pick top N?
+        // TODO: Can I just grab the first combination that's added to combinations and return it?  The would be the set of source nodes
+        // that (a) have > 10 workers, (b) are closest to the target node.  What it would miss is source nodes with even larger number of 
+        // workers that are further away.
+
+        // NOTE: maybe just take the top N (e.g. 3 or 10) and return that list?
+        // TODO: Change combinations to an array of lists.
+
         int combinationCount = 1 << num; // 2^n combinations
         for (int i = 1; i < combinationCount; i++) // Start from 1 to exclude empty set
         {

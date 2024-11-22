@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Pool;
 
 public partial class PlayerAI
 {
@@ -7,13 +8,8 @@ public partial class PlayerAI
     public AIAction DetermineBestActionToPerform(int curDepth, AIDebuggerEntryData parentDebuggerEntry)
     {
         // we'll return the best action from all possible actions at this 'recursive step/turn'
-        AIAction bestAction = new();
-        // if (curDepth == maxDepth || aiTownState.IsGameOver())
-        // {
-        //     bestAction.Type = curDepth == maxDepth ? AIActionType.NoAction_MaxDepth : AIActionType.NoAction_GameOver;
-        //     bestAction.Score = 0;
-        //     return bestAction;
-        // }
+        // AIAction bestAction = new();
+        AIAction bestAction = GetAIAction();
 
         // Update townstate at the start of this 'recursive step'; e.g. woodcutters get +1 wood...
         // TODO: Combine this with TownData.Debug_WorldTurn somehow
@@ -45,31 +41,14 @@ public partial class PlayerAI
             }
         }
 
-        // Attacking AI needs to take into account abiliyt to send workers from multiple nodes to 'pincer' attack
-        // a node.  The above loop starts from sourceNode so it won't work.  Need a different loop that starts from destNode
-        // foreach (var node in aiTownState.Nodes)
-        // {
-        //     if (node.OwnedBy == player || node.OwnedBy == null) continue;
-        //     var action = TryAttackToNode(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-        //     if (action.Score > bestAction.Score)
-        //     {
-        //         bestAction = action;
-        //         parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
-        //     }
-        // }
-
-
-
-
-        // TODO: restore town state
+        // Restore town state. TODO: More?
         foreach (var node in aiTownState.Nodes)
         {
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= 3; // simple for now
             node.NumWorkers = node.aiOrigNumWorkers;
         }
-        if (bestAction.Type == AIActionType.DoNothing)
-            return null;
-        return bestAction;
+
+        return bestAction.Type == AIActionType.DoNothing ? null : bestAction;
     }
 }

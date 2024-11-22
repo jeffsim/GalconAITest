@@ -13,15 +13,15 @@ public class AIDebuggerEntryData
     public int RecurseDepth;
     public AIActionType ActionType;
     public AI_NodeState FromNode;
-    public List<AI_NodeState> FromNodes; // for AttackFromMultipleNodes
+    public List<AI_NodeState> FromNodes = new(10); // for AttackFromMultipleNodes
 
     // optional based on actiontype:
     public AI_NodeState ToNode;
     public AttackResult AttackResult;
-    public List<AttackResult> AttackResults; //for AttackFromMultipleNodes
+    public List<AttackResult> AttackResults = new(10); //for AttackFromMultipleNodes
     public int NumSent;
 
-    public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(); // for AttackFromMultipleNodes
+    public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(10); // for AttackFromMultipleNodes
 
     public BuildingDefn BuildingDefn;
 #if DEBUG
@@ -49,6 +49,10 @@ public class AIDebuggerEntryData
         curPoolIndex = 0;
     }
 
+    public AIDebuggerEntryData()
+    {
+        // Should only gte called in initialization of pool
+    }
     public static void ResetPool()
     {
         curPoolIndex = 0;
@@ -86,8 +90,8 @@ public class AIDebuggerEntryData
         entry.IsInBestStrategyPath = false;
         entry.IsHighestOptionOfPeers = false;
         entry.AttackResult = AttackResult.Undefined;
-        entry.AttackResults = new List<AttackResult>();
-        entry.FromNodes = new List<AI_NodeState>();
+        entry.AttackResults.Clear();
+        entry.FromNodes.Clear();
         entry.ChildEntries.Clear();
         return entry;
     }
@@ -126,7 +130,7 @@ public class AIDebuggerEntryData
         entry.IsInBestStrategyPath = false;
         entry.IsHighestOptionOfPeers = false;
         entry.AttackResult = AttackResult.Undefined;
-        entry.AttackResults = new List<AttackResult>();
+        entry.AttackResults.Clear();
         entry.AttackResults.AddRange(attackResults);
         entry.FromNodes = fromNodes;
         entry.ChildEntries.Clear();
