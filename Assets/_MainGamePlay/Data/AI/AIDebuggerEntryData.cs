@@ -238,6 +238,7 @@ public class AIDebuggerEntryData
             // case AIActionType.ConstructBuildingInOwnedEmptyNode: return BuildingDefn.Id + " in owned node " + ToNode.NodeId;
             case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
+            case AIActionType.UpgradeBuilding: return "Upgrade " + FromNode.NodeId + " (" + FromNode.BuildingDefn.Id + ") to " + FromNode.BuildingLevel;
             // case AIActionType.SendWorkersToEmptyNode: return NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
             default: return "TODO: " + ActionType + "";
         }

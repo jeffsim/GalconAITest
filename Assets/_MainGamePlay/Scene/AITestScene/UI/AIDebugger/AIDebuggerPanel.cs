@@ -23,6 +23,7 @@ public class AIDebuggerPanel : MonoBehaviour
     {
         if (!AITestScene.Instance.ShowDebuggerAI) return;
 
+
         List.RemoveAllChildren();
 
         if (ShowBestOnStart)

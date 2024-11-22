@@ -17,6 +17,8 @@ public class AIDebuggerEntry : MonoBehaviour
         this.panel = panel;
         this.entry = entry;
         ActionNumber.text = entry.ActionNumber.ToString();
+        ActionNumber.color = AITestScene.Instance.DebugPlayerToViewDetailsOn.Color;
+        
         switch (entry.ActionType)
         {
             case AIActionType.AttackFromNode:
