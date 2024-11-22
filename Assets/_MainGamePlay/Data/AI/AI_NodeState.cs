@@ -10,6 +10,8 @@ public class AI_NodeState
     public int MaxWorkers;
     public int WorkersGeneratedPerTurn = 1;
     public int aiOrigNumWorkers;
+    
+    public bool Visited { get; set; }
 
     public PlayerData OwnedBy;
     public int NodeId;

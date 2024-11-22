@@ -1,6 +1,3 @@
-
-using System;
-
 public class AITask_UpgradeBuilding : AITask
 {
     public AITask_UpgradeBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }

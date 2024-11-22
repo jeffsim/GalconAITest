@@ -107,8 +107,8 @@ public class AIAction
     public AIActionType Type = AIActionType.DoNothing;
     public int Count;
     public AI_NodeState SourceNode;
-    public List<AI_NodeState> SourceNodes;// for AttackFromMultipleNodes
-    public Dictionary<AI_NodeState, int> NumSentFromEachNode; // for AttackFromMultipleNodes
+    public List<AI_NodeState> SourceNodes = new(10);// for AttackFromMultipleNodes
+    public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(); // for AttackFromMultipleNodes
 
     public AI_NodeState DestNode;
 
@@ -120,7 +120,7 @@ public class AIAction
 
     // Attacking
     public AttackResult AttackResult;
-    public List<AttackResult> AttackResults; // for AttackFromMultipleNodes
+    public List<AttackResult> AttackResults = new(10); // for AttackFromMultipleNodes
 
 #if DEBUG
     public DebugAIStateReasons DebugOutput_ScoreReasonsBeforeSubActions = new();
@@ -135,12 +135,12 @@ public class AIAction
         BuildingToConstruct = null;
         Type = AIActionType.DoNothing;
         SourceNode = null;
-        SourceNodes = new();
-        NumSentFromEachNode = new();
+        SourceNodes.Clear();
+        NumSentFromEachNode.Clear();
         DestNode = null;
         AIDebuggerEntry = null;
         AttackResult = AttackResult.Undefined;
-        AttackResults = new();
+        AttackResults.Clear();
         DebugOutput_ScoreReasonsBeforeSubActions.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;

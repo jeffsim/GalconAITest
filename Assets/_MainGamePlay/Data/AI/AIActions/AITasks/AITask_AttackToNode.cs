@@ -10,8 +10,13 @@ class AttackState
     public int NumSent;
     public AttackResult AttackResult;
 }
+
 public class AITask_AttackToNode : AITask
 {
+    const int MAX_NEIGHBORS_TO_CHECK = 10; // TODO: magic number
+
+    AI_NodeState[] nDeepNeighbors = new AI_NodeState[MAX_NEIGHBORS_TO_CHECK];
+
     public AITask_AttackToNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut)
         : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
@@ -21,20 +26,21 @@ public class AITask_AttackToNode : AITask
 
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return bestAction;
 
-        // Collect all neighbor nodes up to N levels deep that are owned by the player
-        List<AI_NodeState> nDeepNeighbors = GetDeepNeighborsWithPotentialAttackers(toNode);
+        // Collect all neighbor nodes up to N levels deep that are owned by the player and have more than [10] workers
+        int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
         // Generate all combinations of the neighbor nodes to simulate multiple attacks
-        var sourceNodeCombinations = GenerateNodeCombinations(nDeepNeighbors);
+        var sourceNodeCombinations = GenerateNodeCombinations(nDeepNeighbors, num, toNode.NumWorkers);
 
-        foreach (var sourceNodes in sourceNodeCombinations)
+        for (int i = 0; i < sourceNodeCombinations.Count; i++)
         {
+            var sourceNodes = sourceNodeCombinations[i];
             // Confirm that there are enough workers in the combination of nodes to send any out
-            var totalNumSent = 0;
-            foreach (var node in sourceNodes)
-                totalNumSent += node.NumWorkers;
-            if (totalNumSent < 20) // TODO: magic number
-                continue;
+            // var totalNumSent = 0;
+            // foreach (var node in sourceNodes)
+            //     totalNumSent += node.NumWorkers;
+            // if (totalNumSent < 20) // TODO: magic number
+            //     continue;
 
             // Save original state before performing attacks
             List<AttackState> attackStates = new();
@@ -76,9 +82,9 @@ public class AITask_AttackToNode : AITask
 
             // Undo the attacks to reset the state
             // Reverse the order of attacks to undo properly
-            for (int i = attackStates.Count - 1; i >= 0; i--)
+            for (int a = attackStates.Count - 1; a >= 0; a--)
             {
-                var attackState = attackStates[i];
+                var attackState = attackStates[a];
                 aiTownState.Undo_AttackFromNode(attackState.FromNode, attackState.ToNode, attackState.AttackResult,
                                                 attackState.OrigNumInSourceNode, attackState.OrigNumInDestNode,
                                                 attackState.NumSent, attackState.OrigToNodeOwner);
@@ -88,48 +94,60 @@ public class AITask_AttackToNode : AITask
         return bestAction;
     }
 
-    private List<AI_NodeState> GetDeepNeighborsWithPotentialAttackers(AI_NodeState toNode)
+    Queue<AI_NodeState> queue = new(10);
+    HashSet<AI_NodeState> visited = new(10);
+    const int MAX_DEPTH = 3;
+
+    int GetFriendlyNeighborsWithEnoughWorkers(AI_NodeState toNode, AI_NodeState[] nDeepNeighbors)
     {
-        List<AI_NodeState> result = new();
-        HashSet<AI_NodeState> visited = new() { toNode };
-        Queue<(AI_NodeState Node, int Depth)> queue = new();
-        queue.Enqueue((toNode, 0));
+        int index = 0;
+        int currentDepth = 0;
 
-        while (queue.Count > 0)
+        visited.Clear();
+        visited.Add(toNode);
+        queue.Clear();
+        queue.Enqueue(toNode);
+
+        while (queue.Count > 0 && currentDepth < MAX_DEPTH && index < MAX_NEIGHBORS_TO_CHECK)
         {
-            var (currentNode, depth) = queue.Dequeue();
-            if (depth >= 2) continue;
-
-            foreach (var neighbor in currentNode.NeighborNodes)
+            int nodesAtCurrentLevel = queue.Count;
+            for (int i = 0; i < nodesAtCurrentLevel; i++)
             {
-                if (!visited.Contains(neighbor) && neighbor.OwnedBy == player)
-                {
-                    visited.Add(neighbor);
-                    if (neighbor.NumWorkers > 10)  // TODO: Magic number
-                        result.Add(neighbor);
-                    queue.Enqueue((neighbor, depth + 1));
-                }
+                var currentNode = queue.Dequeue();
+                foreach (var neighbor in currentNode.NeighborNodes)
+                    if (neighbor.OwnedBy == player && !visited.Contains(neighbor))
+                    {
+                        if (neighbor.NumWorkers >= minWorkersInNodeBeforeConsideringSendingAnyOut)
+                            nDeepNeighbors[index++] = neighbor;
+                        visited.Add(neighbor);
+                        queue.Enqueue(neighbor);
+                    }
             }
+            currentDepth++;
         }
-        return result;
+        return index;
     }
 
-    private List<List<AI_NodeState>> GenerateNodeCombinations(List<AI_NodeState> nodes)
+    private List<List<AI_NodeState>> GenerateNodeCombinations(AI_NodeState[] nodes, int num, int numEnemies)
     {
+        // All 'num' nodes in Nodes have more than 10 workers
+        // Find combinations that result in > numEnemies (TODO: real heuristic.  TODO: Optimize for one)
         List<List<AI_NodeState>> combinations = new();
 
-        int combinationCount = 1 << nodes.Count; // 2^n combinations
+        // TODO: if num=10 then 1024 combos!  Need to limit this.  Sort by numWorkers then pick top N?
+        int combinationCount = 1 << num; // 2^n combinations
         for (int i = 1; i < combinationCount; i++) // Start from 1 to exclude empty set
         {
+            int count = 0;
             List<AI_NodeState> combination = new();
-            for (int j = 0; j < nodes.Count; j++)
-            {
+            for (int j = 0; j < num; j++)
                 if ((i & (1 << j)) != 0)
                 {
+                    count += nodes[j].NumWorkers;
                     combination.Add(nodes[j]);
                 }
-            }
-            combinations.Add(combination);
+            if (count > numEnemies)
+                combinations.Add(combination);
         }
 
         return combinations;
