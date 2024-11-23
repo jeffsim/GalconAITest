@@ -115,28 +115,7 @@ public class TownData
                     fromNode.NumWorkers /= 2;
                     break;
 
-                case AIActionType.AttackFromNode:
-                    // TODO: Use same code path as AITownState.AttackFromNode to avoid diverging
-                    fromNode.NumWorkers -= moveToMake.Count;
-                    switch (moveToMake.AttackResult)
-                    {
-                        case AttackResult.AttackerWon:
-                            toNode.OwnedBy = fromNode.OwnedBy;
-                            toNode.NumWorkers = -(toNode.NumWorkers - moveToMake.Count);
-                            break;
-
-                        case AttackResult.DefenderWon:
-                            toNode.NumWorkers -= moveToMake.Count;
-                            break;
-
-                        case AttackResult.BothSidesDied:
-                            toNode.OwnedBy = null;
-                            toNode.NumWorkers = 0;
-                            break;
-                    }
-                    break;
-
-                case AIActionType.AttackFromMultipleNodes:
+                case AIActionType.AttackToNode:
                     {
                         var attackFromNodes = moveToMake.AttackFromNodes;
 

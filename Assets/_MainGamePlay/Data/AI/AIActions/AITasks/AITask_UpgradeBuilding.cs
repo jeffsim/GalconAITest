@@ -2,20 +2,22 @@ public class AITask_UpgradeBuilding : AITask
 {
     public AITask_UpgradeBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
-    override public AIAction TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
+    override public bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
     {
-        var bestAction = player.AI.GetAIAction();
+        bestAction = null;
 
         if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
-            return bestAction;
+            return false;
 
         // ==== Verify we can perform the action
         var buildingInNode = fromNode.BuildingDefn;
         if (buildingInNode == null || !buildingInNode.CanBeUpgraded)
-            return bestAction;
+            return false;
 
         if (fromNode.NumWorkers < fromNode.MaxWorkers)
-            return bestAction;
+            return false;
+
+        bestAction = player.AI.GetAIAction();
 
         // ==== Perform the action and update the aiTownState to reflect the action
         aiTownState.UpgradeBuilding(fromNode, out int origLevel, out int origNumWorkers);
@@ -28,6 +30,6 @@ public class AITask_UpgradeBuilding : AITask
 
         // ==== Undo the action to reset the townstate to its original state
         aiTownState.Undo_UpgradeBuilding(fromNode, origLevel, origNumWorkers);
-        return bestAction;
+        return true;
     }
 }

@@ -8,7 +8,6 @@ public partial class PlayerAI
     public AIAction DetermineBestActionToPerform(int curDepth, AIDebuggerEntryData parentDebuggerEntry)
     {
         // we'll return the best action from all possible actions at this 'recursive step/turn'
-        // AIAction bestAction = new();
         AIAction bestAction = GetAIAction();
 
         // Update townstate at the start of this 'recursive step'; e.g. woodcutters get +1 wood...
@@ -32,8 +31,8 @@ public partial class PlayerAI
         {
             foreach (var task in Tasks)
             {
-                var action = task.TryTask(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score);
-                if (action.Score > bestAction.Score)
+                bool validTask = task.TryTask(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score, out AIAction action);
+                if (validTask && action.Score > bestAction.Score)
                 {
                     bestAction = action;
                     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;

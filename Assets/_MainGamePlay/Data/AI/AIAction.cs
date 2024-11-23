@@ -11,8 +11,7 @@ public enum AIActionType
     SendWorkersToOwnedNode,
     ConstructBuildingInEmptyNode,
     ConstructBuildingInOwnedEmptyNode,
-    AttackFromNode,
-    AttackFromMultipleNodes,
+    AttackToNode,
     NoAction_GameOver,
     NoAction_MaxDepth,
     RootAction,
@@ -26,7 +25,6 @@ public class AIAction
         return Type switch
         {
             AIActionType.SendWorkersToOwnedNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId,
-            AIActionType.AttackFromNode => "Attack with " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " and capture it",
             AIActionType.ConstructBuildingInEmptyNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id,
             AIActionType.DoNothing => "Do nothing (No beneficial action found)",
             AIActionType.NoAction_MaxDepth => "Max depth reached",
@@ -154,24 +152,12 @@ public class AIAction
         Count = numSent;
     }
 
-    internal void SetTo_AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent,
-                                       AttackResult attackResult, float score, AIDebuggerEntryData debuggerEntry)
-    {
-        AIDebuggerEntry = debuggerEntry;
-        Score = score;
-        AttackResult = attackResult;
-        Type = AIActionType.AttackFromNode;
-        SourceNode = fromNode;
-        DestNode = toNode;
-        Count = numSent;
-    }
-
     // New method
-    internal void SetTo_AttackFromMultipleNodes(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float score, AIDebuggerEntryData debuggerEntry)
+    internal void SetTo_AttackToNode(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float score, AIDebuggerEntryData debuggerEntry)
     {
         AIDebuggerEntry = debuggerEntry;
         Score = score;
-        Type = AIActionType.AttackFromMultipleNodes;
+        Type = AIActionType.AttackToNode;
         DestNode = toNode;
 
         AttackFromNodes.Clear();

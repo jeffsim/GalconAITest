@@ -17,10 +17,10 @@ public class AIDebuggerEntryData
     // optional based on actiontype:
     public AI_NodeState ToNode;
     public AttackResult AttackResult;
-    public List<AttackResult> AttackResults = new(10); //for AttackFromMultipleNodes
+    public List<AttackResult> AttackResults = new(10);
     public int NumSent;
 
-    public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(10); // for AttackFromMultipleNodes
+    public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(10);
 
     public BuildingDefn BuildingDefn;
 #if DEBUG
@@ -166,29 +166,13 @@ public class AIDebuggerEntryData
         ChildEntries.Add(newEntry);
         return newEntry;
     }
-    internal AIDebuggerEntryData AddEntry_AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int numSent, float finalActionScore, int actionNum, int curDepth)
-    {
-        var newEntry = GetFromPool(
-                        AIActionType.AttackFromNode,
-                        fromNode,
-                        toNode,
-                        numSent,
-                        null,
-                        finalActionScore,
-                        actionNum,
-                        curDepth,
-                        this);
-        newEntry.AttackResult = attackResult;
-        ChildEntries.Add(newEntry);
-        return newEntry;
-    }
 
-    internal AIDebuggerEntryData AddEntry_AttackFromMultipleNodes(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth)
+    internal AIDebuggerEntryData AddEntry_AttackToNode(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth)
     {
         Debug.Assert(attackFromNodes != null);
 
         var newEntry = GetFromPool2(
-                        AIActionType.AttackFromMultipleNodes,
+                        AIActionType.AttackToNode,
                         toNode,
                         attackFromNodes,
                         attackResults,
@@ -224,9 +208,6 @@ public class AIDebuggerEntryData
             case AIActionType.ConstructBuildingInEmptyNode:
                 Debug.Log(CurSpacing + ActionNumber + ": Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to construct " + BuildingDefn.Id + ".  Score: " + FinalActionScore.ToString("0.0"));
                 break;
-            case AIActionType.AttackFromNode:
-                Debug.Log(CurSpacing + ActionNumber + ": Attack " + ToNode.NodeId + " with " + NumSent + " sent from " + FromNode.NodeId + ".  Score: " + FinalActionScore.ToString("0.0"));
-                break;
             default:
                 Debug.Log("TODO: " + ActionType + "");
                 break;
@@ -237,11 +218,10 @@ public class AIDebuggerEntryData
     {
         switch (ActionType)
         {
-            case AIActionType.AttackFromNode: return "Attack " + ToNode.NodeId + " with " + NumSent + " sent from " + FromNode.NodeId + " (" + AttackResultString() + ")";
             case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
             case AIActionType.UpgradeBuilding: return "Upgrade " + FromNode.NodeId + " (" + FromNode.BuildingDefn.Id + ") to " + FromNode.BuildingLevel;
-            case AIActionType.AttackFromMultipleNodes:
+            case AIActionType.AttackToNode:
                 var numSent = NumSentFromEachNode.Values.Sum();
                 var sentFrom = string.Join(",", NumSentFromEachNode.Select(n => n.Key.NodeId));
                 // same as above but replace "AttackerWon" with "A" and "DefenderWon" with "D"

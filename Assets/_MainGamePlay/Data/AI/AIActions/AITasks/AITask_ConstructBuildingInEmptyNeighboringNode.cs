@@ -2,15 +2,16 @@ public class AITask_ConstructBuilding : AITask
 {
     public AITask_ConstructBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
-    override public AIAction TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
+    override public bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
     {
-        var bestAction = player.AI.GetAIAction();
-
+        bestAction = null;
         if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
-            return bestAction;
+            return false;
 
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
-            return bestAction; // not enough workers in node to send any out
+            return false; // not enough workers in node to send any out
+
+        bestAction = player.AI.GetAIAction();
 
         foreach (var toNode in fromNode.NeighborNodes)
         {
@@ -39,7 +40,7 @@ public class AITask_ConstructBuilding : AITask
                 aiTownState.Undo_SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, res1Id, resource1Amount, res2Id, resource2Amount, numSent);
             }
         }
-        return bestAction;
+        return true;
     }
 
     private bool canBuildBuilding(BuildingDefn buildingDefn, AI_NodeState toNode)

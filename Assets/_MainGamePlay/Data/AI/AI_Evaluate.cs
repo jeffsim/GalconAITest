@@ -89,6 +89,12 @@ public partial class AI_TownState
                     // Storage buildings are useful if...
                     // Crafting buildings are useful if...
 
+
+                    // TODO: Track the below in aitownstate - only update it when a building's owner or numworkers changes
+                    was workgin on ^^
+
+
+                    
                     // If player-owned building has an enemy-owned node nearby, it's more useful to have more workers in it
                     int countEnemyWorkersInNeighborNodes = 0, count = node.NeighborNodes.Count;
                     for (int n = 0; n < count; n++)

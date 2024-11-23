@@ -29,6 +29,7 @@ public class AITestScene : MonoBehaviour
     bool lastShowDebuggerAI;
     public bool DebugOutputStrategyToConsole = false;
     public bool DebugOutputStrategyReasons = false;
+    public bool DebugOutputActionBeforeScore = false;
 #endif
 
     public static AITestScene Instance;
@@ -174,12 +175,7 @@ public class AITestScene : MonoBehaviour
                     DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Send " + action.NumSent + ", build\n" + action.BuildingDefn.Id);
                 break;
 
-            case AIActionType.AttackFromNode:
-                if (action.FromNode != null && action.ToNode != null)
-                    DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Attack " + action.NumSent);
-                break;
-
-            case AIActionType.AttackFromMultipleNodes:
+            case AIActionType.AttackToNode:
                 if (action.NumSentFromEachNode != null && action.ToNode != null)
                 {
                     foreach (var nodeState in action.NumSentFromEachNode)

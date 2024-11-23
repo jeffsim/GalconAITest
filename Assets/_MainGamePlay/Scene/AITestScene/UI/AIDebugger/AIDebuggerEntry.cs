@@ -18,11 +18,9 @@ public class AIDebuggerEntry : MonoBehaviour
         this.entry = entry;
         ActionNumber.text = entry.ActionNumber.ToString();
         ActionNumber.color = AITestScene.Instance.DebugPlayerToViewDetailsOn.Color;
-        
+
         switch (entry.ActionType)
         {
-            case AIActionType.AttackFromNode:
-                break;
             case AIActionType.ConstructBuildingInEmptyNode:
                 break;
             case AIActionType.SendWorkersToOwnedNode:
@@ -32,7 +30,12 @@ public class AIDebuggerEntry : MonoBehaviour
         }
         Information.text = entry.InformationString();
         if (entry.BestNextAction != null)
-            Score.text = entry.Debug_ActionScoreBeforeSubactions.ToString("0.0") + ", " + entry.FinalActionScore.ToString("0.0");
+        {
+            if (AITestScene.Instance.DebugOutputActionBeforeScore)
+                Score.text = entry.Debug_ActionScoreBeforeSubactions.ToString("0.0") + ", " + entry.FinalActionScore.ToString("0.0");
+            else
+                Score.text = entry.FinalActionScore.ToString("0.0");
+        }
         else
             Score.text = entry.FinalActionScore.ToString("0.0");
 

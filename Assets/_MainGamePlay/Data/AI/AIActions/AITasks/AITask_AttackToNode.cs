@@ -38,18 +38,20 @@ public class AITask_AttackToNode : AITask
     public AITask_AttackToNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut)
         : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
-    public override AIAction TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
+    override public bool TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
     {
-        var bestAction = player.AI.GetAIAction();
+        bestAction = null;
 
-        if (toNode.OwnedBy == null || toNode.OwnedBy == player) return bestAction;
+        if (toNode.OwnedBy == null || toNode.OwnedBy == player) return false;
 
         // Collect neighbor nodes
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
         // Generate nodes to attack from
         bool haveEnoughWorkersToAttack = GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers);
-        if (!haveEnoughWorkersToAttack) return bestAction;
+        if (!haveEnoughWorkersToAttack) return false;
+
+        bestAction = player.AI.GetAIAction();
 
         // Get reusable collections from the pool or create new ones
         List<AttackState> attackStates = attackStatesPool.Count > 0 ? attackStatesPool.Pop() : new List<AttackState>();
@@ -90,12 +92,12 @@ public class AITask_AttackToNode : AITask
         }
 
         // Create a debugger entry
-        var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackFromMultipleNodes(attackFromNodes, toNode, attackResults, 0, player.AI.debugOutput_ActionsTried++, curDepth);
+        var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackToNode(attackFromNodes, toNode, attackResults, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
         // Determine the score of the combined action
         var actionScore = GetActionScore(curDepth, debuggerEntry);
         if (actionScore > bestAction.Score)
-            bestAction.SetTo_AttackFromMultipleNodes(attackFromNodes, toNode, attackResults, actionScore, debuggerEntry);
+            bestAction.SetTo_AttackToNode(attackFromNodes, toNode, attackResults, actionScore, debuggerEntry);
 
         // Undo the attacks to reset the state
         for (int a = attackStates.Count - 1; a >= 0; a--)
@@ -114,7 +116,7 @@ public class AITask_AttackToNode : AITask
         attackResultsPool.Push(attackResults);
         attackFromNodesPool.Push(attackFromNodes);
 
-        return bestAction;
+        return true;
     }
 
     Queue<AI_NodeState> queue = new Queue<AI_NodeState>(10);
