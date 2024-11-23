@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using NUnit.Framework;
 
 class AttackState
 {
@@ -10,58 +9,73 @@ class AttackState
     public PlayerData OrigToNodeOwner;
     public int NumSent;
     public AttackResult AttackResult;
+
+    // Reset method to clear data
+    public void Reset()
+    {
+        FromNode = null;
+        OrigNumInSourceNode = 0;
+        ToNode = null;
+        OrigNumInDestNode = 0;
+        OrigToNodeOwner = null;
+        NumSent = 0;
+        AttackResult = default;
+    }
 }
 
 public class AITask_AttackToNode : AITask
 {
-    const int MAX_NEIGHBORS_TO_CHECK = 10; // TODO: magic number
+    const int MAX_NEIGHBORS_TO_CHECK = 10;
 
     AI_NodeState[] nDeepNeighbors = new AI_NodeState[MAX_NEIGHBORS_TO_CHECK];
 
-    // List<AttackState> attackStates;
-    // List<AttackResult> attackResults;
-    // Dictionary<AI_NodeState, int> attackFromNodes;
+    // Pools for reusing collections and AttackState instances
+    Stack<List<AttackState>> attackStatesPool = new Stack<List<AttackState>>();
+    Stack<List<AttackResult>> attackResultsPool = new Stack<List<AttackResult>>();
+    Stack<Dictionary<AI_NodeState, int>> attackFromNodesPool = new Stack<Dictionary<AI_NodeState, int>>();
+    Stack<AttackState> attackStatePool = new Stack<AttackState>();
 
     public AITask_AttackToNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut)
         : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
     public override AIAction TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
-        // TODO: Refactor TryTask to return bool; don't GetAIAction until we know we want to take this action
-
         var bestAction = player.AI.GetAIAction();
 
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return bestAction;
 
-        // Collect all neighbor nodes up to N levels deep that are owned by the player and have more than [10] workers
-        // note that nDeepNeighbors will be sorted by distance from toNode (since it's a BFS process)
+        // Collect neighbor nodes
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
-        // Generate all combinations of the neighbor nodes to simulate multiple attacks
+        // Generate nodes to attack from
         bool haveEnoughWorkersToAttack = GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers);
         if (!haveEnoughWorkersToAttack) return bestAction;
 
-        // Save original state before performing attacks
-        List<AttackState> attackStates = new();
-        var attackResults = new List<AttackResult>();
-        var attackFromNodes = new Dictionary<AI_NodeState, int>();
+        // Get reusable collections from the pool or create new ones
+        List<AttackState> attackStates = attackStatesPool.Count > 0 ? attackStatesPool.Pop() : new List<AttackState>();
+        List<AttackResult> attackResults = attackResultsPool.Count > 0 ? attackResultsPool.Pop() : new List<AttackResult>();
+        Dictionary<AI_NodeState, int> attackFromNodes = attackFromNodesPool.Count > 0 ? attackFromNodesPool.Pop() : new Dictionary<AI_NodeState, int>();
 
-        // (attackStates ??= new(MAX_NEIGHBORS_TO_CHECK)).Clear();
-        // (attackResults ??= new(MAX_NEIGHBORS_TO_CHECK)).Clear();
-        // (attackFromNodes ??= new(MAX_NEIGHBORS_TO_CHECK)).Clear();
+        // Clear collections before use
+        attackStates.Clear();
+        attackResults.Clear();
+        attackFromNodes.Clear();
 
         // Perform attacks from multiple nodes
         foreach (var fromNode in nodesToAttackFrom)
         {
+            // Get an AttackState instance from the pool or create a new one
+            AttackState attackState = attackStatePool.Count > 0 ? attackStatePool.Pop() : new AttackState();
+
+            // Reset the attackState to clear any previous data
+            attackState.Reset();
+
             // Record original state before attack
-            var attackState = new AttackState
-            {
-                FromNode = fromNode,
-                OrigNumInSourceNode = fromNode.NumWorkers,
-                ToNode = toNode,
-                OrigNumInDestNode = toNode.NumWorkers,
-                OrigToNodeOwner = toNode.OwnedBy
-            };
+            attackState.FromNode = fromNode;
+            attackState.OrigNumInSourceNode = fromNode.NumWorkers;
+            attackState.ToNode = toNode;
+            attackState.OrigNumInDestNode = toNode.NumWorkers;
+            attackState.OrigToNodeOwner = toNode.OwnedBy;
 
             aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out _, out _, out int numSent, out _);
             attackResults.Add(attackResult);
@@ -84,20 +98,27 @@ public class AITask_AttackToNode : AITask
             bestAction.SetTo_AttackFromMultipleNodes(attackFromNodes, toNode, attackResults, actionScore, debuggerEntry);
 
         // Undo the attacks to reset the state
-        // Reverse the order of attacks to undo properly
         for (int a = attackStates.Count - 1; a >= 0; a--)
         {
             var attackState = attackStates[a];
             aiTownState.Undo_AttackFromNode(attackState.FromNode, attackState.ToNode, attackState.AttackResult,
                                             attackState.OrigNumInSourceNode, attackState.OrigNumInDestNode,
                                             attackState.NumSent, attackState.OrigToNodeOwner);
+
+            // Return the AttackState instance to the pool
+            attackStatePool.Push(attackState);
         }
+
+        // Return collections to the pool
+        attackStatesPool.Push(attackStates);
+        attackResultsPool.Push(attackResults);
+        attackFromNodesPool.Push(attackFromNodes);
 
         return bestAction;
     }
 
-    Queue<AI_NodeState> queue = new(10);
-    HashSet<AI_NodeState> visited = new(10);
+    Queue<AI_NodeState> queue = new Queue<AI_NodeState>(10);
+    HashSet<AI_NodeState> visited = new HashSet<AI_NodeState>(10);
     const int MAX_DEPTH = 3;
 
     int GetFriendlyNeighborsWithEnoughWorkers(AI_NodeState toNode, AI_NodeState[] nDeepNeighbors)
@@ -130,25 +151,13 @@ public class AITask_AttackToNode : AITask
         return index;
     }
 
-    List<AI_NodeState> nodesToAttackFrom;
+    List<AI_NodeState> nodesToAttackFrom = new List<AI_NodeState>(10);
 
     bool GetNodesToAttackFrom(AI_NodeState[] nodes, int numNodes, int numEnemies)
     {
-        // Notes:
-        //  * All of the nodes in the incoming nodes array have more than 10 workers; i.e. are valid to pull from.
-        //  * The nodes in the incoming nodes array are sorted by distance from target node.  We want to prioritize closer nodes;
-
-        // Find combinations that result in > numEnemies (TODO: real heuristic.  TODO: Optimize for one)
-
-        // TODO: Can I just grab the first combination that's added to combinations and return it?  The would be the set of source nodes
-        // that (a) have > 10 workers, (b) are closest to the target node.  What it would miss is source nodes with even larger number of 
-        // workers that are further away.
-
-        // NOTE: maybe just take the top N (e.g. 3 or 10) and return that list?
-        nodesToAttackFrom ??= new(10);
         nodesToAttackFrom.Clear();
         int count = 0;
-        for (int i = 1; i < numNodes; i++) // Start from 1 to exclude empty set
+        for (int i = 0; i < numNodes; i++)
         {
             var node = nodes[i];
             nodesToAttackFrom.Add(node);

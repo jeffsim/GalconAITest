@@ -14,8 +14,10 @@ public partial class AI_TownState
             scoreReasons = new();
 #endif
 
-        foreach (var node in Nodes)
+        int numNodes = Nodes.Length;
+        for (int i = 0; i < numNodes; i++)
         {
+            var node = Nodes[i];
             if (node.OwnedBy == player)
             {
                 // Add score for each node we own
@@ -88,10 +90,13 @@ public partial class AI_TownState
                     // Crafting buildings are useful if...
 
                     // If player-owned building has an enemy-owned node nearby, it's more useful to have more workers in it
-                    int countEnemyWorkersInNeighborNodes = 0;
-                    foreach (var neighborNode in node.NeighborNodes)
+                    int countEnemyWorkersInNeighborNodes = 0, count = node.NeighborNodes.Count;
+                    for (int n = 0; n < count; n++)
+                    {
+                        var neighborNode = node.NeighborNodes[n];
                         if (neighborNode.OwnedBy != null && neighborNode.OwnedBy.Hates(player))
                             countEnemyWorkersInNeighborNodes += neighborNode.NumWorkers;
+                    }
                     if (countEnemyWorkersInNeighborNodes > node.NumWorkers)
                     {
                         float scoreValue = (node.NumWorkers - countEnemyWorkersInNeighborNodes) * .5f;

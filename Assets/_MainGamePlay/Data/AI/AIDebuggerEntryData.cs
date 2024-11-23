@@ -116,7 +116,9 @@ public class AIDebuggerEntryData
         entry.FromNode = null;
         entry.ToNode = toNode;
         entry.NumSent = -1;
-        entry.NumSentFromEachNode = new(numSentFromEachNode);
+        entry.NumSentFromEachNode.Clear();
+        foreach (var kvp in numSentFromEachNode)
+            entry.NumSentFromEachNode[kvp.Key] = kvp.Value;
         entry.AllChildEntriesCount = 0;
         entry.BuildingDefn = null;
         entry.FinalActionScore = finalActionScore;

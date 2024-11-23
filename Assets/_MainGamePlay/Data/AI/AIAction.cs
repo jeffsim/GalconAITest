@@ -19,73 +19,6 @@ public enum AIActionType
     UpgradeBuilding
 };
 
-#if DEBUG
-public class DebugAIStateReason
-{
-    public float ScoreValue;
-    public AI_NodeState Node;
-}
-
-public class DebugAIStateReasons
-{
-    public override string ToString()
-    {
-        var str = "";
-        if (ScoresFrom_NodesOwned.Count > 0) str += addReasonScoresString("Nodes", ScoresFrom_NodesOwned);
-        if (ScoresFrom_NumEmptyNodesOwned.Count > 0) str += " | " + addReasonScoresString("Empty Nodes", ScoresFrom_NumEmptyNodesOwned);
-        if (ScoresFrom_BuildingsNearEnemyNodes.Count > 0) str += " | " + addReasonScoresString("Nearby enemies", ScoresFrom_BuildingsNearEnemyNodes);
-        if (ScoresFrom_ResourceGatherersCloseToResourceNodes.Count > 0) str += " | " + addReasonScoresString("Res Gatherers", ScoresFrom_ResourceGatherersCloseToResourceNodes);
-        if (ScoresFrom_BuildingsThatGenerateWorkers.Count > 0) str += " | " + addReasonScoresString("Worker Gens", ScoresFrom_BuildingsThatGenerateWorkers);
-        if (ScoresFrom_EnemyOwnedNodes.Count > 0) str += " | " + addReasonScoresString("Enemy Nodes", ScoresFrom_EnemyOwnedNodes);
-        return str;
-    }
-
-    private string addReasonScoresString(string msg, List<DebugAIStateReason> reasons)
-    {
-        var str = msg + " (";
-        for (int i = 0; i < reasons.Count; i++)
-        {
-            if (i > 0) str += ", ";
-            str += reasons[i].Node.NodeId;
-        }
-        return str + ")=" + reasons[0].ScoreValue * reasons.Count;
-    }
-
-    internal void Reset()
-    {
-        ScoresFrom_NodesOwned.Clear();
-        ScoresFrom_NumEmptyNodesOwned.Clear();
-        ScoresFrom_BuildingsNearEnemyNodes.Clear();
-        ScoresFrom_ResourceGatherersCloseToResourceNodes.Clear();
-        ScoresFrom_BuildingsThatGenerateWorkers.Clear();
-        ScoresFrom_EnemyOwnedNodes.Clear();
-    }
-
-    public List<DebugAIStateReason> ScoresFrom_NodesOwned = new();
-    public List<DebugAIStateReason> ScoresFrom_NumEmptyNodesOwned = new();
-    public List<DebugAIStateReason> ScoresFrom_BuildingsNearEnemyNodes = new();
-    public List<DebugAIStateReason> ScoresFrom_ResourceGatherersCloseToResourceNodes = new();
-    public List<DebugAIStateReason> ScoresFrom_BuildingsThatGenerateWorkers = new();
-    public List<DebugAIStateReason> ScoresFrom_EnemyOwnedNodes = new();
-
-    public float TotalScore
-    {
-        get
-        {
-            float score = 0;
-            foreach (var reason in ScoresFrom_NodesOwned) score += reason.ScoreValue;
-            foreach (var reason in ScoresFrom_NumEmptyNodesOwned) score += reason.ScoreValue;
-            foreach (var reason in ScoresFrom_BuildingsNearEnemyNodes) score += reason.ScoreValue;
-            foreach (var reason in ScoresFrom_ResourceGatherersCloseToResourceNodes) score += reason.ScoreValue;
-            foreach (var reason in ScoresFrom_BuildingsThatGenerateWorkers) score += reason.ScoreValue;
-            foreach (var reason in ScoresFrom_EnemyOwnedNodes) score += reason.ScoreValue;
-            return score;
-        }
-    }
-}
-
-#endif
-
 public class AIAction
 {
     public override string ToString()
@@ -107,19 +40,11 @@ public class AIAction
     public AIActionType Type = AIActionType.DoNothing;
     public int Count;
     public AI_NodeState SourceNode;
-    public Dictionary<AI_NodeState, int> AttackFromNodes = new(); // for AttackFromMultipleNodes
-
     public AI_NodeState DestNode;
-
-
-    // public AIAction NextAction;
-
-    // Build building
     public BuildingDefn BuildingToConstruct;
-
-    // Attacking
     public AttackResult AttackResult;
-    public List<AttackResult> AttackResults = new(10); // for AttackFromMultipleNodes
+    public List<AttackResult> AttackResults = new();
+    public Dictionary<AI_NodeState, int> AttackFromNodes = new();
 
 #if DEBUG
     public DebugAIStateReasons DebugOutput_ScoreReasonsBeforeSubActions = new();
@@ -134,11 +59,11 @@ public class AIAction
         BuildingToConstruct = null;
         Type = AIActionType.DoNothing;
         SourceNode = null;
-        AttackFromNodes.Clear();
         DestNode = null;
         AIDebuggerEntry = null;
         AttackResult = AttackResult.Undefined;
         AttackResults.Clear();
+        AttackFromNodes.Clear();
         DebugOutput_ScoreReasonsBeforeSubActions.Reset();
         DebugOutput_TriedActionNum = -1;
         DebugOutput_Depth = -1;
@@ -166,8 +91,21 @@ public class AIAction
         SourceNode = sourceAction.SourceNode;
         DestNode = sourceAction.DestNode;
         AttackResult = sourceAction.AttackResult;
-        AttackResults = sourceAction.AttackResults == null ? null : new(sourceAction.AttackResults);
-        AttackFromNodes = sourceAction.AttackFromNodes == null ? null : new(sourceAction.AttackFromNodes);
+        if (sourceAction.AttackResults == null)
+            AttackResults = null;
+        else
+        {
+            AttackResults.Clear();
+            AttackResults.AddRange(sourceAction.AttackResults);
+        }
+        if (sourceAction.AttackFromNodes == null)
+            AttackFromNodes = null;
+        else
+        {
+            AttackFromNodes.Clear();
+            foreach (var kvp in sourceAction.AttackFromNodes)
+                AttackFromNodes[kvp.Key] = kvp.Value;
+        }
 
         DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
         DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
@@ -233,11 +171,15 @@ public class AIAction
     {
         AIDebuggerEntry = debuggerEntry;
         Score = score;
-        AttackResults = attackResults;
         Type = AIActionType.AttackFromMultipleNodes;
         DestNode = toNode;
-        Debug.Assert(attackFromNodes != null);
-        AttackFromNodes = new(attackFromNodes);
+
+        AttackFromNodes.Clear();
+        foreach (var kvp in attackFromNodes)
+            AttackFromNodes[kvp.Key] = kvp.Value;
+
+        AttackResults.Clear();
+        AttackResults.AddRange(attackResults);
     }
 
     internal void SetTo_UpgradeBuilding(AI_NodeState fromNode, float score, AIDebuggerEntryData debuggerEntry)
