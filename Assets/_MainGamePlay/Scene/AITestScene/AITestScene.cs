@@ -180,10 +180,10 @@ public class AITestScene : MonoBehaviour
                 break;
 
             case AIActionType.AttackFromMultipleNodes:
-                if (action.FromNodes != null && action.ToNode != null)
+                if (action.NumSentFromEachNode != null && action.ToNode != null)
                 {
-                    foreach (var node in action.FromNodes)
-                        DrawArrow(node.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Attack " + action.NumSentFromEachNode[node]);
+                    foreach (var nodeState in action.NumSentFromEachNode)
+                        DrawArrow(nodeState.Key.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Attack " + action.NumSentFromEachNode[nodeState.Key]);
                 }
                 break;
             case AIActionType.SendWorkersToOwnedNode:

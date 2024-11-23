@@ -137,29 +137,18 @@ public class TownData
                     break;
 
                 case AIActionType.AttackFromMultipleNodes:
-                    // Implementing the AttackFromMultipleNodes case
                     {
-                        // List of source nodes and their corresponding real nodes
-                        var sourceNodes = moveToMake.SourceNodes;
-                        var realSourceNodes = new List<NodeData>();
-                        foreach (var aiSourceNode in sourceNodes)
-                            realSourceNodes.Add(aiSourceNode.RealNode);
-
-                        // Mapping from AI_NodeState to int (number of units sent)
-                        var numSentFromEachNode = moveToMake.NumSentFromEachNode;
-                        Debug.Assert(numSentFromEachNode != null);
+                        var attackFromNodes = moveToMake.AttackFromNodes;
 
                         // List of attack results for each attack
                         var attackResults = moveToMake.AttackResults;
 
-                        // We need to perform the attacks in the same order as they were executed in the AI simulation
-                        // The state of the destination node may change after each attack
-
-                        for (int i = 0; i < realSourceNodes.Count; i++)
+                        int i = 0;
+                        foreach (var attackFromNode in attackFromNodes.Keys)
                         {
-                            var sourceNode = realSourceNodes[i];
-                            var numSent = numSentFromEachNode[moveToMake.SourceNodes[i]];
-                            var attackResult = attackResults[i];
+                            var sourceNode = attackFromNode.RealNode;
+                            var numSent = attackFromNodes[attackFromNode];
+                            var attackResult = attackResults[i++];
 
                             // Subtract units sent from the source node
                             sourceNode.NumWorkers -= numSent;

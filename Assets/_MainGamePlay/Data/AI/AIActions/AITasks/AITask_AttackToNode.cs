@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using NUnit.Framework;
 
 class AttackState
 {
@@ -17,11 +18,17 @@ public class AITask_AttackToNode : AITask
 
     AI_NodeState[] nDeepNeighbors = new AI_NodeState[MAX_NEIGHBORS_TO_CHECK];
 
+    // List<AttackState> attackStates;
+    // List<AttackResult> attackResults;
+    // Dictionary<AI_NodeState, int> attackFromNodes;
+
     public AITask_AttackToNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut)
         : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
     public override AIAction TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions)
     {
+        // TODO: Refactor TryTask to return bool; don't GetAIAction until we know we want to take this action
+
         var bestAction = player.AI.GetAIAction();
 
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return bestAction;
@@ -31,65 +38,59 @@ public class AITask_AttackToNode : AITask
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
         // Generate all combinations of the neighbor nodes to simulate multiple attacks
-        var sourceNodeCombinations = GenerateNodeCombinations(nDeepNeighbors, num, toNode.NumWorkers);
+        bool haveEnoughWorkersToAttack = GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers);
+        if (!haveEnoughWorkersToAttack) return bestAction;
 
-        for (int i = 0; i < sourceNodeCombinations.Count; i++)
+        // Save original state before performing attacks
+        List<AttackState> attackStates = new();
+        var attackResults = new List<AttackResult>();
+        var attackFromNodes = new Dictionary<AI_NodeState, int>();
+
+        // (attackStates ??= new(MAX_NEIGHBORS_TO_CHECK)).Clear();
+        // (attackResults ??= new(MAX_NEIGHBORS_TO_CHECK)).Clear();
+        // (attackFromNodes ??= new(MAX_NEIGHBORS_TO_CHECK)).Clear();
+
+        // Perform attacks from multiple nodes
+        foreach (var fromNode in nodesToAttackFrom)
         {
-            var sourceNodes = sourceNodeCombinations[i];
-            // Confirm that there are enough workers in the combination of nodes to send any out
-            // var totalNumSent = 0;
-            // foreach (var node in sourceNodes)
-            //     totalNumSent += node.NumWorkers;
-            // if (totalNumSent < 20) // TODO: magic number
-            //     continue;
-
-            // Save original state before performing attacks
-            List<AttackState> attackStates = new();
-            var attackResults = new List<AttackResult>();
-            var numSentFromEachNode = new Dictionary<AI_NodeState, int>();
-
-            // Perform attacks from multiple nodes
-            foreach (var fromNode in sourceNodes)
+            // Record original state before attack
+            var attackState = new AttackState
             {
-                // Record original state before attack
-                var attackState = new AttackState
-                {
-                    FromNode = fromNode,
-                    OrigNumInSourceNode = fromNode.NumWorkers,
-                    ToNode = toNode,
-                    OrigNumInDestNode = toNode.NumWorkers,
-                    OrigToNodeOwner = toNode.OwnedBy
-                };
+                FromNode = fromNode,
+                OrigNumInSourceNode = fromNode.NumWorkers,
+                ToNode = toNode,
+                OrigNumInDestNode = toNode.NumWorkers,
+                OrigToNodeOwner = toNode.OwnedBy
+            };
 
-                aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out _, out _, out int numSent, out _);
-                attackResults.Add(attackResult);
-                numSentFromEachNode[fromNode] = numSent;
+            aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out _, out _, out int numSent, out _);
+            attackResults.Add(attackResult);
+            attackFromNodes[fromNode] = numSent;
 
-                // Record the attack result and numSent
-                attackState.NumSent = numSent;
-                attackState.AttackResult = attackResult;
+            // Record the attack result and numSent
+            attackState.NumSent = numSent;
+            attackState.AttackResult = attackResult;
 
-                // Add the attackState to the list
-                attackStates.Add(attackState);
-            }
+            // Add the attackState to the list
+            attackStates.Add(attackState);
+        }
 
-            // Create a debugger entry
-            var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackFromMultipleNodes(sourceNodes, toNode, attackResults, numSentFromEachNode, 0, player.AI.debugOutput_ActionsTried++, curDepth);
+        // Create a debugger entry
+        var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackFromMultipleNodes(attackFromNodes, toNode, attackResults, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
-            // Determine the score of the combined action
-            var actionScore = GetActionScore(curDepth, debuggerEntry);
-            if (actionScore > bestAction.Score)
-                bestAction.SetTo_AttackFromMultipleNodes(sourceNodes, toNode, numSentFromEachNode, attackResults, actionScore, debuggerEntry);
+        // Determine the score of the combined action
+        var actionScore = GetActionScore(curDepth, debuggerEntry);
+        if (actionScore > bestAction.Score)
+            bestAction.SetTo_AttackFromMultipleNodes(attackFromNodes, toNode, attackResults, actionScore, debuggerEntry);
 
-            // Undo the attacks to reset the state
-            // Reverse the order of attacks to undo properly
-            for (int a = attackStates.Count - 1; a >= 0; a--)
-            {
-                var attackState = attackStates[a];
-                aiTownState.Undo_AttackFromNode(attackState.FromNode, attackState.ToNode, attackState.AttackResult,
-                                                attackState.OrigNumInSourceNode, attackState.OrigNumInDestNode,
-                                                attackState.NumSent, attackState.OrigToNodeOwner);
-            }
+        // Undo the attacks to reset the state
+        // Reverse the order of attacks to undo properly
+        for (int a = attackStates.Count - 1; a >= 0; a--)
+        {
+            var attackState = attackStates[a];
+            aiTownState.Undo_AttackFromNode(attackState.FromNode, attackState.ToNode, attackState.AttackResult,
+                                            attackState.OrigNumInSourceNode, attackState.OrigNumInDestNode,
+                                            attackState.NumSent, attackState.OrigToNodeOwner);
         }
 
         return bestAction;
@@ -129,37 +130,32 @@ public class AITask_AttackToNode : AITask
         return index;
     }
 
-    private List<List<AI_NodeState>> GenerateNodeCombinations(AI_NodeState[] nodes, int num, int numEnemies)
+    List<AI_NodeState> nodesToAttackFrom;
+
+    bool GetNodesToAttackFrom(AI_NodeState[] nodes, int numNodes, int numEnemies)
     {
         // Notes:
         //  * All of the nodes in the incoming nodes array have more than 10 workers; i.e. are valid to pull from.
         //  * The nodes in the incoming nodes array are sorted by distance from target node.  We want to prioritize closer nodes;
 
         // Find combinations that result in > numEnemies (TODO: real heuristic.  TODO: Optimize for one)
-        List<List<AI_NodeState>> combinations = new();
 
         // TODO: Can I just grab the first combination that's added to combinations and return it?  The would be the set of source nodes
         // that (a) have > 10 workers, (b) are closest to the target node.  What it would miss is source nodes with even larger number of 
         // workers that are further away.
 
         // NOTE: maybe just take the top N (e.g. 3 or 10) and return that list?
-        // TODO: Change combinations to an array of lists.
-
-        int combinationCount = 1 << num; // 2^n combinations
-        for (int i = 1; i < combinationCount; i++) // Start from 1 to exclude empty set
+        nodesToAttackFrom ??= new(10);
+        nodesToAttackFrom.Clear();
+        int count = 0;
+        for (int i = 1; i < numNodes; i++) // Start from 1 to exclude empty set
         {
-            int count = 0;
-            List<AI_NodeState> combination = new();
-            for (int j = 0; j < num; j++)
-                if ((i & (1 << j)) != 0)
-                {
-                    count += nodes[j].NumWorkers;
-                    combination.Add(nodes[j]);
-                }
+            var node = nodes[i];
+            nodesToAttackFrom.Add(node);
+            count += node.NumWorkers;
             if (count > numEnemies)
-                combinations.Add(combination);
+                return true;
         }
-
-        return combinations;
+        return false;
     }
 }

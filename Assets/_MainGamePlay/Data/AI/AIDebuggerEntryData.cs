@@ -13,7 +13,6 @@ public class AIDebuggerEntryData
     public int RecurseDepth;
     public AIActionType ActionType;
     public AI_NodeState FromNode;
-    public List<AI_NodeState> FromNodes = new(10); // for AttackFromMultipleNodes
 
     // optional based on actiontype:
     public AI_NodeState ToNode;
@@ -91,13 +90,12 @@ public class AIDebuggerEntryData
         entry.IsHighestOptionOfPeers = false;
         entry.AttackResult = AttackResult.Undefined;
         entry.AttackResults.Clear();
-        entry.FromNodes.Clear();
         entry.ChildEntries.Clear();
         return entry;
     }
 
     // HACK
-    internal static AIDebuggerEntryData GetFromPool2(AIActionType actionType, List<AI_NodeState> fromNodes, AI_NodeState toNode, Dictionary<AI_NodeState, int> numSentFromEachNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
+    internal static AIDebuggerEntryData GetFromPool2(AIActionType actionType, AI_NodeState toNode, Dictionary<AI_NodeState, int> numSentFromEachNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
     {
         if (Pool == null)
             InitializePool();
@@ -132,7 +130,6 @@ public class AIDebuggerEntryData
         entry.AttackResult = AttackResult.Undefined;
         entry.AttackResults.Clear();
         entry.AttackResults.AddRange(attackResults);
-        entry.FromNodes = fromNodes;
         entry.ChildEntries.Clear();
         return entry;
     }
@@ -184,15 +181,14 @@ public class AIDebuggerEntryData
         return newEntry;
     }
 
-    internal AIDebuggerEntryData AddEntry_AttackFromMultipleNodes(List<AI_NodeState> fromNodes, AI_NodeState toNode, List<AttackResult> attackResults, Dictionary<AI_NodeState, int> numSentFromEachNode, float finalActionScore, int actionNum, int curDepth)
+    internal AIDebuggerEntryData AddEntry_AttackFromMultipleNodes(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth)
     {
-        Debug.Assert(numSentFromEachNode != null);
+        Debug.Assert(attackFromNodes != null);
 
         var newEntry = GetFromPool2(
                         AIActionType.AttackFromMultipleNodes,
-                        fromNodes,
                         toNode,
-                        numSentFromEachNode,
+                        attackFromNodes,
                         attackResults,
                         finalActionScore,
                         actionNum,
@@ -245,7 +241,7 @@ public class AIDebuggerEntryData
             case AIActionType.UpgradeBuilding: return "Upgrade " + FromNode.NodeId + " (" + FromNode.BuildingDefn.Id + ") to " + FromNode.BuildingLevel;
             case AIActionType.AttackFromMultipleNodes:
                 var numSent = NumSentFromEachNode.Values.Sum();
-                var sentFrom = string.Join(",", FromNodes.Select(n => n.NodeId));
+                var sentFrom = string.Join(",", NumSentFromEachNode.Select(n => n.Key.NodeId));
                 // same as above but replace "AttackerWon" with "A" and "DefenderWon" with "D"
                 var attackResults = string.Join(",", AttackResults.Select(r => r switch
                 {

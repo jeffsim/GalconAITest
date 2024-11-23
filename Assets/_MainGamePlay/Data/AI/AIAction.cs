@@ -107,8 +107,7 @@ public class AIAction
     public AIActionType Type = AIActionType.DoNothing;
     public int Count;
     public AI_NodeState SourceNode;
-    public List<AI_NodeState> SourceNodes = new(10);// for AttackFromMultipleNodes
-    public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(); // for AttackFromMultipleNodes
+    public Dictionary<AI_NodeState, int> AttackFromNodes = new(); // for AttackFromMultipleNodes
 
     public AI_NodeState DestNode;
 
@@ -135,8 +134,7 @@ public class AIAction
         BuildingToConstruct = null;
         Type = AIActionType.DoNothing;
         SourceNode = null;
-        SourceNodes.Clear();
-        NumSentFromEachNode.Clear();
+        AttackFromNodes.Clear();
         DestNode = null;
         AIDebuggerEntry = null;
         AttackResult = AttackResult.Undefined;
@@ -166,12 +164,11 @@ public class AIAction
 
         // NextAction = sourceAction.NextAction;
         SourceNode = sourceAction.SourceNode;
-        SourceNodes = sourceAction.SourceNodes == null ? null : new(sourceAction.SourceNodes);
         DestNode = sourceAction.DestNode;
         AttackResult = sourceAction.AttackResult;
         AttackResults = sourceAction.AttackResults == null ? null : new(sourceAction.AttackResults);
-        NumSentFromEachNode = sourceAction.NumSentFromEachNode == null ? null : new(sourceAction.NumSentFromEachNode);
-        
+        AttackFromNodes = sourceAction.AttackFromNodes == null ? null : new(sourceAction.AttackFromNodes);
+
         DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
         DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
         DebugOutput_Depth = sourceAction.DebugOutput_Depth;
@@ -232,16 +229,15 @@ public class AIAction
     }
 
     // New method
-    internal void SetTo_AttackFromMultipleNodes(List<AI_NodeState> fromNodes, AI_NodeState toNode, Dictionary<AI_NodeState, int> numSentFromEachNode, List<AttackResult> attackResults, float score, AIDebuggerEntryData debuggerEntry)
+    internal void SetTo_AttackFromMultipleNodes(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float score, AIDebuggerEntryData debuggerEntry)
     {
         AIDebuggerEntry = debuggerEntry;
         Score = score;
         AttackResults = attackResults;
         Type = AIActionType.AttackFromMultipleNodes;
-        SourceNodes = fromNodes;
         DestNode = toNode;
-        Debug.Assert(numSentFromEachNode != null);
-        NumSentFromEachNode = new(numSentFromEachNode);
+        Debug.Assert(attackFromNodes != null);
+        AttackFromNodes = new(attackFromNodes);
     }
 
     internal void SetTo_UpgradeBuilding(AI_NodeState fromNode, float score, AIDebuggerEntryData debuggerEntry)
