@@ -105,7 +105,7 @@ public class AI_NodeState
 
     public void Update()
     {
-        //set properties that change
+        // Set properties that change
         if (RealNode.Building == null)
             ClearBuilding();
         else

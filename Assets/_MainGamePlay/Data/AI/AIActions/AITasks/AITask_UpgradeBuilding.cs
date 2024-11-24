@@ -22,7 +22,7 @@ public class AITask_UpgradeBuilding : AITask
         bestAction = player.AI.GetAIAction();
 
         // ==== Perform the action and update the aiTownState to reflect the action
-            int d1 = fromNode.NumWorkers;
+        int d1 = fromNode.NumWorkers;
         aiTownState.UpgradeBuilding(fromNode, out int origLevel, out int origNumWorkers);
         var debuggerEntry = aiDebuggerParentEntry.AddEntry_UpgradeBuilding(fromNode, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
