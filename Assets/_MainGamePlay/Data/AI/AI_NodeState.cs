@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -8,17 +9,18 @@ public class AI_NodeState
     public int NumNeighbors;
     public int NumWorkers;
     public int MaxWorkers;
-    public int WorkersGeneratedPerTurn = 1;
+    public int WorkersGeneratedPerTurn = 5; // bump this up from 1 to exaggerate value of gen'ing workers
     public int aiOrigNumWorkers;
-    
+
     public int NumEnemiesInNeighborNodes;
-    public bool Visited { get; set; }
 
     public PlayerData OwnedBy;
     public int NodeId;
     internal bool IsResourceNode => CanBeGatheredFrom;
 
     public Dictionary<GoodType, int> DistanceToGatherableResource = new();
+
+    public bool IsVisited;
 
     // Buildings
     public bool HasBuilding;
@@ -51,6 +53,10 @@ public class AI_NodeState
         BuildingDefn = buildingDefn;
         HasBuilding = true;
         BuildingLevel = 1;
+
+        // NOTE: If update this then need to update elsewhere too.  grep on TODO-042
+        MaxWorkers = 10 * (int)Math.Pow(2, BuildingLevel - 1);
+
         TurnBuildingWasBuilt = turnNumber;
         CanGoGatherResources = buildingDefn.CanGatherResources;
         if (CanGoGatherResources)

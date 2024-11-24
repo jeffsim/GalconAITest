@@ -190,12 +190,18 @@ public partial class AI_TownState
         origNumWorkers = node.NumWorkers;
         node.BuildingLevel++;
         node.NumWorkers /= 2;
+        
+        // NOTE: If update this then need to update elsewhere too.  grep on TODO-042
+        node.MaxWorkers = 10 * (int)Math.Pow(2, node.BuildingLevel - 1);
     }
 
     internal void Undo_UpgradeBuilding(AI_NodeState node, int origLevel, int origNumWorkers)
     {
         node.BuildingLevel = origLevel;
         node.NumWorkers = origNumWorkers;
+        
+        // NOTE: If update this then need to update elsewhere too.  grep on TODO-042
+        node.MaxWorkers = 10 * (int)Math.Pow(2, node.BuildingLevel - 1);
     }
 
     internal bool IsGameOver()

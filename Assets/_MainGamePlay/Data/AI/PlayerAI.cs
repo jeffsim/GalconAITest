@@ -86,7 +86,7 @@ public partial class PlayerAI
 #endif
 
         // Determine the best action to take, and then take it
-        debugOutput_ActionsTried = -1;
+        debugOutput_ActionsTried = 0;
         actionPoolIndex = 0;
 
 #if DEBUG
@@ -132,12 +132,13 @@ public partial class PlayerAI
                         // Tasks.Add(new AITask_AttackFromNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
                     }
                     AIDebugger.rootEntry.BestNextAction = null;
+
                     var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
                     if (bestAction == null)
                         BestNextActionToTake.SetToNothing();
                     else
                         BestNextActionToTake.CopyFrom(bestAction);
-                        player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
+                    player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
                 }
                 break;
         }

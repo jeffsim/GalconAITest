@@ -18,6 +18,7 @@ public class AITask_ConstructBuilding : AITask
             // Verify we can perform the action
             if (toNode.OwnedBy != null) continue; // This task can't send workers to nodes owned by anyone (including this player).  Those are handled in other actions
             if (toNode.HasBuilding) continue; // Node already has a building. note: resource nodes e.g. forest don't count as having a building until e.g. woodcutter is built
+            if (toNode.IsVisited) continue; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
 
             // If here then we can send workers to this node.  Now determine what building we can construct in this node
             for (int i = 0; i < player.AI.numBuildingDefns; i++)

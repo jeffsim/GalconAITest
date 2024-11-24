@@ -18,6 +18,7 @@ public class AITask_TryButtressOwnedNode : AITask
         {
             // ==== Verify we can perform the action
             if (toNode.OwnedBy != player) continue;
+            if (toNode.IsVisited) continue; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
 
             // ==== Perform the action and update the aiTownState to reflect the action
             aiTownState.SendWorkersToOwnedNode(fromNode, toNode, .5f, out int numSent); // TODO: Try different #s?

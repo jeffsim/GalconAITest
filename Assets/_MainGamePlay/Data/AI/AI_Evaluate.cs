@@ -117,7 +117,7 @@ public partial class AI_TownState
                             // building built turn 0; currently on turn 10; multiply score by 10
                             // building built turn 5; currently on turn 10; multiply score by 5
                             // TODO: Change turnbuildingwasbuilt into max of [4] turns ago; otherwise this becomes huge.  Can't just use min, need to subtract from curturn#
-                            addedScore += (maxStateDepth - node.TurnBuildingWasBuilt + 1) * .1f;
+                            addedScore += (maxStateDepth - node.TurnBuildingWasBuilt + 1) * 1.5f;
 
 #if DEBUG
                             scoreReasons?.ScoresFrom_ResourceGatherersCloseToResourceNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = 2f });
@@ -142,7 +142,7 @@ public partial class AI_TownState
                         // Defensive buildings are useful if...
                         if (node.CanGenerateWorkers)
                         {
-                            score += .25f;
+                            score += .125f;
 #if DEBUG
                             scoreReasons?.ScoresFrom_BuildingsThatGenerateWorkers.Add(new DebugAIStateReason() { Node = node, ScoreValue = .25f });
 #endif

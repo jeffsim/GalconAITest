@@ -1,0 +1,4 @@
+== Bugs
+* Recursion is pingponging between nodes.
+    - Update DetermineBestAction to not go 'back' to a node from a previous recursion level
+        Keep track at the recursion level which nodes have been visited.

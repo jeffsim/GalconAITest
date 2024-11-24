@@ -1,5 +1,4 @@
 using System;
-using UnityEngine.Pool;
 
 public partial class PlayerAI
 {
@@ -8,15 +7,16 @@ public partial class PlayerAI
     public AIAction DetermineBestActionToPerform(int curDepth, AIDebuggerEntryData parentDebuggerEntry)
     {
         // we'll return the best action from all possible actions at this 'recursive step/turn'
-        AIAction bestAction = GetAIAction();
+        var bestAction = GetAIAction();
 
-        // Update townstate at the start of this 'recursive step'; e.g. woodcutters get +1 wood...
-        // TODO: Combine this with TownData.Debug_WorldTurn somehow
+        const int numResources = 3;
+
+        // Update townstate at the start of this 'recursive step'; e.g. woodcutters get +wood...
         for (int i = 0; i < aiTownState.Nodes.Length; i++)
         {
             var node = aiTownState.Nodes[i];
             if (node.CanGoGatherResources && node.OwnedBy == player)
-                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += 3; // simple for now
+                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += numResources;
             node.aiOrigNumWorkers = node.NumWorkers;
             if (node.CanGenerateWorkers)
             {
@@ -31,17 +31,20 @@ public partial class PlayerAI
         for (int i = 0; i < aiTownState.Nodes.Length; i++)
         {
             var node = aiTownState.Nodes[i];
+            if (node.IsVisited) continue; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
+            node.IsVisited = true;
             for (int t = 0; t < Tasks.Count; t++)
             {
                 var task = Tasks[t];
-            
-                bool validTask = task.TryTask(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score, out AIAction action);
+
+                bool validTask = task.TryTask(node, curDepth, debugOutput_ActionsTried, parentDebuggerEntry, bestAction.Score, out AIAction action);
                 if (validTask && action.Score > bestAction.Score)
                 {
                     bestAction = action;
                     parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
                 }
             }
+            node.IsVisited = false;
         }
 
         // Restore town state. TODO: More?
@@ -49,7 +52,7 @@ public partial class PlayerAI
         {
             var node = aiTownState.Nodes[i];
             if (node.CanGoGatherResources && node.OwnedBy == player)
-                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= 3; // simple for now
+                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= numResources;
             node.NumWorkers = node.aiOrigNumWorkers;
         }
         return bestAction.Type == AIActionType.DoNothing ? null : bestAction;
