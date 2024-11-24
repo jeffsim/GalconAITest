@@ -63,8 +63,10 @@
         "**/*.asmdef": true,
         "G*.sln": true,
         "Assets/Scenes": true,
+        "Assets/Standard Assets": true,
         "Assets/Resources": true,
-        "Assets/TextMesh Pro": true
+        "Assets/TextMesh Pro": true,
+        "DONT*": true
     },
     "dotnet.defaultSolution": "GalconAITest.sln"
 }
