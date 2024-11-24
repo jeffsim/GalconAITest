@@ -43,7 +43,7 @@ public class AITask_AttackToNode : AITask
         bestAction = null;
 
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return false;
-        if (toNode.IsVisited) return false; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
+        // if (toNode.IsVisited) return false; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
 
         // Collect neighbor nodes
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);

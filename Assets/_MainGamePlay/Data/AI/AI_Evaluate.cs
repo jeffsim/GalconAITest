@@ -1,5 +1,6 @@
 using System;
 using Unity.Profiling;
+using UnityEngine;
 
 public partial class AI_TownState
 {
@@ -129,7 +130,7 @@ public partial class AI_TownState
                         // If player-owned building has an enemy-owned node nearby, it's more useful to have more workers in it
                         if (node.NumEnemiesInNeighborNodes > node.NumWorkers)
                         {
-                            float scoreValue = (node.NumWorkers - node.NumEnemiesInNeighborNodes) * .5f;
+                            float scoreValue = Mathf.Max((node.NumWorkers - node.NumEnemiesInNeighborNodes) * .15f, - 1);
                             score += scoreValue;
 #if DEBUG
                             scoreReasons?.ScoresFrom_BuildingsNearEnemyNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = score });
@@ -140,7 +141,7 @@ public partial class AI_TownState
                 else if (node.OwnedBy != null)
                 {
                     // Subtract score for each node owned by another player
-                    //            score -= .9f; // todo: weight this based on player's personality
+                    score -= .1f; // todo: weight this based on player's personality
 #if DEBUG
                     //          scoreReasons?.ScoresFrom_EnemyOwnedNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = -.9f });
 #endif
