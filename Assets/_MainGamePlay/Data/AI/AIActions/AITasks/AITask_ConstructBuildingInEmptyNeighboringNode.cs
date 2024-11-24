@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 public class AITask_ConstructBuilding : AITask
 {
     public AITask_ConstructBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
@@ -28,6 +30,8 @@ public class AITask_ConstructBuilding : AITask
                 // ==== Verify we can perform the action
                 if (!canBuildBuilding(buildingDefn, toNode)) continue;
 
+                int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
+
                 // ==== Perform the action and update the aiTownState to reflect the action
                 aiTownState.SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, buildingDefn, curDepth, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount, .5f, out int numSent); // TODO: Try different #s?
                 var debuggerEntry = aiDebuggerParentEntry.AddEntry_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, 0, player.AI.debugOutput_ActionsTried++, curDepth);
@@ -39,6 +43,7 @@ public class AITask_ConstructBuilding : AITask
 
                 // ==== Undo the action to reset the townstate to its original state
                 aiTownState.Undo_SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, res1Id, resource1Amount, res2Id, resource2Amount, numSent);
+                Debug.Assert(d1 == fromNode.NumWorkers && d2 == toNode.NumWorkers);
             }
         }
         return true;

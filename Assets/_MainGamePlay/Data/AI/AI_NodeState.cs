@@ -10,7 +10,9 @@ public class AI_NodeState
     public int NumWorkers;
     public int MaxWorkers;
     public int WorkersGeneratedPerTurn = 5; // bump this up from 1 to exaggerate value of gen'ing workers
-    public int aiOrigNumWorkers;
+                                            // public int aiOrigNumWorkers;
+
+    public int WorkersAdded;
 
     public int NumEnemiesInNeighborNodes;
 

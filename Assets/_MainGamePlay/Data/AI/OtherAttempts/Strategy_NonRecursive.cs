@@ -53,8 +53,8 @@ public class Strategy_NonRecursive
         {
             // e.g.: resourceEntry.Key = wood => "I need wood, value = resourceEntry.Value"
             // Do we already have "enough" of this resource?
-            if (Town.PlayerTownInventory[resourceEntry.Key] >= resourceEntry.Value)
-                continue;
+            // if (Town.PlayerTownInventory[resourceEntry.Key] >= resourceEntry.Value)
+            //     continue;
 
 
             // TODO: This is only working for wood at the moment

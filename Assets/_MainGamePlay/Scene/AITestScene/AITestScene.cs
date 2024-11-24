@@ -5,18 +5,18 @@ using UnityEngine;
 
 public class AITestScene : MonoBehaviour
 {
-    [NonSerialized][ShowInInspector] public TownData Town;
-    public TownDefn TestTownDefn;
+    [NonSerialized] public TownData Town;
+    [HideInInspector] public TownDefn TestTownDefn;
 
     [FoldoutGroup("Nodes", false)] public NodeGO NodePrefab;
-    [FoldoutGroup("Nodes", false)] public List<NodeGO> Nodes = new();
+    [HideInInspector][FoldoutGroup("Nodes", false)] public List<NodeGO> Nodes = new();
     [FoldoutGroup("Nodes", false)] public Material NodeConnectionMat;
     [FoldoutGroup("Nodes", false)] public GameObject NodesFolder;
 
     [FoldoutGroup("Workers", false)] public Worker WorkerPrefab;
-    [FoldoutGroup("Workers", false)] public List<Worker> Workers = new();
+    [HideInInspector][FoldoutGroup("Workers", false)] public List<Worker> Workers = new();
     [FoldoutGroup("Workers", false)] public GameObject WorkersFolder;
-    [FoldoutGroup("Workers", false)] public WorkerDefn TestWorkerDefn;
+    [HideInInspector][FoldoutGroup("Workers", false)] public WorkerDefn TestWorkerDefn;
 
 #if DEBUG
     public PlayerData DebugPlayerToViewDetailsOn;

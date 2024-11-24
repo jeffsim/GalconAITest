@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 public class AITask_TryButtressOwnedNode : AITask
 {
     public AITask_TryButtressOwnedNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
@@ -21,6 +23,7 @@ public class AITask_TryButtressOwnedNode : AITask
             if (toNode.IsVisited) continue; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
 
             // ==== Perform the action and update the aiTownState to reflect the action
+            int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
             aiTownState.SendWorkersToOwnedNode(fromNode, toNode, .5f, out int numSent); // TODO: Try different #s?
             var debuggerEntry = aiDebuggerParentEntry.AddEntry_SendWorkersToOwnedNode(fromNode, toNode, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
@@ -31,6 +34,7 @@ public class AITask_TryButtressOwnedNode : AITask
 
             // ==== Undo the action to reset the townstate to its original state
             aiTownState.Undo_SendWorkersToOwnedNode(fromNode, toNode, numSent);
+            Debug.Assert(d1 == fromNode.NumWorkers && d2 == toNode.NumWorkers);
         }
         return true;
     }

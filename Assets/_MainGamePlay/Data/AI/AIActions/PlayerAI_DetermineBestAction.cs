@@ -9,23 +9,22 @@ public partial class PlayerAI
         // we'll return the best action from all possible actions at this 'recursive step/turn'
         var bestAction = GetAIAction();
 
-        const int numResources = 3;
-
+        // const int numResources = 3;
         // Update townstate at the start of this 'recursive step'; e.g. woodcutters get +wood...
-        for (int i = 0; i < aiTownState.Nodes.Length; i++)
-        {
-            var node = aiTownState.Nodes[i];
-            if (node.CanGoGatherResources && node.OwnedBy == player)
-                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += numResources;
-            node.aiOrigNumWorkers = node.NumWorkers;
-            if (node.CanGenerateWorkers)
-            {
-                if (node.NumWorkers < node.MaxWorkers)
-                    node.NumWorkers = Math.Min(node.MaxWorkers, node.NumWorkers + node.WorkersGeneratedPerTurn);
-                else if (node.NumWorkers > node.MaxWorkers)
-                    node.NumWorkers--;
-            }
-        }
+        // for (int i = 0; i < aiTownState.Nodes.Length; i++)
+        // {
+        //     var node = aiTownState.Nodes[i];
+        //     if (node.CanGoGatherResources && node.OwnedBy == player)
+        //         aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += numResources;
+        //     node.aiOrigNumWorkers = node.NumWorkers;
+        //     if (node.CanGenerateWorkers)
+        //     {
+        //         if (node.NumWorkers < node.MaxWorkers)
+        //             node.NumWorkers = Math.Min(node.MaxWorkers, node.NumWorkers + node.WorkersGeneratedPerTurn);
+        //         else if (node.NumWorkers > node.MaxWorkers)
+        //             node.NumWorkers--;
+        //     }
+        // }
 
         // bestAction is currently set to 'do nothing' -- see if taking any of our available actions results in a better score
         for (int i = 0; i < aiTownState.Nodes.Length; i++)
@@ -48,13 +47,13 @@ public partial class PlayerAI
         }
 
         // Restore town state. TODO: More?
-        for (int i = 0; i < aiTownState.Nodes.Length; i++)
-        {
-            var node = aiTownState.Nodes[i];
-            if (node.CanGoGatherResources && node.OwnedBy == player)
-                aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= numResources;
-            node.NumWorkers = node.aiOrigNumWorkers;
-        }
+        // for (int i = 0; i < aiTownState.Nodes.Length; i++)
+        // {
+        //     var node = aiTownState.Nodes[i];
+        //     if (node.CanGoGatherResources && node.OwnedBy == player)
+        //         aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= numResources;
+        //     node.NumWorkers = node.aiOrigNumWorkers;
+        // }
         return bestAction.Type == AIActionType.DoNothing ? null : bestAction;
     }
 }

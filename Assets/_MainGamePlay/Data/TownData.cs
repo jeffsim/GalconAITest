@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using UnityEngine;
 
 public class TownData
 {
     public static TownData Instance;
-    public List<PlayerData> Players = new();
-    public List<NodeData> Nodes = new();
-    public List<WorkerData> Workers = new();
+    [HideInInspector] public List<PlayerData> Players = new();
+    [HideInInspector] public List<NodeData> Nodes = new();
+    [HideInInspector] public List<WorkerData> Workers = new();
 
     public Action<int> OnAIDebuggerUpdate { get; internal set; }
-    public int TestOnePlayerId = 1;
+    public int TestOnePlayerId = 0;
 
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
     {

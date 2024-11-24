@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 public class AITask_UpgradeBuilding : AITask
 {
     public AITask_UpgradeBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
@@ -20,6 +22,7 @@ public class AITask_UpgradeBuilding : AITask
         bestAction = player.AI.GetAIAction();
 
         // ==== Perform the action and update the aiTownState to reflect the action
+            int d1 = fromNode.NumWorkers;
         aiTownState.UpgradeBuilding(fromNode, out int origLevel, out int origNumWorkers);
         var debuggerEntry = aiDebuggerParentEntry.AddEntry_UpgradeBuilding(fromNode, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
@@ -30,6 +33,7 @@ public class AITask_UpgradeBuilding : AITask
 
         // ==== Undo the action to reset the townstate to its original state
         aiTownState.Undo_UpgradeBuilding(fromNode, origLevel, origNumWorkers);
+        Debug.Assert(d1 == fromNode.NumWorkers);
         return true;
     }
 }

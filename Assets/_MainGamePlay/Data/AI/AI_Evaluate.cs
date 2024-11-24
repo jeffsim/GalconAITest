@@ -13,45 +13,12 @@ public partial class AI_TownState
     internal float EvaluateScore(int stateDepth, int maxStateDepth, out DebugAIStateReasons scoreReasons)
     {
         float score = 0;
-
         scoreReasons = null;
-
-#if DEBUG
-        if (AITestScene.Instance.DebugOutputStrategyReasons)
-            scoreReasons = new();
-#endif
-
         int numNodes = Nodes.Length;
 
-        // temp simplified version of this function
-        // for each node we own, add 1 to the score
-        // for each building in a node we own, add .5 to the score
-        // for each building in a node we own that is a resource gatherer, add 1 to the score
-        // for each building in a node we own that is a worker generator, add .25 to the score
-        // for (int i = 0; i < numNodes; i++)
-        // {
-        //     var node = Nodes[i];
-        //     if (node.OwnedBy == player)
-        //     {
-        //         score += 1;
-        //         if (node.HasBuilding)
-        //         {
-        //             score += .5f;
-        //             if (node.CanGoGatherResources)
-        //             {
-        //                 score += 1;
-        //             }
-        //             if (node.CanGenerateWorkers)
-        //             {
-        //                 score += .25f;
-        //             }
-        //         }
-        //     } else if (node.OwnedBy != null)
-        //     {
-        //         score -= .9f;
-        //     }
-        // }
-        // return score;
+#if DEBUG
+        if (AITestScene.Instance.DebugOutputStrategyReasons) scoreReasons = new();
+#endif
 
         using (m1.Auto())
         {
@@ -105,6 +72,10 @@ public partial class AI_TownState
                         float buildingUpgradeModifier = .15f; // set this to 'value' of upgrades. 
                         score += buildingUpgradeModifier * (node.BuildingLevel - 1);
 
+                        // Discourage having too many workers in a building
+                        if (node.NumWorkers > node.MaxWorkers * 2f)
+                            score -= .5f * (node.NumWorkers - node.MaxWorkers / 2f);
+
                         // Resource gathering buildings are useful if they can reach a resource node.
                         // These buildings are more useful the close to the resource node they are.
                         // TODO: Increase usefulness score based on how much we need the resource vs how much we have
@@ -131,11 +102,11 @@ public partial class AI_TownState
 
                             // The more of the resource that this building can gather we already own, the lower the utility of it
                             var resourceType = node.ResourceThisNodeCanGoGather;
-                            if (PlayerTownInventory.TryGetValue(resourceType, out int resourceCount))
-                            {
-                                addedScore = Math.Max(0, addedScore - resourceCount * .1f);
-                            }
+                            int numResource = 0;
+                            if (resourceType == GoodType.Wood) numResource = NumWood;
+                            else if (resourceType == GoodType.Stone) numResource = NumStone;
 
+                            addedScore = Math.Max(0, addedScore - numResource * .1f);
                             score += addedScore;
                         }
 
