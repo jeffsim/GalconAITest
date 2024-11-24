@@ -23,6 +23,36 @@ public partial class AI_TownState
 
         int numNodes = Nodes.Length;
 
+        // temp simplified version of this function
+        // for each node we own, add 1 to the score
+        // for each building in a node we own, add .5 to the score
+        // for each building in a node we own that is a resource gatherer, add 1 to the score
+        // for each building in a node we own that is a worker generator, add .25 to the score
+        // for (int i = 0; i < numNodes; i++)
+        // {
+        //     var node = Nodes[i];
+        //     if (node.OwnedBy == player)
+        //     {
+        //         score += 1;
+        //         if (node.HasBuilding)
+        //         {
+        //             score += .5f;
+        //             if (node.CanGoGatherResources)
+        //             {
+        //                 score += 1;
+        //             }
+        //             if (node.CanGenerateWorkers)
+        //             {
+        //                 score += .25f;
+        //             }
+        //         }
+        //     } else if (node.OwnedBy != null)
+        //     {
+        //         score -= .9f;
+        //     }
+        // }
+        // return score;
+
         using (m1.Auto())
         {
             if (NodeOwnershipOrWorkersChanged)
@@ -72,7 +102,7 @@ public partial class AI_TownState
                     {
                         // upgraded buildings are more useful than non-upgraded buildings
                         // todo: temp - should be based on building type, game state, how much we need the building, etc.
-                        float buildingUpgradeModifier = .5f; // set this to 'value' of upgrades. 
+                        float buildingUpgradeModifier = .15f; // set this to 'value' of upgrades. 
                         score += buildingUpgradeModifier * (node.BuildingLevel - 1);
 
                         // Resource gathering buildings are useful if they can reach a resource node.

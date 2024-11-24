@@ -12,8 +12,9 @@ public partial class PlayerAI
 
         // Update townstate at the start of this 'recursive step'; e.g. woodcutters get +1 wood...
         // TODO: Combine this with TownData.Debug_WorldTurn somehow
-        foreach (var node in aiTownState.Nodes)
+        for (int i = 0; i < aiTownState.Nodes.Length; i++)
         {
+            var node = aiTownState.Nodes[i];
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] += 3; // simple for now
             node.aiOrigNumWorkers = node.NumWorkers;
@@ -27,10 +28,13 @@ public partial class PlayerAI
         }
 
         // bestAction is currently set to 'do nothing' -- see if taking any of our available actions results in a better score
-        foreach (var node in aiTownState.Nodes)
+        for (int i = 0; i < aiTownState.Nodes.Length; i++)
         {
-            foreach (var task in Tasks)
+            var node = aiTownState.Nodes[i];
+            for (int t = 0; t < Tasks.Count; t++)
             {
+                var task = Tasks[t];
+            
                 bool validTask = task.TryTask(node, curDepth, debugOutput_ActionsTried++, parentDebuggerEntry, bestAction.Score, out AIAction action);
                 if (validTask && action.Score > bestAction.Score)
                 {
@@ -41,13 +45,13 @@ public partial class PlayerAI
         }
 
         // Restore town state. TODO: More?
-        foreach (var node in aiTownState.Nodes)
+        for (int i = 0; i < aiTownState.Nodes.Length; i++)
         {
+            var node = aiTownState.Nodes[i];
             if (node.CanGoGatherResources && node.OwnedBy == player)
                 aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= 3; // simple for now
             node.NumWorkers = node.aiOrigNumWorkers;
         }
-
         return bestAction.Type == AIActionType.DoNothing ? null : bestAction;
     }
 }

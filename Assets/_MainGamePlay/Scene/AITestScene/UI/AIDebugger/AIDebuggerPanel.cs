@@ -38,7 +38,7 @@ public class AIDebuggerPanel : MonoBehaviour
 
 
         AddChildEntries(AIDebugger.rootEntry.ChildEntries);
-        Debug.Log("Total actions tried: " + AITestScene.Instance.DebugPlayerToViewDetailsOn.AI.debugOutput_ActionsTried);
+        Debug.Log("Total actions (player " + AITestScene.Instance.DebugPlayerToViewDetailsOn.Name +") tried: " + AITestScene.Instance.DebugPlayerToViewDetailsOn.AI.debugOutput_ActionsTried);
     }
 
     private void initializeExpandedEntries(AIDebuggerEntryData curEntry, bool forceValue = false, bool value = false)

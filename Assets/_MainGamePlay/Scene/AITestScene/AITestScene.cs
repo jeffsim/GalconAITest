@@ -118,8 +118,10 @@ public class AITestScene : MonoBehaviour
     void DrawArrow(Vector3 start, Vector3 end, Color color, string label)
     {
         var draw = Drawing.Draw.ingame;
-        draw.PushLineWidth(6);
-        draw.Arrow(start, end, color);
+        draw.PushLineWidth(4);
+        start.y += 0.1f;
+        end.y += 0.1f;
+        draw.Arrow(start, end, new Unity.Mathematics.float3(0, 1, 0), 0.4f, color);
         draw.PopLineWidth();
         var pos = (start + end) / 2;
 
@@ -156,7 +158,14 @@ public class AITestScene : MonoBehaviour
             int i = 1;
             while (action != null)
             {
-                drawActionArrow(i, action, player, i <= 2 ? Color.red : Color.gray);
+                switch (i)
+                {
+                    case 1: color = Color.green; break;
+                    case 2: color = Color.blue; break;
+                    case 3: color = Color.yellow; break;
+                    case 4: color = Color.red; break;
+                }
+                drawActionArrow(i, action, player, color);
                 i++;
                 action = action.BestNextAction;
             }

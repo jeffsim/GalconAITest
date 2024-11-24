@@ -1,4 +1,5 @@
 using TMPro;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,14 +10,14 @@ public class AIDebuggerEntry : MonoBehaviour
     public TextMeshProUGUI Score;
     public TextMeshProUGUI Count;
     public Button ThisButton;
-    AIDebuggerEntryData entry;
     AIDebuggerPanel panel;
-
+    int ActionNum;
     public void ShowForEntry(AIDebuggerEntryData entry, AIDebuggerPanel panel)
     {
         this.panel = panel;
-        this.entry = entry;
-        ActionNumber.text = entry.ActionNumber.ToString();
+        
+        ActionNum = entry.ActionNumber;
+        ActionNumber.text = ActionNum.ToString();
         ActionNumber.color = AITestScene.Instance.DebugPlayerToViewDetailsOn.Color;
 
         switch (entry.ActionType)
@@ -70,7 +71,7 @@ public class AIDebuggerEntry : MonoBehaviour
 
     public void OnClicked()
     {
-        panel.ExpandedEntries[entry.ActionNumber] = !panel.ExpandedEntries[entry.ActionNumber];
+        panel.ExpandedEntries[ActionNum] = !panel.ExpandedEntries[ActionNum];
         panel.Refresh();
-    }
+    } 
 }
