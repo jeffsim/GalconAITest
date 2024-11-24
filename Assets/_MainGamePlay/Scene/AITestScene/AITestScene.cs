@@ -164,6 +164,7 @@ public class AITestScene : MonoBehaviour
                     case 2: color = Color.blue; break;
                     case 3: color = Color.yellow; break;
                     case 4: color = Color.red; break;
+                    case 5: color = Color.magenta; break;
                 }
                 drawActionArrow(i, action, player, color);
                 i++;
