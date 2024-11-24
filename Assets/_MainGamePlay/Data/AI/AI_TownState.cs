@@ -76,6 +76,7 @@ public partial class AI_TownState
         numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
         sourceNode.NumWorkers -= numSent;
         destNode.NumWorkers += numSent;
+        NodeOwnershipOrWorkersChanged = true;
     }
 
     internal void Undo_SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)
@@ -128,6 +129,7 @@ public partial class AI_TownState
             resource2 = GoodType.Unset;
             resource2Amount = 0;
         }
+        NodeOwnershipOrWorkersChanged = true;
     }
 
     internal void Undo_SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, GoodType resource1, int resource1Amount, GoodType resource2, int resource2Amount, int numSent)
@@ -171,6 +173,8 @@ public partial class AI_TownState
         {
             attackResult = AttackResult.DefenderWon;
         }
+
+        NodeOwnershipOrWorkersChanged = true;
     }
 
     internal void Undo_AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, AttackResult attackResult, int origNumInSourceNode, int origNumInDestNode, int numSent, PlayerData origToNodeOwner)

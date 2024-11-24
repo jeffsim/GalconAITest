@@ -11,6 +11,7 @@ public class AI_NodeState
     public int WorkersGeneratedPerTurn = 1;
     public int aiOrigNumWorkers;
     
+    public int NumEnemiesInNeighborNodes;
     public bool Visited { get; set; }
 
     public PlayerData OwnedBy;

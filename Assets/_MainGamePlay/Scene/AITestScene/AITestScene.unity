@@ -3719,11 +3719,12 @@ MonoBehaviour:
   WorkersFolder: {fileID: 832437443}
   TestWorkerDefn: {fileID: 11400000, guid: b51577acc1c9f47359c32bcceee14da7, type: 2}
   AIDebuggerPanel: {fileID: 134469009}
-  MaxAIDepth: 2
+  MaxAIDepth: 1
   ShowDebuggerAI: 1
   ShowFullActionPath: 0
   DebugOutputStrategyToConsole: 0
   DebugOutputStrategyReasons: 0
+  DebugOutputActionBeforeScore: 1
 --- !u!114 &227787908341963640
 MonoBehaviour:
   m_ObjectHideFlags: 0
