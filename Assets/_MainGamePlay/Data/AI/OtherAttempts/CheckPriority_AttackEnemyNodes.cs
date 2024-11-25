@@ -31,14 +31,7 @@ public partial class Strategy_NonRecursive
                 {
                     // we have a neighbor node that we own
                     // do a BFS to see if we have enough workers to attack this node
-                    int numWorkers = 0;
-                    // bool found = BFS_AttackEnemyNodes(neighbor, enemyNode, out numWorkers);
-                    // if (found)
-                    // {
-                    //     // we have enough workers to attack this node
-                    //     // calculate the value of attacking this node
-                    //     rawValue += CalculateValue_AttackEnemyNode(neighbor, enemyNode, numWorkers);
-                    // }
+                
                 }
             }
         }
