@@ -94,7 +94,7 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        int aiApproach = 4;
+        int aiApproach = 3;
         switch (aiApproach)
         {
             case 2: // Another recursive approach
@@ -112,12 +112,14 @@ public partial class PlayerAI
 
             case 3: // trying a nonrecursive approach because FFFS
                 {
+                    AIDebugger.rootEntry.BestNextAction = null;
                     strategyNonrecursive ??= new Strategy_NonRecursive(townData, player);
                     var bestAction = strategyNonrecursive.DecideAction();
                     if (bestAction == null)
                         BestNextActionToTake.SetToNothing();
                     else
                         BestNextActionToTake.CopyFrom(bestAction);
+                    player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
                 }
                 break;
 

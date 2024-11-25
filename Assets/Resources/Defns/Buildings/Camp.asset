@@ -31,6 +31,9 @@ MonoBehaviour:
   CanBeUpgraded: 1
   CanBeBuiltByPlayer: 0
   ConstructionRequirements: []
+  CanBeAttacked: 1
+  Health: 100
+  IsDefensive: 0
   CanGatherResources: 0
   ResourceThisNodeCanGoGather: {fileID: 0}
   CanBeGatheredFrom: 0

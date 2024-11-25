@@ -7,10 +7,10 @@ public partial class AI_TownState
     public int NumNodes;
     public PlayerData player;
 
-    public int NumWood = 0;
-    public int NumStone = 0;
+    // public int NumWood = 0;
+    // public int NumStone = 0;
 
-    // public Dictionary<GoodType, int> PlayerTownInventory = new();
+    public Dictionary<GoodType, int> PlayerTownInventory = new();
 
     public AI_TownState(PlayerData player)
     {
@@ -55,30 +55,22 @@ public partial class AI_TownState
         // Accessing scriptableobjects is slower than shit.  create 'cached versions'
 
         // Initialize inventory. start with 0 for all item types o ensure keys exist
-        // foreach (var key in GameDefns.Instance.GoodDefns.Values)
-        // PlayerTownInventory[key.GoodType] = 0;
-        NumWood = 0;
-        NumStone = 0;
+        foreach (var key in GameDefns.Instance.GoodDefns.Values)
+            PlayerTownInventory[key.GoodType] = 0;
 
         for (int i = 0; i < NumNodes; i++)
         {
             var node = townData.Nodes[i];
             if (node.OwnedBy == player)
-            {
                 foreach (var invItem in node.Inventory)
-                {
-                    // PlayerTownInventory[invItem.Key] += invItem.Value;
-                    if (invItem.Key == GoodType.Wood) NumWood += invItem.Value;
-                    if (invItem.Key == GoodType.Stone) NumStone += invItem.Value;
-                }
-            }
+                    PlayerTownInventory[invItem.Key] += invItem.Value;
         }
 
         for (int i = 0; i < NumNodes; i++)
             Nodes[i].Update();
     }
 
-    // internal int GetNumItem(GoodDefn good) => PlayerTownInventory[good.GoodType];
+    internal int GetNumItem(GoodDefn good) => PlayerTownInventory[good.GoodType];
 
     internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
     {
@@ -116,9 +108,7 @@ public partial class AI_TownState
             resource1Amount = reqs[0].Amount;
 
             // TODO: Need to consume from particular nodes, not just the town inventory
-            if (resource1 == GoodType.Wood) NumWood -= resource1Amount;
-            else if (resource1 == GoodType.Stone) NumStone -= resource1Amount;
-            // PlayerTownInventory[resource1] -= resource1Amount;
+            PlayerTownInventory[resource1] -= resource1Amount;
         }
         else
         {
@@ -133,9 +123,7 @@ public partial class AI_TownState
             resource2Amount = reqs[1].Amount;
 
             // TODO: Need to consume from particular nodes, not just the town inventory
-            if (resource2 == GoodType.Wood) NumWood -= resource2Amount;
-            else if (resource2 == GoodType.Stone) NumStone -= resource2Amount;
-            // PlayerTownInventory[resource2] -= resource2Amount;
+            PlayerTownInventory[resource2] -= resource2Amount;
         }
         else
         {
@@ -155,15 +143,11 @@ public partial class AI_TownState
         // Undo Consume resources
         if (resource1 != GoodType.Unset)
         {
-            if (resource1 == GoodType.Wood) NumWood += resource1Amount;
-            else if (resource1 == GoodType.Stone) NumStone += resource1Amount;
-            // PlayerTownInventory[resource1] += resource1Amount;
+            PlayerTownInventory[resource1] += resource1Amount;
         }
         if (resource2 != GoodType.Unset)
         {
-            if (resource2 == GoodType.Wood) NumWood += resource2Amount;
-            else if (resource2 == GoodType.Stone) NumStone += resource2Amount;
-            // PlayerTownInventory[resource2] += resource2Amount;
+            PlayerTownInventory[resource2] += resource2Amount;
         }
     }
 
@@ -244,13 +228,8 @@ public partial class AI_TownState
         for (int i = 0; i < NumReqs; i++)
         {
             var req = craftingReqs[i];
-            if (req.Good.GoodType == GoodType.Wood && NumWood < req.Amount)
+            if (PlayerTownInventory[req.Good.GoodType] < req.Amount)
                 return false;
-            if (req.Good.GoodType == GoodType.Stone && NumStone < req.Amount)
-                return false;
-
-            // if (PlayerTownInventory[req.Good.GoodType] < req.Amount)
-            //     return false;
         }
         return true;
     }

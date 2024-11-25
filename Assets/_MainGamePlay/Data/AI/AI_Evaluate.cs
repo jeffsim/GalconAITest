@@ -103,9 +103,8 @@ public partial class AI_TownState
 
                             // The more of the resource that this building can gather we already own, the lower the utility of it
                             var resourceType = node.ResourceThisNodeCanGoGather;
-                            int numResource = 0;
-                            if (resourceType == GoodType.Wood) numResource = NumWood;
-                            else if (resourceType == GoodType.Stone) numResource = NumStone;
+                            
+                            int numResource = PlayerTownInventory[resourceType];
 
                             addedScore = Math.Max(0, addedScore - numResource * .1f);
                             score += addedScore;

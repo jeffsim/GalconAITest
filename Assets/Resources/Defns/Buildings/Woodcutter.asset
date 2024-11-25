@@ -33,6 +33,9 @@ MonoBehaviour:
   ConstructionRequirements:
   - Good: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
     Amount: 2
+  CanBeAttacked: 1
+  Health: 100
+  IsDefensive: 0
   CanGatherResources: 1
   ResourceThisNodeCanGoGather: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d,
     type: 2}

@@ -39,6 +39,13 @@ public class BuildingDefn : BaseDefn
     [ShowIf("CanBeBuiltByPlayer")]
     public List<Good_CraftingRequirements> ConstructionRequirements = new();
 
+    // Defensive
+    [Header("Defensive"), Space(10)]
+    public bool CanBeAttacked = false;
+    [ShowIf("CanBeAttacked")]
+    public int Health = 100;
+    public bool IsDefensive = false;
+
     // Gathering
     [Header("Gathering"), Space(10)]
     public bool CanGatherResources = false;

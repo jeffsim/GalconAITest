@@ -1,0 +1,80 @@
+using UnityEngine;
+
+public partial class Strategy_NonRecursive
+{
+    const float excessWorkersScalingFactor = 1f;
+    const float excessWorkersScalingFactor2 = 1f;
+    const float nearbyEnemiesScalingFactor = 1f;
+
+    // Define the normalization parameters for Upgrade Node action
+    const float upgradeNodeMinScore = 1f;
+    const float upgradeNodeMaxScore = 4f; // Global max score across all actions
+
+    private void CheckPriority_UpgradeNode()
+    {
+        int playerNodesCount = PlayerNodes.Count;
+        for (int i = 0; i < playerNodesCount; i++)
+        {
+            var node = PlayerNodes[i];
+            float rawValue = 0f;
+
+            // can't upgrade if < maxworkers
+            if (node.NumWorkers < node.MaxWorkers)
+                continue;
+
+            // 1. Calculate base value based on excessive workers
+            int numExcessiveWorkers = node.NumWorkers - node.MaxWorkers;
+            if (node.NumWorkers > node.MaxWorkers * 1.5f)
+                rawValue = 100;
+            else if (numExcessiveWorkers > 0)
+            {
+                float percentExcessive = (float)numExcessiveWorkers / node.MaxWorkers;
+                rawValue += Mathf.Pow(percentExcessive, 2) * excessWorkersScalingFactor;
+
+                // If no enemies are nearby, further increase the value
+                if (node.NumEnemiesInNeighborNodes == 0)
+                    rawValue += Mathf.Pow(numExcessiveWorkers, 2) * excessWorkersScalingFactor2;
+            }
+
+            // 2. Adjust value based on nearby enemies
+            if (node.NumEnemiesInNeighborNodes > 0)
+            {
+                float delta = node.NumEnemiesInNeighborNodes - node.NumWorkers;
+                rawValue -= Mathf.Pow(delta, 2) * nearbyEnemiesScalingFactor;
+            }
+            if (node.IsOnTerritoryEdge && node.NumWorkers < node.MaxWorkers * 1.5f)
+            {
+                rawValue -= 15; // TODO
+            }
+
+            // 3. Normalize the raw value
+            // Ensure the rawValue is within the action's original score range before normalization
+            // Since the base scores for Upgrade Node are 10-20, but rawValue can vary based on game state
+            // We'll map rawValue proportionally to the normalized range [0, 0.333]
+
+            // First, clamp the rawValue to the action's score range to prevent overflows
+            float clampedRawValue = Mathf.Clamp(rawValue, 10f, 40f);
+
+            // Normalize the clamped raw value
+            float normalizedValue = (clampedRawValue - upgradeNodeMinScore) / (upgradeNodeMaxScore - upgradeNodeMinScore);
+            // normalizedValue is now between 0.0 and 0.333
+
+            // 4. Apply AI personality multiplier
+            float finalValue = normalizedValue * personalityMultiplier_UpgradeNode;
+
+            // 5. Update Best Action if this action is better than the current best action
+            if (finalValue > BestAction.Score)
+            {
+                AIDebuggerEntryData debuggerEntry = null;
+#if DEBUG
+                if (AITestScene.Instance.TrackDebugAIInfo)
+                {
+                    debuggerEntry = AIDebugger.rootEntry.AddEntry_UpgradeBuilding(
+                                                        node, finalValue, Player.AI.debugOutput_ActionsTried++, 0);
+                }
+#endif
+                BestAction.SetTo_UpgradeBuilding(node, finalValue, debuggerEntry);
+            }
+        }
+    }
+}

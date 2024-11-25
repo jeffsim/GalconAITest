@@ -15,6 +15,7 @@ public class AI_NodeState
     public int WorkersAdded;
 
     public int NumEnemiesInNeighborNodes;
+    public bool IsOnTerritoryEdge;
 
     public PlayerData OwnedBy;
     public int NodeId;

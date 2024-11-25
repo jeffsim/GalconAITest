@@ -30,6 +30,7 @@ public class AITestScene : MonoBehaviour
     public bool DebugOutputStrategyToConsole = false;
     public bool DebugOutputStrategyReasons = false;
     public bool DebugOutputActionBeforeScore = false;
+    public bool TrackDebugAIInfo = true;
 #endif
 
     public static AITestScene Instance;
