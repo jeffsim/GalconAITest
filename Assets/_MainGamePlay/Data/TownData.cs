@@ -126,35 +126,42 @@ public class TownData
                         {
                             var sourceNode = attackFromNode.RealNode;
                             var numSent = attackFromNodes[attackFromNode];
-                            var attackResult = attackResults[i++];
+                            // var attackResult = attackResults[i++];
 
-                            // Subtract units sent from the source node
+                            // // Subtract units sent from the source node
+                            // sourceNode.NumWorkers -= numSent;
+
+                            // // Perform the attack on the destination node based on the attack result
+                            // switch (attackResult)
+                            // {
+                            //     case AttackResult.AttackerWon:
+                            //         // If the attacker won, the destination node becomes owned by the attacker
+                            //         toNode.OwnedBy = sourceNode.OwnedBy;
+                            //         // The remaining workers are the attackers that survived
+                            //         toNode.NumWorkers = numSent - Math.Max(0, toNode.NumWorkers);
+                            //         break;
+
+                            //     case AttackResult.DefenderWon:
+                            //         // If the defender won, reduce the destination node's workers by the number of attackers
+                            //         toNode.NumWorkers -= numSent;
+                            //         break;
+
+                            //     case AttackResult.BothSidesDied:
+                            //         // If both sides died, the destination node becomes neutral
+                            //         toNode.OwnedBy = null;
+                            //         toNode.NumWorkers = 0;
+                            //         break;
+                            // }
+
                             sourceNode.NumWorkers -= numSent;
+                            toNode.NumWorkers -= numSent;
 
-                            // Perform the attack on the destination node based on the attack result
-                            switch (attackResult)
+                            if (toNode.NumWorkers <= 0)
                             {
-                                case AttackResult.AttackerWon:
-                                    // If the attacker won, the destination node becomes owned by the attacker
-                                    toNode.OwnedBy = sourceNode.OwnedBy;
-                                    // The remaining workers are the attackers that survived
-                                    toNode.NumWorkers = numSent - Math.Max(0, toNode.NumWorkers);
-                                    break;
-
-                                case AttackResult.DefenderWon:
-                                    // If the defender won, reduce the destination node's workers by the number of attackers
-                                    toNode.NumWorkers -= numSent;
-                                    break;
-
-                                case AttackResult.BothSidesDied:
-                                    // If both sides died, the destination node becomes neutral
-                                    toNode.OwnedBy = null;
-                                    toNode.NumWorkers = 0;
-                                    break;
+                                // we captured the node
+                                toNode.OwnedBy = player;
+                                toNode.NumWorkers = -toNode.NumWorkers;
                             }
-
-                            // Note: After each attack, the state of toNode changes, which affects the next attack
-                            // Ensure the next iteration uses the updated state of toNode
                         }
                     }
                     break;

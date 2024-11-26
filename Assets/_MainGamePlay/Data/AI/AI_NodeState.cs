@@ -4,6 +4,7 @@ using System.Diagnostics;
 
 public class AI_NodeState
 {
+    public override string ToString() => $"Node {NodeId} ({OwnedBy?.Name[^1]})";
     public NodeData RealNode;
     public List<AI_NodeState> NeighborNodes = new();
     public int NumNeighbors;
@@ -16,7 +17,8 @@ public class AI_NodeState
 
     public int NumEnemiesInNeighborNodes;
     public bool IsOnTerritoryEdge;
-
+    public int NumWorkersWillingToSend;
+    
     public PlayerData OwnedBy;
     public int NodeId;
     internal bool IsResourceNode => CanBeGatheredFrom;

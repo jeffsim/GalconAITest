@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class PlayerData
 {
+    public override string ToString() => $"Player ({Name[^1]})";
+
     public WorkerDefn WorkerDefn;
     public string Name;
     public int Id;

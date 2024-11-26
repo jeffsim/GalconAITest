@@ -1,9 +1,10 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public partial class Strategy_NonRecursive
 {
+    public override string ToString() => $"Strategy_NonRecursive ({Player.Name[^1]})";
+
     TownData SourceTownData;
     PlayerData Player;
     AIAction BestAction;
@@ -66,11 +67,6 @@ public partial class Strategy_NonRecursive
             if (node.OwnedBy == Player)
                 PlayerNodes.Add(node);
 
-        EnemyNodes.Clear();
-        foreach (var node in Town.Nodes)
-            if (node.OwnedBy != Player)
-                EnemyNodes.Add(node);
-
         // Calculate the number of enemies in neighboring nodes for each of our nodes
         var Nodes = Town.Nodes;
         int numNodes = Nodes.Length;
@@ -93,5 +89,17 @@ public partial class Strategy_NonRecursive
                 }
             }
         }
+
+        // we only care about enemies on the territory edge (enemies inside their terrain aren't accesisble)
+        EnemyNodes.Clear();
+        foreach (var node in Town.Nodes)
+            if (node.OwnedBy != Player && node.OwnedBy != null)
+                foreach (var neighbor in node.NeighborNodes)
+                    if (neighbor.OwnedBy == Player)
+                    {
+                        if (!EnemyNodes.Contains(node))
+                            EnemyNodes.Add(node);
+                        break;
+                    }
     }
 }

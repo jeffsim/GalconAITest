@@ -5,8 +5,6 @@ public partial class Strategy_NonRecursive
     private void CheckPriority_BuildBuilding()
     {
         int playerNodesCount = PlayerNodes.Count;
-
-        // Can only construct in empty nodes that we can access - e.g. neighbor nodes
         for (int i = 0; i < playerNodesCount; i++)
         {
             var fromNode = PlayerNodes[i];

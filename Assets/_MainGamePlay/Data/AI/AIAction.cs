@@ -164,8 +164,8 @@ public class AIAction
         foreach (var kvp in attackFromNodes)
             AttackFromNodes[kvp.Key] = kvp.Value;
 
-        AttackResults.Clear();
-        AttackResults.AddRange(attackResults);
+        // AttackResults.Clear();
+        // AttackResults.AddRange(attackResults);
     }
 
     internal void SetTo_UpgradeBuilding(AI_NodeState fromNode, float score, AIDebuggerEntryData debuggerEntry)

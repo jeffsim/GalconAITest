@@ -1,12 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
-using JetBrains.Annotations;
 
 public partial class Strategy_NonRecursive
 {
     // New constants for Buttress Node action
     const float buttressNodeMinScore = 20f;
     const float buttressNodeMaxScore = 40f; // Global max score across all actions
+    const float attackNodeMinScore = 20f;
+    const float attackNodeMaxScore = 40f; // Global max score across all actions
     const float territoryEdgeScalingFactor = 10f;
     const float insufficientWorkersScalingFactor = 10f;
     List<AI_NodeState> nodesWithExcessWorkers = new(100);

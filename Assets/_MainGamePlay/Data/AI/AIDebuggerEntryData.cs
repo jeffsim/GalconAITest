@@ -131,7 +131,7 @@ public class AIDebuggerEntryData
         entry.IsHighestOptionOfPeers = false;
         entry.AttackResult = AttackResult.Undefined;
         entry.AttackResults.Clear();
-        entry.AttackResults.AddRange(attackResults);
+        // entry.AttackResults.AddRange(attackResults);
         entry.ChildEntries.Clear();
         return entry;
     }
