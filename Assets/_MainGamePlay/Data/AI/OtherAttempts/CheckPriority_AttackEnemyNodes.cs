@@ -34,6 +34,9 @@ public partial class Strategy_NonRecursive
                 {
                     float rawValue = 0f;
 
+                    // TODO: calculate actual value
+                    rawValue = attackNodeMaxScore / 2;
+
                     // 4. Normalize the raw value
                     float clampedRawValue = Mathf.Clamp(rawValue, attackNodeMinScore, attackNodeMaxScore);
                     float normalizedValue = (clampedRawValue - attackNodeMinScore) / (attackNodeMaxScore - attackNodeMinScore);
@@ -48,11 +51,11 @@ public partial class Strategy_NonRecursive
                         // this node would be valuable to capture AND we can attack it.
                         // do a BFS outward to see if we have enough workers to attack this node
                         List<AI_NodeState> nodesToSendFrom = new();
-                        int targetNumberToSend = (int)(enemyNode.NumWorkers * 1.5f); // TODO
+                        int targetNumberToSend = (int)(enemyNode.NumWorkers * 1.0f); // TODO
                         int numToSend = BFS_GetPlayerNodesToSendFromStartingAtNode(neighbor, nodesToSendFrom, targetNumberToSend);
 
                         // don't send if not enough to win
-                        if (numToSend < targetNumberToSend)
+                        if (numToSend < targetNumberToSend || fuckItAttackAnyways)
                         {
                             // Occassionally randomly be okay sending fewer from node. TODO: smarter heuristic
                             if (fuckItAttackAnyways && neighbor.NumWorkers > neighbor.MaxWorkers * 0.5f)
