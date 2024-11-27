@@ -121,7 +121,6 @@ public class TownData
                         // List of attack results for each attack
                         var attackResults = moveToMake.AttackResults;
 
-                        int i = 0;
                         foreach (var attackFromNode in attackFromNodes.Keys)
                         {
                             var sourceNode = attackFromNode.RealNode;
