@@ -8,17 +8,6 @@ public partial class Strategy_NonRecursive
 
     private void CheckPriority_AttackEnemyNodes()
     {
-        /*
-            find all enemy nodes that we can reach; i.e. they are adjacent to on of PlayerNodes
-            foreach enemy node, determine (A) if we have enough workers to do so and (B) the value of doing so
-            to calculate (A), we do a simple BFS outward ONLY through neighboring nodes that we own
-                 if one of the nodes we own has workers to spare (and doesn't itself want to keep them) then they're added to the sum of workers
-                 AI can stop at 3 BFS or go deeper.  when we have enoguh workers, we can stop the BFS
-            to calculate (B), we need to know
-                how much the AI personality values attacking enemy nodes
-                how much the AI personality values owning nodes
-        */
-
         int playerNodesCount = PlayerNodes.Count;
         for (int i = 0; i < playerNodesCount; i++)
         {
@@ -44,13 +33,14 @@ public partial class Strategy_NonRecursive
                 if (neighbor.OwnedBy == Player)
                 {
                     float rawValue = 0f;
-                    // TODO: calculate raw value
-                    rawValue = attackNodeMaxScore; // fuck it for now
 
                     // 4. Normalize the raw value
                     float clampedRawValue = Mathf.Clamp(rawValue, attackNodeMinScore, attackNodeMaxScore);
                     float normalizedValue = (clampedRawValue - attackNodeMinScore) / (attackNodeMaxScore - attackNodeMinScore);
 
+                    bool fuckItAttackAnyways = /*UnityEngine.Random.value < 0.25f && */neighbor.NumWorkers > neighbor.MaxWorkers * 0.5f;
+                    if (fuckItAttackAnyways)
+                        normalizedValue = attackNodeMaxScore;
                     // 5. Apply AI personality multiplier
                     float finalValue = normalizedValue * personalityMultiplier_CaptureNode;
                     if (finalValue > BestAction.Score)
@@ -62,7 +52,20 @@ public partial class Strategy_NonRecursive
                         int numToSend = BFS_GetPlayerNodesToSendFromStartingAtNode(neighbor, nodesToSendFrom, targetNumberToSend);
 
                         // don't send if not enough to win
-                        if (numToSend < targetNumberToSend) continue;
+                        if (numToSend < targetNumberToSend)
+                        {
+                            // Occassionally randomly be okay sending fewer from node. TODO: smarter heuristic
+                            if (fuckItAttackAnyways && neighbor.NumWorkers > neighbor.MaxWorkers * 0.5f)
+                            {
+                                nodesToSendFrom.Clear();
+                                nodesToSendFrom.Add(neighbor);
+                                neighbor.NumWorkersWillingToSend = neighbor.NumWorkers / 2;
+                            }
+                            else
+                                continue;
+                        }
+                        else
+                            continue;
 
                         AIDebuggerEntryData debuggerEntry = null;
                         Dictionary<AI_NodeState, int> attackFromNodes = attackFromNodesPool.Count > 0 ? attackFromNodesPool.Pop() : new Dictionary<AI_NodeState, int>();

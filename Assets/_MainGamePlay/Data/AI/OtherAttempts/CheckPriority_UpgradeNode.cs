@@ -42,10 +42,16 @@ public partial class Strategy_NonRecursive
                 float delta = node.NumEnemiesInNeighborNodes - node.NumWorkers;
                 rawValue -= Mathf.Pow(delta, 2) * nearbyEnemiesScalingFactor;
             }
-            if (node.IsOnTerritoryEdge && node.NumWorkers < node.MaxWorkers * 1.5f)
+            if (node.IsOnTerritoryEdge && node.NumWorkers < node.MaxWorkers * 1.5f && node.NumEnemiesInNeighborNodes > 0)
             {
-                rawValue -= 15; // TODO
+                rawValue += 35; // TODO
             }
+            
+            // if num workers is far from max, increase value
+            // if (node.NumWorkers < node.MaxWorkers * 0.25f)
+            // {
+            //     rawValue += 10;
+            // }
 
             // 3. Normalize the raw value
             // Ensure the rawValue is within the action's original score range before normalization
