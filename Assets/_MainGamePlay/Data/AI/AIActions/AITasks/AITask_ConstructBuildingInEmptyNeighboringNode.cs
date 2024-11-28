@@ -29,7 +29,7 @@ public class AITask_ConstructBuilding : AITask
 
                 // ==== Verify we can perform the action
                 if (!canBuildBuilding(buildingDefn, toNode)) continue;
-
+ 
                 int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
 
                 // ==== Perform the action and update the aiTownState to reflect the action

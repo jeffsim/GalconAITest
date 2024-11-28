@@ -41,12 +41,13 @@ public partial class Strategy_NonRecursive
                     float clampedRawValue = Mathf.Clamp(rawValue, attackNodeMinScore, attackNodeMaxScore);
                     float normalizedValue = (clampedRawValue - attackNodeMinScore) / (attackNodeMaxScore - attackNodeMinScore);
 
-                    bool fuckItAttackAnyways = /*UnityEngine.Random.value < 0.25f && */neighbor.NumWorkers > neighbor.MaxWorkers * 0.5f;
+                    bool fuckItAttackAnyways = /*UnityEngine.Random.value < 0.25f &&  */neighbor.NumWorkers > neighbor.MaxWorkers * 0.5f && neighbor.NumWorkers > 12;
                     if (fuckItAttackAnyways)
                         normalizedValue = attackNodeMaxScore;
+
                     // 5. Apply AI personality multiplier
                     float finalValue = normalizedValue * personalityMultiplier_CaptureNode;
-                    if (finalValue > BestAction.Score)
+                    //    if (finalValue > BestAction.Score)
                     {
                         // this node would be valuable to capture AND we can attack it.
                         // do a BFS outward to see if we have enough workers to attack this node
@@ -81,13 +82,14 @@ public partial class Strategy_NonRecursive
                             debuggerEntry = AIDebugger.rootEntry.AddEntry_AttackToNode(
                                                                     attackFromNodes,
                                                                     enemyNode,
-                                                                   null,// attackResults,
-                                                                    0,
+                                                                    null,// attackResults,
+                                                                    finalValue,
                                                                     Player.AI.debugOutput_ActionsTried++,
                                                                     0);
                         }
 #endif
-                        BestAction.SetTo_AttackToNode(attackFromNodes, enemyNode, null /*attackResults*/, finalValue, debuggerEntry);
+                        if (finalValue > BestAction.Score)
+                            BestAction.SetTo_AttackToNode(attackFromNodes, enemyNode, null /*attackResults*/, finalValue, debuggerEntry);
                     }
                 }
             }

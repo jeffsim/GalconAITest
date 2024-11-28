@@ -12,20 +12,33 @@ public partial class Strategy_NonRecursive
     List<AI_NodeState> EnemyNodes = new(100);
     AI_TownState Town;
 
+    const int minWorkersInNodeBeforeConsideringSendingAnyOut = 6;
+
     float personalityMultiplier_UpgradeNode = 0.7f;
     float personalityMultiplier_ButtressNode = 1.0f;
     float personalityMultiplier_BuildBuilding = 1.0f;
     float personalityMultiplier_CaptureNode = 1.0f;
 
+    const float excessWorkersScalingFactor = 1f;
+    const float excessWorkersScalingFactor2 = 1f;
+    const float nearbyEnemiesScalingFactor = 1f;
+
     // Scaling factors for Build Building
     const float buildingResourceScalingFactor = 5f; // Influence of resource availability
     const float buildingStrategicScalingFactor = 8f; // Influence of strategic importance
 
-    const int minWorkersInNodeBeforeConsideringSendingAnyOut = 10;
-
-    // Normalization parameters for Build Building
+    // Define the normalization parameters for Upgrade Node action
+    const float upgradeNodeMinScore = 10f;
+    const float upgradeNodeMaxScore = 40f; // Global max score across all actions
     const float buildBuildingMinScore = 20f;
-    const float buildBuildingMaxScore = 30f; // Original score range for Build Building
+    const float buildBuildingMaxScore = 40f; // Original score range for Build Building
+    const float buttressNodeMinScore = 20f;
+    const float buttressNodeMaxScore = 40f; // Global max score across all actions
+    const float attackNodeMinScore = 20f;
+    const float attackNodeMaxScore = 40f; // Global max score across all actions
+    
+    const float territoryEdgeScalingFactor = 10f;
+    const float insufficientWorkersScalingFactor = 10f;
 
     public Strategy_NonRecursive(TownData townData, PlayerData player)
     {

@@ -44,7 +44,7 @@ public partial class Strategy_NonRecursive
                         var gatherableResource = buildingDefn.ResourceThisNodeCanGoGather.GoodType;
                         int numGatherableResourceOwned = Town.PlayerTownInventory[gatherableResource];
                         
-                        int numGatherableResourceDesired = 10; // TODO: base this on how much we need the resource
+                        int numGatherableResourceDesired = 20; // TODO: base this on how much we need the resource
 
                         rawValue += buildingResourceScalingFactor * (numGatherableResourceDesired - numGatherableResourceOwned);
                     }
@@ -63,7 +63,8 @@ public partial class Strategy_NonRecursive
                     float finalValue = normalizedValue * personalityMultiplier_BuildBuilding;
 
                     // 6. Update Best Action if this action is better than the current best action
-                    if (finalValue > BestAction.Score)
+                    // TODO: Uncomment following and comment below to avoid unnecessary work.  Same with other CheckPriority methods
+                    // if (finalValue > BestAction.Score)
                     {
                         int numSent = fromNode.NumWorkers / 2;
                         AIDebuggerEntryData debuggerEntry = null;
@@ -75,12 +76,13 @@ public partial class Strategy_NonRecursive
                                 toNode,
                                 numSent,
                                 buildingDefn,
-                                0,
+                                finalValue,
                                 Player.AI.debugOutput_ActionsTried++,
                                 0
                             );
                         }
 #endif
+                    if (finalValue > BestAction.Score)
                         BestAction.SetTo_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, finalValue, debuggerEntry);
                     }
                 }

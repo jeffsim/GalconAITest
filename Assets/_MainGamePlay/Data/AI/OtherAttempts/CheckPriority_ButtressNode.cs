@@ -3,13 +3,6 @@ using System.Collections.Generic;
 
 public partial class Strategy_NonRecursive
 {
-    // New constants for Buttress Node action
-    const float buttressNodeMinScore = 20f;
-    const float buttressNodeMaxScore = 40f; // Global max score across all actions
-    const float attackNodeMinScore = 20f;
-    const float attackNodeMaxScore = 40f; // Global max score across all actions
-    const float territoryEdgeScalingFactor = 10f;
-    const float insufficientWorkersScalingFactor = 10f;
     List<AI_NodeState> nodesWithExcessWorkers = new(100);
 
     private void CheckPriority_ButtressNode()
@@ -61,7 +54,7 @@ public partial class Strategy_NonRecursive
             float finalValue = normalizedValue * personalityMultiplier_ButtressNode;
 
             // 6. Update Best Action if this action is better than the current best action
-            if (finalValue > BestAction.Score)
+            //    if (finalValue > BestAction.Score)
             {
                 // TODO: Ideally BFS out similar to attack.
                 // Instead, just get the neighbor with the most available workers and if there is enough then pull from it
@@ -76,7 +69,8 @@ public partial class Strategy_NonRecursive
                     if (AITestScene.Instance.TrackDebugAIInfo)
                         debuggerEntry = AIDebugger.rootEntry.AddEntry_SendWorkersToOwnedNode(fromNode, toNode, numSent, finalValue, Player.AI.debugOutput_ActionsTried++, 0);
 #endif
-                    BestAction.SetTo_SendWorkersToOwnedNode(fromNode, toNode, numSent, finalValue, debuggerEntry);
+                    if (finalValue > BestAction.Score)
+                        BestAction.SetTo_SendWorkersToOwnedNode(fromNode, toNode, numSent, finalValue, debuggerEntry);
                 }
             }
         }

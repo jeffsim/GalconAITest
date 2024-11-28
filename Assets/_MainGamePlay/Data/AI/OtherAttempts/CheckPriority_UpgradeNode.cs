@@ -2,14 +2,6 @@ using UnityEngine;
 
 public partial class Strategy_NonRecursive
 {
-    const float excessWorkersScalingFactor = 1f;
-    const float excessWorkersScalingFactor2 = 1f;
-    const float nearbyEnemiesScalingFactor = 1f;
-
-    // Define the normalization parameters for Upgrade Node action
-    const float upgradeNodeMinScore = 1f;
-    const float upgradeNodeMaxScore = 4f; // Global max score across all actions
-
     private void CheckPriority_UpgradeNode()
     {
         int playerNodesCount = PlayerNodes.Count;
@@ -21,6 +13,9 @@ public partial class Strategy_NonRecursive
             // can't upgrade if < maxworkers
             if (node.NumWorkers < node.MaxWorkers)
                 continue;
+
+            // if here then have >= max workers.  At least minimum desire to upgrade (if nothing better to do)
+            rawValue = upgradeNodeMinScore * 1.1f;
 
             // 1. Calculate base value based on excessive workers
             int numExcessiveWorkers = node.NumWorkers - node.MaxWorkers;
@@ -46,7 +41,7 @@ public partial class Strategy_NonRecursive
             {
                 rawValue += 35; // TODO
             }
-            
+
             // if num workers is far from max, increase value
             // if (node.NumWorkers < node.MaxWorkers * 0.25f)
             // {
@@ -69,17 +64,17 @@ public partial class Strategy_NonRecursive
             float finalValue = normalizedValue * personalityMultiplier_UpgradeNode;
 
             // 5. Update Best Action if this action is better than the current best action
-            if (finalValue > BestAction.Score)
+            //      if (finalValue > BestAction.Score)
             {
                 AIDebuggerEntryData debuggerEntry = null;
 #if DEBUG
                 if (AITestScene.Instance.TrackDebugAIInfo)
                 {
-                    debuggerEntry = AIDebugger.rootEntry.AddEntry_UpgradeBuilding(
-                                                        node, finalValue, Player.AI.debugOutput_ActionsTried++, 0);
+                    debuggerEntry = AIDebugger.rootEntry.AddEntry_UpgradeBuilding(node, finalValue, Player.AI.debugOutput_ActionsTried++, 0);
                 }
 #endif
-                BestAction.SetTo_UpgradeBuilding(node, finalValue, debuggerEntry);
+                if (finalValue > BestAction.Score)
+                    BestAction.SetTo_UpgradeBuilding(node, finalValue, debuggerEntry);
             }
         }
     }

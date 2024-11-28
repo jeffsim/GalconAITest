@@ -11,7 +11,7 @@ public partial class PlayerAI
 
     PlayerData player;
     AI_TownState aiTownState;
-    int minWorkersInNodeBeforeConsideringSendingAnyOut = 8;
+    int minWorkersInNodeBeforeConsideringSendingAnyOut = 6;
     int maxDepth;
     public int debugOutput_ActionsTried;
 
