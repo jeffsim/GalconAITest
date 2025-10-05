@@ -12,16 +12,16 @@ public class CameraDraggerEditor : Editor
 
         if (GUILayout.Button("Save Camera Position"))
         {
-            // This uses the GameSettingsDefn to set the camera position
-            var gameSettingsDefn = GameDefns.Instance.GameSettingsDefns["default"];
-            if (gameSettingsDefn == null)
+            // Save the position to the active TownDefn
+            var townDefn = AITestScene.Instance != null ? AITestScene.Instance.TestTownDefn : null;
+            if (townDefn == null)
             {
-                Debug.LogError("GameSettingsDefn with id 'default' not found in Resources/Defns/GameSettings.  Please create one");
+                Debug.LogError("No active TownDefn found on AITestScene.Instance.TestTownDefn");
                 return;
             }
-            gameSettingsDefn.Debug_StartingCameraPosition = script.transform.position;
-            EditorUtility.SetDirty(gameSettingsDefn);
-            Debug.Log("Camera position saved in Resources/Defns/GameSettings (default)");
+            townDefn.Debug_StartingCameraPosition = script.transform.position;
+            EditorUtility.SetDirty(townDefn);
+            Debug.Log("Camera position saved to current TownDefn");
         }
     }
 }

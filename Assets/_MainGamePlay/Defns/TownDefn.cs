@@ -25,6 +25,7 @@ public class NodeConnectionDefn
 [CreateAssetMenu()]
 public class TownDefn : BaseDefn
 {
+    public Vector3 Debug_StartingCameraPosition = new(-8.8f, 12.5f, -8f);
     public List<NodeDefn> Nodes = new();
     public List<NodeConnectionDefn> NodeConnections = new();
 }

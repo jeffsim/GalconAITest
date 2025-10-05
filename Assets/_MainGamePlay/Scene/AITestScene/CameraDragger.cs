@@ -12,10 +12,12 @@ public class CameraDragger : MonoBehaviour
 
     void Start()
     {
-        // This uses the GameSettingsDefn to set the camera position
-        transform.position = GameDefns.Instance.GameSettingsDefns["default"].Debug_StartingCameraPosition;
+        // Set the camera position from the active TownDefn instead of GameSettings
+        var townDefn = AITestScene.Instance != null ? AITestScene.Instance.TestTownDefn : null;
+        if (townDefn != null)
+            transform.position = townDefn.Debug_StartingCameraPosition;
         
-        // The value is set using the CameraPannerEditor class and stored in the GameSettingsDefn ScriptableObject in the Resources/Defns folder
+        // The value is set using the CameraDraggerEditor class and stored in the TownDefn ScriptableObject
     }
 
     void Update()

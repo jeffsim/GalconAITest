@@ -23,6 +23,7 @@ MonoBehaviour:
     SerializationNodes: []
   Id: redmond
   IsEnabled: 1
+  Debug_StartingCameraPosition: {x: 527.88763, y: 18.361431, z: 423.88873}
   Nodes:
   - NodeId: 0
     Enabled: 0

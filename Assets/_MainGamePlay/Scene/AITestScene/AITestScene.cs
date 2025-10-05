@@ -6,7 +6,7 @@ using UnityEngine;
 public class AITestScene : MonoBehaviour
 {
     [NonSerialized] public TownData Town;
-    [HideInInspector] public TownDefn TestTownDefn;
+    [SerializeReference] public TownDefn TestTownDefn;
 
     [FoldoutGroup("Nodes", false)] public NodeGO NodePrefab;
     [HideInInspector][FoldoutGroup("Nodes", false)] public List<NodeGO> Nodes = new();
