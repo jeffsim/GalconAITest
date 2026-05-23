@@ -13,4 +13,10 @@ public class PlayerAIDefn : BaseDefn
     [Range(0f, 2f)] public float EconomicExpansionWeight = 1f;
     [Range(0f, 2f)] public float DefenseWeight = 1f;
     [Range(0f, 2f)] public float AggressivenessWeight = 1f;
+
+    [Header("Realtime Decision")]
+    [Tooltip("Average seconds between this AI's decisions in realtime mode.")]
+    [Range(0.05f, 10f)] public float DecisionIntervalSeconds = 1.0f;
+    [Tooltip("Uniform +/- variance applied to DecisionIntervalSeconds each time the next decision is scheduled.")]
+    [Range(0f, 5f)] public float DecisionVarianceSeconds = 0.5f;
 }

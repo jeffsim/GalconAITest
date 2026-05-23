@@ -130,7 +130,15 @@ public class AI_NodeState
 
     public void Update()
     {
-        // Set properties that change
+        Update(null);
+    }
+
+    // viewerPlayer: when non-null (realtime mode AI search), the node mirror is adjusted from
+    // that player's perspective so in-flight workers and capture intents are visible to the
+    // AI. This is what suppresses the "send another 10 immediately because the enemy node
+    // still shows full strength" pathology.
+    public void Update(PlayerData viewerPlayer)
+    {
         if (RealNode.Building == null)
             ClearBuilding();
         else
@@ -142,10 +150,50 @@ public class AI_NodeState
             BuildingLevel = RealNode.Building.Level;
         }
 
+        OwnedBy = RealNode.OwnedBy;
         NumWorkers = RealNode.NumWorkers;
         MaxWorkers = RealNode.Building?.MaxWorkers ?? 0;
         WorkersGeneratedPerTurn = RealNode.Building?.WorkersGeneratedPerTurn ?? 0;
-        OwnedBy = RealNode.OwnedBy;
+
+        if (viewerPlayer != null)
+        {
+            // Capture intent: a neutral / empty node that one of my in-flight construct or
+            // capture groups is targeting should look "already mine" so AITask_ConstructBuilding
+            // and AITask_AttackToNode skip it and don't pile on duplicates.
+            if (OwnedBy == null && RealNode.PendingCaptureBy != null)
+            {
+                OwnedBy = RealNode.PendingCaptureBy;
+                NumWorkers = RealNode.GetIncomingFor(RealNode.PendingCaptureBy);
+                if (RealNode.PendingCaptureBy == viewerPlayer && RealNode.PendingConstructBuilding != null)
+                {
+                    // Make the would-be building visible so the AI's own search treats this
+                    // site as already serving that role and doesn't queue redundant work.
+                    HasBuilding = true;
+                    BuildingDefn = RealNode.PendingConstructBuilding;
+                    BuildingLevel = 1;
+                    MaxWorkers = 10;
+                    CanGoGatherResources = RealNode.PendingConstructBuilding.CanGatherResources;
+                    if (CanGoGatherResources)
+                        ResourceThisNodeCanGoGather = RealNode.PendingConstructBuilding.ResourceThisNodeCanGoGather.GoodType;
+                    CanGenerateWorkers = RealNode.PendingConstructBuilding.CanGenerateWorkers;
+                    if (CanGenerateWorkers)
+                        WorkerGenerated = RealNode.PendingConstructBuilding.GeneratableWorker;
+                }
+            }
+            else if (OwnedBy == viewerPlayer)
+            {
+                // Friendly node: my own incoming reinforcements add to perceived strength so I
+                // don't reinforce harder than necessary while help is already on the way.
+                NumWorkers += RealNode.GetIncomingFor(viewerPlayer);
+            }
+            else if (OwnedBy != null)
+            {
+                // Enemy node: my own incoming attackers reduce the defender count (1:1 trade)
+                // so I don't keep piling on after I've already committed enough to take it.
+                int incomingAttackers = RealNode.GetIncomingFor(viewerPlayer);
+                NumWorkers = Math.Max(0, NumWorkers - incomingAttackers);
+            }
+        }
     }
 
     internal int DistanceToClosestEnemyNode(PlayerData player)

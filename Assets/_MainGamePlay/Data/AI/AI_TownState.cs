@@ -78,8 +78,13 @@ public partial class AI_TownState
                     PlayerTownInventory[invItem.Key] += invItem.Value;
         }
 
+        // In realtime mode, project our own in-flight workers into the AI's view of the world
+        // so we don't pile on duplicate sends. Step mode keeps the legacy "snapshot only what's
+        // physically there" behavior (Realtime is detected by the scene flag).
+        bool realtime = AITestScene.Instance != null && AITestScene.Instance.Realtime;
+        var viewer = realtime ? player : null;
         for (int i = 0; i < NumNodes; i++)
-            Nodes[i].Update();
+            Nodes[i].Update(viewer);
     }
 
     internal int GetNumItem(GoodDefn good) => PlayerTownInventory[good.GoodType];

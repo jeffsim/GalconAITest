@@ -91,6 +91,12 @@ public partial class PlayerAI
 
     public List<AITask> Tasks = new();
 
+    // Realtime: world-time at which this AI is scheduled to make its next decision. The
+    // realtime loop in TownData fires Update on this player when WorldTime crosses this
+    // threshold, then ScheduleNextDecision rolls a new threshold using DecisionInterval +/-
+    // DecisionVariance from PlayerAIDefn. Negative sentinel forces an immediate first decision.
+    public float NextRealtimeDecisionTime = -1f;
+
     public PlayerAI(PlayerData playerData)
     {
         player = playerData;
@@ -110,6 +116,26 @@ public partial class PlayerAI
     public void InitializeStaticData(TownData townData)
     {
         aiTownState.InitializeStaticData(townData);
+    }
+
+    public void ScheduleNextRealtimeDecision(float currentWorldTime)
+    {
+        var defn = player.AIDefn;
+        float interval = defn != null ? defn.DecisionIntervalSeconds : 1f;
+        float variance = defn != null ? defn.DecisionVarianceSeconds : 0.5f;
+        float jitter = UnityEngine.Random.Range(-variance, variance);
+        // Floor at a small minimum so we don't accidentally schedule zero-or-negative deltas
+        // when variance >= interval (which would re-trigger every frame).
+        float delta = Mathf.Max(0.05f, interval + jitter);
+        NextRealtimeDecisionTime = currentWorldTime + delta;
+    }
+
+    // In realtime mode the world is constantly mutating outside of WorldRevision bumps (workers
+    // arriving, resources accumulating). The "skip search if revision unchanged" cache is unsafe
+    // there, so we force a fresh search whenever the realtime path drives Update.
+    internal void InvalidateDecisionCache()
+    {
+        lastSearchedWorldRevision = -1;
     }
 
     internal void Update(TownData townData)
