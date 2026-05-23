@@ -23,6 +23,13 @@ public class AIDebuggerEntryData
     public Dictionary<AI_NodeState, int> NumSentFromEachNode = new(10);
 
     public BuildingDefn BuildingDefn;
+
+    // Snapshot of fromNode.BuildingLevel at the moment the entry was created. Reading
+    // FromNode.BuildingLevel at display time is unsafe -- the live AI_NodeState's level
+    // is mutated and reverted across the search (UpgradeBuilding++ then Undo_UpgradeBuilding
+    // restores), so by the time the debugger panel renders, the level on the node could be
+    // anything. Captured here once and frozen.
+    public int BuildingLevelAtAction;
 #if DEBUG
     public float Debug_ActionScoreBeforeSubactions;
 #endif
@@ -57,7 +64,7 @@ public class AIDebuggerEntryData
         curPoolIndex = 0;
     }
 
-    internal static AIDebuggerEntryData GetFromPool(AIActionType actionType, AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float finalActionScore, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
+    internal static AIDebuggerEntryData GetFromPool(AIActionType actionType, AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, int buildingLevelAtAction, float finalActionScore, int actionNum, int curDepth, AIDebuggerEntryData curEntry)
     {
         if (Pool == null)
             InitializePool();
@@ -80,6 +87,7 @@ public class AIDebuggerEntryData
         entry.NumSent = numSent;
         entry.AllChildEntriesCount = 0;
         entry.BuildingDefn = buildingDefn;
+        entry.BuildingLevelAtAction = buildingLevelAtAction;
         entry.FinalActionScore = finalActionScore;
         entry.ActionNumber = actionNum;
         entry.BestNextAction = null;
@@ -121,6 +129,7 @@ public class AIDebuggerEntryData
             entry.NumSentFromEachNode[kvp.Key] = kvp.Value;
         entry.AllChildEntriesCount = 0;
         entry.BuildingDefn = null;
+        entry.BuildingLevelAtAction = 0;
         entry.FinalActionScore = finalActionScore;
         entry.ActionNumber = actionNum;
         entry.BestNextAction = null;
@@ -145,6 +154,7 @@ public class AIDebuggerEntryData
                         toNode,
                         numSent,
                         buildingDefn,
+                        0,
                         finalActionScore,
                         actionNum,
                         curDepth,
@@ -161,6 +171,7 @@ public class AIDebuggerEntryData
                         toNode,
                         numSent,
                         null,
+                        0,
                         finalActionScore,
                         actionNum,
                         curDepth,
@@ -190,12 +201,18 @@ public class AIDebuggerEntryData
     internal AIDebuggerEntryData AddEntry_UpgradeBuilding(AI_NodeState fromNode, float finalActionScore, int actionNum, int curDepth)
     {
         if (!AIDebugger.ShouldTrackEntries) return null;
+        // Snapshot BuildingDefn and BuildingLevel NOW. The live AI_NodeState gets undone
+        // (Undo_UpgradeBuilding restores level; Undo_SendWorkersToConstructBuildingInEmptyNode
+        // can null out BuildingDefn) before the debugger panel ever reads them. Without the
+        // snapshot, InformationString reads whatever a later sibling search left behind ->
+        // wrong level, or NRE on a now-cleared BuildingDefn.
         var newEntry = GetFromPool(
                          AIActionType.UpgradeBuilding,
                         fromNode,
                         null,
                         0,
-                        null,
+                        fromNode.BuildingDefn,
+                        fromNode.BuildingLevel,
                         finalActionScore,
                         actionNum,
                         curDepth,
@@ -224,7 +241,11 @@ public class AIDebuggerEntryData
         {
             case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
-            case AIActionType.UpgradeBuilding: return "Upgrade " + FromNode.NodeId + " (" + FromNode.BuildingDefn.Id + ") to " + FromNode.BuildingLevel;
+            case AIActionType.UpgradeBuilding:
+                // Use snapshotted values; FromNode.BuildingDefn / .BuildingLevel are mutated
+                // by sibling search branches and may be null/wrong by the time this renders.
+                string defnId = BuildingDefn != null ? BuildingDefn.Id : "?";
+                return "Upgrade " + FromNode.NodeId + " (" + defnId + ") to " + BuildingLevelAtAction;
             case AIActionType.AttackToNode:
                 var numSent = NumSentFromEachNode.Values.Sum();
                 var sentFrom = string.Join(",", NumSentFromEachNode.Select(n => n.Key.NodeId));

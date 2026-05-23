@@ -38,20 +38,33 @@ public class AITask_AttackToNode : AITask
 
     public override float PreviewHeuristic(AI_NodeState toNode)
     {
-        if (toNode.OwnedBy == null || toNode.OwnedBy == player) return 0f;
+        // Neutral nodes (OwnedBy == null) are valid expansion targets: AttackFromNode handles
+        // them correctly (toNode.NumWorkers <= 0 -> capture). Without this, an Expansion AI on
+        // a map with neutrals can't move at all -- Construct requires resources Green doesn't
+        // have early game, and there is no other task wired to fulfill CaptureNode goals.
+        if (toNode.OwnedBy == player) return 0f;
 
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
         if (!GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers, out int totalWillingToSend))
             return 0f;
 
-        return AI_ActionHeuristics.GetAttackHeuristic(toNode, totalWillingToSend);
+        float h = AI_ActionHeuristics.GetAttackHeuristic(aiTownState, toNode, totalWillingToSend);
+        if (h <= 0f) return 0f;
+
+        // Apply personality so Phase 1 candidate ranking matches actual scoring. Aggressive AIs
+        // (e.g. AggressivenessWeight=2) should see attack candidates rank above their own
+        // buttresses; pacifist AIs (Weight=0) should see attacks drop out of top-K entirely.
+        // Neutral targets use Expansion personality (this is grabbing unclaimed ground).
+        var actionType = AI_ActionHeuristics.ResolveCaptureActionType(toNode);
+        return h * AI_ActionHeuristics.GetPersonalityMultiplier(player, actionType);
     }
 
     override public bool TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
     {
         bestAction = null;
 
-        if (toNode.OwnedBy == null || toNode.OwnedBy == player) return false;
+        // Neutral targets allowed (see PreviewHeuristic comment). Only friendlies are excluded.
+        if (toNode.OwnedBy == player) return false;
 
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
@@ -59,10 +72,15 @@ public class AITask_AttackToNode : AITask
         bool haveEnoughWorkersToAttack = GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers, out totalWillingToSend);
         if (!haveEnoughWorkersToAttack) return false;
 
-        float heuristicBonus = AI_ActionHeuristics.GetAttackHeuristic(toNode, totalWillingToSend);
+        float heuristicBonus = AI_ActionHeuristics.GetAttackHeuristic(aiTownState, toNode, totalWillingToSend);
         if (heuristicBonus <= 0f) return false;
 
-        if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Attack, bestScoreAmongPeerActions))
+        // Capture-against-neutral is expansion-personality, capture-against-enemy is
+        // aggression-personality. Determined once here and used for both pruning and scoring
+        // so they stay consistent.
+        var actionType = AI_ActionHeuristics.ResolveCaptureActionType(toNode);
+
+        if (ShouldPruneByHeuristic(heuristicBonus, actionType, bestScoreAmongPeerActions))
             return false;
 
         bestAction = player.AI.GetAIAction();
@@ -98,7 +116,7 @@ public class AITask_AttackToNode : AITask
         var debuggerEntry = aiDebuggerParentEntry?.AddEntry_AttackToNode(attackFromNodes, toNode, attackResults, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
         var actionScore = GetActionScore(curDepth, debuggerEntry);
-        actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Attack);
+        actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, actionType);
         if (actionScore > bestAction.Score)
             bestAction.SetTo_AttackToNode(attackFromNodes, toNode, attackResults, actionScore, debuggerEntry);
 
@@ -141,7 +159,11 @@ public class AITask_AttackToNode : AITask
                 foreach (var neighbor in currentNode.NeighborNodes)
                     if (neighbor.OwnedBy == player && !visited.Contains(neighbor))
                     {
-                        if (AI_ActionHeuristics.GetWorkersWillingToSend(neighbor, minWorkersInNodeBeforeConsideringSendingAnyOut) > 0)
+                        // The outer while-loop's MAX_NEIGHBORS bound is checked once per level,
+                        // not per inner iteration -- a single dense level can blow past it and
+                        // OOB into nDeepNeighbors. Keep the inner write strictly bounded.
+                        if (index < MAX_NEIGHBORS_TO_CHECK
+                            && AI_ActionHeuristics.GetWorkersWillingToSend(neighbor, minWorkersInNodeBeforeConsideringSendingAnyOut) > 0)
                             nDeepNeighbors[index++] = neighbor;
                         visited.Add(neighbor);
                         queue.Enqueue(neighbor);

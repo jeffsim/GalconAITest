@@ -25,6 +25,6 @@ MonoBehaviour:
   IsEnabled: 1
   Name: Player G
   Color: {r: 0, g: 1, b: 0, a: 1}
-  ExpansionWeight: 0.09
-  DefenseWeight: 1.78
-  AggressivenessWeight: 0
+  ExpansionWeight: 1.13
+  DefenseWeight: 1.1
+  AggressivenessWeight: 0.67

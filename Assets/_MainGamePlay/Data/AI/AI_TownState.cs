@@ -12,6 +12,18 @@ public partial class AI_TownState
 
     public Dictionary<GoodType, int> PlayerTownInventory = new();
 
+    // Goal-driven resource demand vector: how much of each GoodType the player wants on hand
+    // to fulfill its currently-active strategic goals. Derived from ActiveGoals once per
+    // real-game Update by AI_ActionHeuristics.UpdateResourceDemand. Read by GetBuildHeuristic
+    // (favor gatherers for resources we are short on) and GetAttackHeuristic (favor capturing
+    // resource sources we need).
+    public Dictionary<GoodType, int> ResourceDemand = new Dictionary<GoodType, int>();
+
+    // Strategic goals the player is currently pursuing -- e.g. "capture node #25", "build
+    // a Barracks". Rebuilt once per real-game Update by AIGoalEnumerator and frozen for the
+    // duration of the recursive search. The resource demand vector is derived from this list.
+    public List<AIGoal> ActiveGoals = new List<AIGoal>();
+
     public AI_TownState(PlayerData player)
     {
         this.player = player;

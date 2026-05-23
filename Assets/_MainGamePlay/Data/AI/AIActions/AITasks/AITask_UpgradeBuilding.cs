@@ -10,7 +10,12 @@ public class AITask_UpgradeBuilding : AITask
         var buildingInNode = fromNode.BuildingDefn;
         if (buildingInNode == null || !buildingInNode.CanBeUpgraded) return 0f;
         if (fromNode.NumWorkers < fromNode.MaxWorkers) return 0f;
-        return AI_ActionHeuristics.GetUpgradeHeuristic(fromNode);
+        float h = AI_ActionHeuristics.GetUpgradeHeuristic(fromNode);
+        if (h <= 0f) return 0f;
+
+        // Apply personality so Phase 1 candidate ranking matches actual scoring; Upgrade is
+        // expansion-aligned, so a low-ExpansionWeight AI should not crowd top-K with upgrades.
+        return h * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Upgrade);
     }
 
     override public bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)

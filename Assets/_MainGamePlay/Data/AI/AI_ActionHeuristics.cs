@@ -34,7 +34,15 @@ public static class AI_ActionHeuristics
     const float attackNodeMinScore = 20f;
     const float attackNodeMaxScore = 40f;
 
-    const int numGatherableResourceDesired = 20;
+    // Fallback "I always want some" floor when ResourceDemand has no entry for a GoodType
+    // (e.g. early game when no building requires that resource). Keeps gatherers from going
+    // to zero appeal in pathological maps.
+    const int resourceDemandFloor = 5;
+
+    // Each unit of resource shortage on an enemy node we can capture adds this much raw
+    // attack score. With min/max attack score = 20/40, a shortage of ~2 already maxes out
+    // the bonus, so this is intentionally aggressive on critical-resource captures.
+    const float attackResourceShortageScalingFactor = 5f;
 
     public static float GetPersonalityMultiplier(PlayerData player, AIHeuristicActionType actionType)
     {
@@ -51,6 +59,16 @@ public static class AI_ActionHeuristics
         };
     }
 
+    // Capturing a neutral node is mechanically an Attack (AttackFromNode walks workers in and
+    // claims the empty target) but strategically it's expansion -- "I'm grabbing unclaimed
+    // ground", not "I'm fighting an enemy". Without this split, a peaceful expansionist AI
+    // (agg=0, exp=2) could never grab neutrals (heuristic * agg = 0) even though grabbing
+    // neutrals is exactly the move its personality wants.
+    public static AIHeuristicActionType ResolveCaptureActionType(AI_NodeState toNode)
+    {
+        return toNode.OwnedBy == null ? AIHeuristicActionType.Build : AIHeuristicActionType.Attack;
+    }
+
     public static float ApplyHeuristicAndPersonality(float simulationScore, float heuristicBonus, PlayerData player, AIHeuristicActionType actionType)
     {
         // Personality now scales the full final score, not just the heuristic bonus. With the
@@ -61,6 +79,101 @@ public static class AI_ActionHeuristics
         // expects.
         float personality = GetPersonalityMultiplier(player, actionType);
         return (simulationScore + heuristicBonus) * personality;
+    }
+
+    // Goal-driven resource demand: every active strategic goal expands into the buildings
+    // that would help fulfill it; each such building's construction requirements contribute
+    // to demand, scaled by the goal's urgency (Value / HorizonTurns).
+    //
+    // This replaces the previous "sum every buildable building's reqs unconditionally"
+    // formulation, which couldn't differentiate between an aggressive AI (wants Barracks ->
+    // wants wood) and a peaceful one (doesn't care about Barracks). Now the same map can
+    // produce different demand vectors for different personalities because the goal list
+    // they generate is different.
+    //
+    // Capture goals collectively share a single Barracks contribution (one Barracks unlocks
+    // all of them) rather than multiplying demand by goal count. EconomicTier goals each
+    // contribute their own building's reqs, since each building is a distinct outcome.
+    public static void UpdateResourceDemand(
+        AI_TownState town,
+        BuildingDefn[] buildableBuildingDefns,
+        int numBuildableBuildingDefns,
+        List<AIGoal> activeGoals)
+    {
+        var demand = town.ResourceDemand;
+        demand.Clear();
+
+        float totalCaptureUrgency = 0f;
+        for (int i = 0; i < activeGoals.Count; i++)
+        {
+            var goal = activeGoals[i];
+            float urgency = goal.Value / System.Math.Max(1, goal.HorizonTurns);
+
+            switch (goal.Type)
+            {
+                case AIGoalType.EconomicTier:
+                    AddBuildingReqsToDemand(demand, goal.TargetBuilding, urgency);
+                    break;
+
+                case AIGoalType.CaptureNode:
+                    // Aggregate; folded into a single Barracks contribution below.
+                    totalCaptureUrgency += urgency;
+                    break;
+
+                case AIGoalType.DefendFrontier:
+                    // v1: defense doesn't drive resource demand directly. Buttress (the
+                    // recursive task) handles it via worker shuffling. v2 could add demand
+                    // for defensive buildings.
+                    break;
+            }
+        }
+
+        if (totalCaptureUrgency > 0f)
+        {
+            var barracksDefn = FindBuildingDefnOfType(buildableBuildingDefns, numBuildableBuildingDefns, BuildingType.Barracks);
+            if (barracksDefn != null)
+                AddBuildingReqsToDemand(demand, barracksDefn, totalCaptureUrgency);
+        }
+    }
+
+    static void AddBuildingReqsToDemand(Dictionary<GoodType, int> demand, BuildingDefn bd, float urgency)
+    {
+        if (bd == null || bd.ConstructionRequirements == null) return;
+
+        for (int r = 0; r < bd.ConstructionRequirements.Count; r++)
+        {
+            var req = bd.ConstructionRequirements[r];
+            var goodType = req.Good.GoodType;
+
+            // Always at least the literal cost (so even minimum-urgency goals still register
+            // their building's construction footprint), scaled up linearly with urgency.
+            // The 0.1 factor keeps urgency~10 producing roughly 1x req.Amount of extra demand.
+            int contribution = (int)(req.Amount * urgency * 0.1f);
+            if (contribution < req.Amount) contribution = req.Amount;
+
+            demand.TryGetValue(goodType, out int prev);
+            demand[goodType] = prev + contribution;
+        }
+    }
+
+    static BuildingDefn FindBuildingDefnOfType(BuildingDefn[] defns, int count, BuildingType type)
+    {
+        for (int i = 0; i < count; i++)
+            if (defns[i].BuildingType == type) return defns[i];
+        return null;
+    }
+
+    // Shortage of a resource = max(0, demand - currentlyOwned). Falls back to a small floor
+    // when nothing in the buildable catalog needs the resource so gatherers still register
+    // some appeal.
+    public static int GetResourceShortage(AI_TownState town, GoodType goodType)
+    {
+        if (goodType == GoodType.Unset) return 0;
+        int wanted = town.ResourceDemand.TryGetValue(goodType, out int d) ? d : resourceDemandFloor;
+        if (wanted < resourceDemandFloor) wanted = resourceDemandFloor;
+        int owned = town.PlayerTownInventory.TryGetValue(goodType, out int o) ? o : 0;
+        int shortage = wanted - owned;
+        return shortage < 0 ? 0 : shortage;
     }
 
     public static void UpdateTerritoryDetails(AI_TownState town, PlayerData player)
@@ -135,11 +248,11 @@ public static class AI_ActionHeuristics
                 rawValue += Mathf.Pow(numExcessiveWorkers, 2) * excessWorkersScalingFactor2;
         }
 
-        if (node.NumEnemiesInNeighborNodes > 0)
-        {
-            float delta = node.NumEnemiesInNeighborNodes - node.NumWorkers;
-            rawValue -= Mathf.Pow(delta, 2) * nearbyEnemiesScalingFactor;
-        }
+        // Only penalize upgrade when we are ACTUALLY outnumbered (signed delta squared previously
+        // discounted upgrades for over-defended nodes too, which it shouldn't).
+        int outnumberedBy = node.NumEnemiesInNeighborNodes - node.NumWorkers;
+        if (outnumberedBy > 0)
+            rawValue -= outnumberedBy * outnumberedBy * nearbyEnemiesScalingFactor;
         if (node.IsOnTerritoryEdge && node.NumWorkers < node.MaxWorkers * 1.5f && node.NumEnemiesInNeighborNodes > 0)
             rawValue += 35;
 
@@ -152,19 +265,30 @@ public static class AI_ActionHeuristics
     {
         float rawValue = 0f;
 
-        if (toNode.NumEnemiesInNeighborNodes > 0)
-        {
-            float delta = toNode.NumEnemiesInNeighborNodes - toNode.NumWorkers;
-            rawValue += Mathf.Pow(delta, 2) * nearbyEnemiesScalingFactor;
-        }
+        // Only reward buttressing when we are ACTUALLY outnumbered. The previous formulation
+        // squared the signed delta, so an over-defended node (e.g. 220 workers vs 60 enemies,
+        // delta = -160) produced the same huge bonus as a genuinely besieged one (delta = +160).
+        // That meant a dominant player with many over-defended frontiers generated a wall of
+        // false-positive Buttress candidates that crowded all real attacks out of Phase 1's top-K
+        // and the AI sat on top of an enormous economy doing nothing. Match the DefendFrontier
+        // goal enumerator's clamping (deficit = max(0, enemies - ours)) here.
+        int outnumberedBy = toNode.NumEnemiesInNeighborNodes - toNode.NumWorkers;
+        if (outnumberedBy > 0)
+            rawValue += outnumberedBy * outnumberedBy * nearbyEnemiesScalingFactor;
 
         if (toNode.IsOnTerritoryEdge)
             rawValue += territoryEdgeScalingFactor;
 
-        if (toNode.NumWorkers < toNode.MaxWorkers / 2)
+        // Reinforce understaffed nodes ONLY when there is something to defend against. An
+        // interior Woodcutter at 18/40 doesn't need workers shipped to it (gathering is
+        // per-tick, not worker-count-dependent). Without this gate, a dominant player ends
+        // up with a pile of phantom buttress candidates against its own peaceful interior
+        // and never reaches Phase 2 attack candidates.
+        if (toNode.NumWorkers < toNode.MaxWorkers / 2
+            && (toNode.IsOnTerritoryEdge || toNode.NumEnemiesInNeighborNodes > 0))
         {
             float workersDeficit = toNode.MaxWorkers - toNode.NumWorkers;
-            rawValue += Mathf.Pow(workersDeficit, 2) * insufficientWorkersScalingFactor;
+            rawValue += workersDeficit * workersDeficit * insufficientWorkersScalingFactor;
         }
 
         if (rawValue < buttressNodeMinScore) return 0f;
@@ -187,9 +311,13 @@ public static class AI_ActionHeuristics
         }
         else if (buildingDefn.CanGatherResources)
         {
+            // Goal-driven: appeal of a gatherer is proportional to how short we are on its
+            // produced resource relative to what the buildable catalog demands. Replaces the
+            // previous constant target of 20-of-everything which had no relationship to what
+            // the player was actually trying to build.
             var gatherableResource = buildingDefn.ResourceThisNodeCanGoGather.GoodType;
-            int numGatherableResourceOwned = town.PlayerTownInventory[gatherableResource];
-            rawValue += buildingResourceScalingFactor * (numGatherableResourceDesired - numGatherableResourceOwned);
+            int shortage = GetResourceShortage(town, gatherableResource);
+            rawValue += buildingResourceScalingFactor * shortage;
         }
         else
         {
@@ -201,7 +329,7 @@ public static class AI_ActionHeuristics
         return normalizedValue * HeuristicScoreScale;
     }
 
-    public static float GetAttackHeuristic(AI_NodeState enemyNode, int totalWorkersWillingToSend)
+    public static float GetAttackHeuristic(AI_TownState town, AI_NodeState enemyNode, int totalWorkersWillingToSend)
     {
         float rawValue = attackNodeMaxScore / 2f;
 
@@ -214,6 +342,23 @@ public static class AI_ActionHeuristics
 
         if (enemyNode.HasBuilding)
             rawValue += 5f;
+
+        // Resource-aware bonus: if the target node either gathers a resource (e.g. enemy
+        // Woodcutter) or *is* a resource source (e.g. neutral/enemy Forest), and we are
+        // short on that resource relative to what the buildable catalog demands, score the
+        // capture much more highly. This is what turns "capture the forest because I need
+        // wood for a Barracks" from accidental into intentional.
+        GoodType targetResource = GoodType.Unset;
+        if (enemyNode.CanGoGatherResources)
+            targetResource = enemyNode.ResourceThisNodeCanGoGather;
+        else if (enemyNode.CanBeGatheredFrom)
+            targetResource = enemyNode.ResourceGatheredFromThisNode;
+
+        if (targetResource != GoodType.Unset)
+        {
+            int shortage = GetResourceShortage(town, targetResource);
+            rawValue += shortage * attackResourceShortageScalingFactor;
+        }
 
         float clampedRawValue = Mathf.Clamp(rawValue, attackNodeMinScore, attackNodeMaxScore);
         float normalizedValue = (clampedRawValue - attackNodeMinScore) / (attackNodeMaxScore - attackNodeMinScore);

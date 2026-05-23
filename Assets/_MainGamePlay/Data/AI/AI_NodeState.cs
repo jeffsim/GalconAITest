@@ -41,7 +41,30 @@ public class AI_NodeState
     public bool CanGenerateWorkers;
     public WorkerDefn WorkerGenerated;
 
-    public void ClearBuilding() => HasBuilding = false;
+    // Fully reset all building-derived state. The previous "HasBuilding = false" alone left
+    // BuildingDefn / MaxWorkers / BuildingLevel / CanGoGatherResources / CanGenerateWorkers
+    // / WorkerGenerated polluted with whatever was last set via SetBuilding / SetResourceNode.
+    // That pollution mattered in two paths:
+    //   - Undo_SendWorkersToConstructBuildingInEmptyNode calls this after undoing a hypothetical
+    //     Construct, leaving the AI node looking like it still had the would-be building.
+    //   - Update() (per real-game Update) calls this when RealNode.Building is null, so a
+    //     captured neutral whose AI mirror had been polluted earlier in the search would still
+    //     read BuildingDefn != null next turn -- making AITask_UpgradeBuilding fire on it and
+    //     handing TownData.Debug_WorldTurn a real node with Building == null (NRE).
+    public void ClearBuilding()
+    {
+        HasBuilding = false;
+        BuildingDefn = null;
+        BuildingLevel = 0;
+        MaxWorkers = 0;
+        TurnBuildingWasBuilt = 0;
+        CanGoGatherResources = false;
+        ResourceThisNodeCanGoGather = GoodType.Unset;
+        CanGenerateWorkers = false;
+        WorkerGenerated = null;
+        // CanBeGatheredFrom / ResourceGatheredFromThisNode describe the underlying terrain
+        // (Forest / mineral deposit) and are set once at startup; do not reset them here.
+    }
 
     // public BuildingDefn BuildingInNode;
     public void SetResourceNode(BuildingDefn buildingDefn, int turnNumber)

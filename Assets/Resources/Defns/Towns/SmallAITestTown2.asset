@@ -22,34 +22,62 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   Id: 
+  IsEnabled: 1
+  Debug_StartingCameraPosition: {x: -8.8, y: 12.5, z: -8}
   Nodes:
   - NodeId: 0
+    Enabled: 1
     WorldLoc: {x: -4, y: 0, z: -4}
     OwnedByPlayerId: 2
     StartingBuilding: {fileID: 11400000, guid: 09725fa57aef24c9f97f9df6418b8d93, type: 2}
     NumStartingWorkers: 64
+    StartingInventory:
+      exported_Keys:
+      - {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d, type: 2}
+      - {fileID: 11400000, guid: 5eb686fd1272dc74c8876ccbc130c9da, type: 2}
+      exported_Values: 0400000004000000
   - NodeId: 1
+    Enabled: 1
     WorldLoc: {x: 0, y: 0, z: -3}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
   - NodeId: 2
+    Enabled: 1
     WorldLoc: {x: 0, y: 0, z: 0}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 11400000, guid: 29ff838ce556c4f3f919e0ffbc03bc59, type: 2}
     NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
   - NodeId: 3
+    Enabled: 1
     WorldLoc: {x: -5, y: 0, z: 0}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
   - NodeId: 4
+    Enabled: 1
     WorldLoc: {x: -2.5, y: 0, z: 2.5}
     OwnedByPlayerId: 0
     StartingBuilding: {fileID: 0}
     NumStartingWorkers: 0
+    StartingInventory:
+      exported_Keys: []
+      exported_Values: 
   NodeConnections:
   - Nodes: {x: 1, y: 0}
+    IsBidirectional: 1
   - Nodes: {x: 0, y: 3}
+    IsBidirectional: 1
   - Nodes: {x: 1, y: 2}
+    IsBidirectional: 1
   - Nodes: {x: 3, y: 4}
+    IsBidirectional: 1

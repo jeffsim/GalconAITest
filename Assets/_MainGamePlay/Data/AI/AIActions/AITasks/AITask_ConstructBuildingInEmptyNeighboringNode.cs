@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class AITask_ConstructBuilding : AITask
@@ -8,8 +9,18 @@ public class AITask_ConstructBuilding : AITask
     // reduction we can apply without lowering MaxAIDepth.
     const int MaxBuildingsPerSite = 2;
 
+    // Scratch buffers for SelectTopBuildingsForSite. THESE GET STOMPED by recursion: when
+    // TryTask iterates these, GetActionScore recurses, and PreviewHeuristic / a deeper TryTask
+    // call SelectTopBuildingsForSite again, overwriting these arrays. Always snapshot to a
+    // per-depth buffer (snapshotBuildingsPerDepth) before the simulate+recurse loop so the
+    // outer iteration reads stable values.
     BuildingDefn[] topBuildings = new BuildingDefn[MaxBuildingsPerSite];
     float[] topHeuristics = new float[MaxBuildingsPerSite];
+
+    // Per-depth snapshot of top-K (stable across recursion). One slot per recursion depth
+    // because the search is depth-first and each ply needs its own captured top-K.
+    BuildingDefn[][] snapshotBuildingsPerDepth;
+    float[][] snapshotHeuristicsPerDepth;
 
     public AITask_ConstructBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
@@ -30,7 +41,11 @@ public class AITask_ConstructBuilding : AITask
             if (topCount > 0 && topHeuristics[0] > bestSiteScore)
                 bestSiteScore = topHeuristics[0];
         }
-        return bestSiteScore;
+        if (bestSiteScore <= 0f) return 0f;
+
+        // Apply personality so Phase 1 candidate ranking matches actual scoring; Construct is
+        // expansion-aligned, so a low-ExpansionWeight AI does not crowd top-K with builds.
+        return bestSiteScore * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Build);
     }
 
     override public bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
@@ -53,10 +68,22 @@ public class AITask_ConstructBuilding : AITask
             int topCount = SelectTopBuildingsForSite(toNode);
             if (topCount == 0) continue;
 
+            // Snapshot to per-depth buffer; recursion via GetActionScore below re-enters this
+            // task instance and stomps the topBuildings/topHeuristics arrays.
+            EnsureSnapshotCapacity(curDepth);
+            var snapBuildings = snapshotBuildingsPerDepth[curDepth];
+            var snapHeuristics = snapshotHeuristicsPerDepth[curDepth];
+            for (int s = 0; s < topCount; s++)
+            {
+                snapBuildings[s] = topBuildings[s];
+                snapHeuristics[s] = topHeuristics[s];
+            }
+
             for (int t = 0; t < topCount; t++)
             {
-                var buildingDefn = topBuildings[t];
-                float heuristicBonus = topHeuristics[t];
+                var buildingDefn = snapBuildings[t];
+                float heuristicBonus = snapHeuristics[t];
+                if (buildingDefn == null) continue;
 
                 // Branch-and-bound: skip simulate+recurse when the heuristic-only optimistic
                 // score for this candidate cannot beat what a peer action has already produced.
@@ -126,5 +153,28 @@ public class AITask_ConstructBuilding : AITask
             if (filled < MaxBuildingsPerSite) filled++;
         }
         return filled;
+    }
+
+    void EnsureSnapshotCapacity(int curDepth)
+    {
+        int requiredLen = curDepth + 1;
+        int currentLen = snapshotBuildingsPerDepth?.Length ?? 0;
+        if (currentLen >= requiredLen) return;
+
+        int newLen = Math.Max(requiredLen, 8);
+        var newB = new BuildingDefn[newLen][];
+        var newH = new float[newLen][];
+        if (snapshotBuildingsPerDepth != null)
+        {
+            Array.Copy(snapshotBuildingsPerDepth, newB, currentLen);
+            Array.Copy(snapshotHeuristicsPerDepth, newH, currentLen);
+        }
+        for (int i = 0; i < newLen; i++)
+        {
+            if (newB[i] == null) newB[i] = new BuildingDefn[MaxBuildingsPerSite];
+            if (newH[i] == null) newH[i] = new float[MaxBuildingsPerSite];
+        }
+        snapshotBuildingsPerDepth = newB;
+        snapshotHeuristicsPerDepth = newH;
     }
 }

@@ -112,8 +112,57 @@ public partial class AITestScene
                 sb.AppendLine($"    actionsTried: {player.AI.debugOutput_ActionsTried}");
 #endif
             AppendPlannedActionPath(sb, player);
+            AppendGoals(sb, player);
+            AppendResourceDemand(sb, player);
             sb.AppendLine();
         }
+    }
+
+    void AppendGoals(StringBuilder sb, PlayerData player)
+    {
+        var goals = player.AI?.GetActiveGoalsForDump();
+        if (goals == null || goals.Count == 0)
+        {
+            sb.AppendLine("    goals: (none)");
+            return;
+        }
+
+        sb.AppendLine($"    goals ({goals.Count}):");
+        foreach (var goal in goals)
+        {
+            string target;
+            switch (goal.Type)
+            {
+                case AIGoalType.CaptureNode:
+                    target = goal.TargetNode != null ? $"#{goal.TargetNode.NodeId}" : "?";
+                    break;
+                case AIGoalType.DefendFrontier:
+                    target = goal.TargetNode != null ? $"#{goal.TargetNode.NodeId}" : "?";
+                    break;
+                case AIGoalType.EconomicTier:
+                    target = goal.TargetBuilding != null ? goal.TargetBuilding.BuildingType.ToString() : "?";
+                    break;
+                default:
+                    target = "?";
+                    break;
+            }
+            float urgency = goal.Value / System.Math.Max(1, goal.HorizonTurns);
+            sb.AppendLine($"      {goal.Type} {target} | val={goal.Value:F2} horiz={goal.HorizonTurns} urg={urgency:F2} | {goal.DebugReason}");
+        }
+    }
+
+    void AppendResourceDemand(StringBuilder sb, PlayerData player)
+    {
+        var demand = player.AI?.GetResourceDemandForDump();
+        if (demand == null || demand.Count == 0)
+        {
+            sb.AppendLine("    demand: (none)");
+            return;
+        }
+        sb.Append("    demand:");
+        foreach (var kvp in demand)
+            sb.Append($" {kvp.Key}={kvp.Value}");
+        sb.AppendLine();
     }
 
     void AppendPlannedActionPath(StringBuilder sb, PlayerData player)
@@ -299,14 +348,16 @@ public partial class AITestScene
 
     static float ComputeButtressHeuristicPreview(int numWorkers, int maxWorkers, int numEnemiesInNeighborNodes, bool isOnTerritoryEdge)
     {
+        // Mirrors AI_ActionHeuristics.GetButtressHeuristic. Only credits the enemy-pressure
+        // term when we are actually outnumbered; squaring a signed delta would over-credit
+        // over-defended nodes and the dump would disagree with the real heuristic.
         float rawValue = 0f;
-        if (numEnemiesInNeighborNodes > 0)
-        {
-            float delta = numEnemiesInNeighborNodes - numWorkers;
-            rawValue += delta * delta;
-        }
+        int outnumberedBy = numEnemiesInNeighborNodes - numWorkers;
+        if (outnumberedBy > 0)
+            rawValue += outnumberedBy * outnumberedBy;
         if (isOnTerritoryEdge) rawValue += 10f;
-        if (maxWorkers > 0 && numWorkers < maxWorkers / 2)
+        if (maxWorkers > 0 && numWorkers < maxWorkers / 2
+            && (isOnTerritoryEdge || numEnemiesInNeighborNodes > 0))
         {
             float workersDeficit = maxWorkers - numWorkers;
             rawValue += workersDeficit * workersDeficit * 10f;

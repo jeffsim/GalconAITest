@@ -51,6 +51,8 @@ public class BuildingDefn : BaseDefn
     public bool CanGatherResources = false;
     [ShowIf("CanGatherResources")]
     public GoodDefn ResourceThisNodeCanGoGather;
+    [ShowIf("CanGatherResources")]
+    public int ResourceProducedPerTurn = 3;
 
     // ResourceNode
     [Header("Resource"), Space(10)]

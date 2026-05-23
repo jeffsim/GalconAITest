@@ -39,7 +39,24 @@ public partial class PlayerAI
     {
         var bestAction = GetAIAction();
 
+        // Per-ply world tick at depth >= 1 (see DetermineBestActionToPerform for rationale).
+        // Both search drivers must apply the tick consistently because GetActionScore can
+        // route the recursion through either function depending on EnableHybridSearch.
+        if (curDepth > 0)
+            ApplyWorldTick(curDepth);
+
+        // Defensive reset: at the top of a real-game search, all IsVisited should be false.
+        // If a prior search threw an exception inside the simulate+recurse loop below, the
+        // try/finally guards us, but for years' worth of code stretching back through this
+        // file we treat this as a belt-and-suspenders zero-cost cleanup.
+        if (curDepth == 0)
+        {
+            var resetNodes = aiTownState.Nodes;
+            for (int i = 0; i < resetNodes.Length; i++) resetNodes[i].IsVisited = false;
+        }
+
         // Snapshot baseline so peer tasks at this depth can branch-and-bound against it.
+        // Snapshot is taken AFTER ApplyWorldTick so the baseline reflects post-tick state.
         float prevBaseline = currentDepthBaselineScore;
         currentDepthBaselineScore = aiTownState.EvaluateScore(curDepth, maxDepth, out _);
 
@@ -56,6 +73,8 @@ public partial class PlayerAI
         int numTasks = Tasks.Count;
 
         // Phase 1: enumerate (node, task) heuristic-only scores. No simulation, no recursion.
+        // PreviewHeuristic returns personality-adjusted values so the top-K reflects what each
+        // candidate would actually score, not just its raw situational fit.
         for (int i = 0; i < numNodes; i++)
         {
             var node = nodes[i];
@@ -78,9 +97,21 @@ public partial class PlayerAI
             var node = candidate.Node;
             var task = Tasks[candidate.TaskIndex];
 
+            // try/finally protects IsVisited: if TryTask (or anything it recurses into) throws,
+            // we MUST still clear the flag, otherwise this node would be skipped on every
+            // subsequent search for this PlayerAI -- which manifests as "the AI just sits
+            // there" with actionsTried=0 because Phase 1 keeps finding zero candidates.
             node.IsVisited = true;
-            bool validTask = task.TryTask(node, curDepth, debugOutput_ActionsTried, parentDebuggerEntry, bestAction.Score, out AIAction action);
-            node.IsVisited = false;
+            bool validTask;
+            AIAction action;
+            try
+            {
+                validTask = task.TryTask(node, curDepth, debugOutput_ActionsTried, parentDebuggerEntry, bestAction.Score, out action);
+            }
+            finally
+            {
+                node.IsVisited = false;
+            }
 
             if (validTask && action.Score > bestAction.Score)
             {
@@ -91,6 +122,8 @@ public partial class PlayerAI
         }
 
         currentDepthBaselineScore = prevBaseline;
+        if (curDepth > 0)
+            UndoWorldTick(curDepth);
         return bestAction.Type == AIActionType.DoNothing ? null : bestAction;
     }
 

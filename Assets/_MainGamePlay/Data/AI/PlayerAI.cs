@@ -66,6 +66,15 @@ public partial class PlayerAI
     public BuildingDefn[] buildableBuildingDefns;
     public int numBuildingDefns;
 
+    // Pool of recyclable AIGoal instances. AIGoalEnumerator.EnumerateGoals returns spent
+    // goals here at the start of each enumeration so per-Update GC pressure stays flat.
+    Stack<AIGoal> goalPool = new Stack<AIGoal>();
+
+    // Read-only views for the simulation dump / debugger panel; the AI internally owns
+    // these collections and we only want callers reading, not mutating, them.
+    public List<AIGoal> GetActiveGoalsForDump() => aiTownState?.ActiveGoals;
+    public Dictionary<GoodType, int> GetResourceDemandForDump() => aiTownState?.ResourceDemand;
+
 #if DEBUG
     int lastMaxDepth = -1;
 #endif
@@ -193,6 +202,14 @@ public partial class PlayerAI
                     AIDebugger.rootEntry.BestNextAction = null;
 
                     AI_ActionHeuristics.UpdateTerritoryDetails(aiTownState, player);
+
+                    // Enumerate strategic goals (capture/defend/economic) once per real-game
+                    // Update. The recursive search below is then biased by the demand vector
+                    // these goals imply -- e.g. an aggressive player generates many CaptureNode
+                    // goals which in turn raise demand for Barracks construction resources,
+                    // which then raises the build heuristic for Woodcutters / StoneMiners.
+                    AIGoalEnumerator.EnumerateGoals(player, aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals, goalPool);
+                    AI_ActionHeuristics.UpdateResourceDemand(aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals);
 
 #if DEBUG
                     bool useHybrid = AITestScene.Instance.EnableHybridSearch;

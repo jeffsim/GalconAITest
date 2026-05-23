@@ -11,7 +11,13 @@ public class AITask_TryButtressOwnedNode : AITask
         // TryTask (fromNode.NumWorkers >= MaxWorkers * 3/4) is the correct precondition. The
         // global "excess" check disables buttress in balanced states where a high-DefenseWeight
         // AI should still reinforce a vulnerable frontier from a healthy source.
-        return AI_ActionHeuristics.GetButtressHeuristic(toNode);
+        float h = AI_ActionHeuristics.GetButtressHeuristic(toNode);
+        if (h <= 0f) return 0f;
+
+        // Apply personality so Phase 1 candidate ranking matches actual scoring. Without this,
+        // a low-DefenseWeight AI's buttresses still rank by raw heuristic and crowd out higher-
+        // priority actions like attacks for a high-AggressivenessWeight AI.
+        return h * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Buttress);
     }
 
     override public bool TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
@@ -36,7 +42,11 @@ public class AITask_TryButtressOwnedNode : AITask
         if (fromNode == null || fromNode == toNode)
             return false;
 
-        if (fromNode.NumWorkers <= fromNode.MaxWorkers * 3f / 4f)
+        // Strict less-than (matches GetWorkersWillingToSend). A node at exactly 75% capacity
+        // IS willing to send half its workers; the previous <= here over-rejected those edge
+        // cases and starved Buttress for entire searches when the only candidate source sat
+        // at the boundary.
+        if (fromNode.NumWorkers < fromNode.MaxWorkers * 3f / 4f)
             return false;
 
         if (fromNode.IsVisited)
