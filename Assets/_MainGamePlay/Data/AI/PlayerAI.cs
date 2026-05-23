@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,9 +21,41 @@ public partial class PlayerAI
     public AIAction BestNextActionToTake = new();
     AIAction[] actionPool;
     int actionPoolIndex;
-    // public AIAction GetAIAction() { return new AIAction(); }
-    public AIAction GetAIAction() => actionPool[actionPoolIndex++].Reset();
+    public AIAction GetAIAction()
+    {
+        EnsureActionPoolCapacity(actionPoolIndex + 1);
+        return actionPool[actionPoolIndex++].Reset();
+    }
     int maxPoolSize = 25000;
+
+    void EnsureActionPoolCapacity(int requiredCapacity)
+    {
+        if (actionPool == null)
+        {
+            int initialSize = Math.Max(maxPoolSize, requiredCapacity);
+            actionPool = new AIAction[initialSize];
+            for (int i = 0; i < initialSize; i++)
+                actionPool[i] = new AIAction();
+            return;
+        }
+
+        if (requiredCapacity <= actionPool.Length)
+            return;
+
+        int newSize = actionPool.Length;
+        while (newSize < requiredCapacity)
+            newSize *= 2;
+
+        var newPool = new AIAction[newSize];
+        Array.Copy(actionPool, newPool, actionPool.Length);
+        for (int i = actionPool.Length; i < newSize; i++)
+            newPool[i] = new AIAction();
+        actionPool = newPool;
+
+#if DEBUG
+        Debug.LogWarning($"PlayerAI action pool grew to {newSize} for {player?.Name} (required {requiredCapacity})");
+#endif
+    }
 
     public BuildingDefn[] buildableBuildingDefns;
     public int numBuildingDefns;
@@ -38,13 +71,8 @@ public partial class PlayerAI
         player = playerData;
         aiTownState = new AI_TownState(player);
 
-        // Create pool of actions to avoid allocs.  Can do this statically because it's only used by one player at a time.
-        if (actionPool == null)
-        {
-            actionPool = new AIAction[maxPoolSize];
-            for (int i = 0; i < maxPoolSize; i++)
-                actionPool[i] = new AIAction();
-        }
+        // Create pool of actions to avoid allocs during search.
+        EnsureActionPoolCapacity(maxPoolSize);
 
         // Convert dictionary to array for speed
         buildableBuildingDefns = new BuildingDefn[GameDefns.Instance.BuildingDefns.Count];
@@ -94,7 +122,7 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        int aiApproach = 3;
+        int aiApproach = 4;
         switch (aiApproach)
         {
             case 2: // Another recursive approach
@@ -133,6 +161,8 @@ public partial class PlayerAI
                         Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
                     }
                     AIDebugger.rootEntry.BestNextAction = null;
+
+                    AI_ActionHeuristics.UpdateTerritoryDetails(aiTownState, player);
 
                     var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
                     if (bestAction == null)

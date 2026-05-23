@@ -8,10 +8,9 @@ public class AITask_UpgradeBuilding : AITask
     {
         bestAction = null;
 
-        if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
+        if (fromNode.OwnedBy != player)
             return false;
 
-        // ==== Verify we can perform the action
         var buildingInNode = fromNode.BuildingDefn;
         if (buildingInNode == null || !buildingInNode.CanBeUpgraded)
             return false;
@@ -19,19 +18,21 @@ public class AITask_UpgradeBuilding : AITask
         if (fromNode.NumWorkers < fromNode.MaxWorkers)
             return false;
 
+        float heuristicBonus = AI_ActionHeuristics.GetUpgradeHeuristic(fromNode);
+        if (heuristicBonus <= 0f)
+            return false;
+
         bestAction = player.AI.GetAIAction();
 
-        // ==== Perform the action and update the aiTownState to reflect the action
         int d1 = fromNode.NumWorkers;
         aiTownState.UpgradeBuilding(fromNode, out int origLevel, out int origNumWorkers);
         var debuggerEntry = aiDebuggerParentEntry.AddEntry_UpgradeBuilding(fromNode, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
-        // ==== Determine the score of the action we just performed (recurse down); if this is the best so far amongst our peers (in our parent node) then track it as the best action
         var actionScore = GetActionScore(curDepth, debuggerEntry);
+        actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Upgrade);
         if (actionScore > bestAction.Score)
             bestAction.SetTo_UpgradeBuilding(fromNode, actionScore, debuggerEntry);
 
-        // ==== Undo the action to reset the townstate to its original state
         aiTownState.Undo_UpgradeBuilding(fromNode, origLevel, origNumWorkers);
         Debug.Assert(d1 == fromNode.NumWorkers);
         return true;

@@ -4,38 +4,43 @@ public class AITask_TryButtressOwnedNode : AITask
 {
     public AITask_TryButtressOwnedNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
-    override public bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
+    override public bool TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
     {
         bestAction = null;
-        
-        if (fromNode.OwnedBy != player) // only process actions from/in nodes that we own
+
+        if (toNode.OwnedBy != player)
             return false;
 
-        if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut)
-            return false; // not enough workers in node to send any out
+        if (!AI_ActionHeuristics.PlayerHasExcessWorkers(aiTownState, player))
+            return false;
+
+        float heuristicBonus = AI_ActionHeuristics.GetButtressHeuristic(toNode);
+        if (heuristicBonus <= 0f)
+            return false;
+
+        var fromNode = AI_ActionHeuristics.GetFriendlyNodeWithMostWorkers(toNode, player);
+        if (fromNode == null || fromNode == toNode)
+            return false;
+
+        if (fromNode.NumWorkers <= fromNode.MaxWorkers * 3f / 4f)
+            return false;
+
+        if (fromNode.IsVisited)
+            return false;
 
         bestAction = player.AI.GetAIAction();
 
-        foreach (var toNode in fromNode.NeighborNodes)
-        {
-            // ==== Verify we can perform the action
-            if (toNode.OwnedBy != player) continue;
-            if (toNode.IsVisited) continue; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
+        int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
+        aiTownState.SendWorkersToOwnedNode(fromNode, toNode, .5f, out int numSent);
+        var debuggerEntry = aiDebuggerParentEntry.AddEntry_SendWorkersToOwnedNode(fromNode, toNode, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
-            // ==== Perform the action and update the aiTownState to reflect the action
-            int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
-            aiTownState.SendWorkersToOwnedNode(fromNode, toNode, .5f, out int numSent); // TODO: Try different #s?
-            var debuggerEntry = aiDebuggerParentEntry.AddEntry_SendWorkersToOwnedNode(fromNode, toNode, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);
+        var actionScore = GetActionScore(curDepth, debuggerEntry);
+        actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Buttress);
+        if (actionScore > bestAction.Score)
+            bestAction.SetTo_SendWorkersToOwnedNode(fromNode, toNode, numSent, actionScore, debuggerEntry);
 
-            // ==== Determine the score of the action we just performed (recurse down); if this is the best so far amongst our peers (in our parent node) then track it as the best action
-            var actionScore = GetActionScore(curDepth, debuggerEntry);
-            if (actionScore > bestAction.Score)
-                bestAction.SetTo_SendWorkersToOwnedNode(fromNode, toNode, numSent, actionScore, debuggerEntry);
-
-            // ==== Undo the action to reset the townstate to its original state
-            aiTownState.Undo_SendWorkersToOwnedNode(fromNode, toNode, numSent);
-            Debug.Assert(d1 == fromNode.NumWorkers && d2 == toNode.NumWorkers);
-        }
+        aiTownState.Undo_SendWorkersToOwnedNode(fromNode, toNode, numSent);
+        Debug.Assert(d1 == fromNode.NumWorkers && d2 == toNode.NumWorkers);
         return true;
     }
 }

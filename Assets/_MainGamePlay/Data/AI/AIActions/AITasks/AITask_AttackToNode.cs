@@ -10,7 +10,6 @@ class AttackState
     public int NumSent;
     public AttackResult AttackResult;
 
-    // Reset method to clear data
     public void Reset()
     {
         FromNode = null;
@@ -29,7 +28,6 @@ public class AITask_AttackToNode : AITask
 
     AI_NodeState[] nDeepNeighbors = new AI_NodeState[MAX_NEIGHBORS_TO_CHECK];
 
-    // Pools for reusing collections and AttackState instances
     Stack<List<AttackState>> attackStatesPool = new Stack<List<AttackState>>();
     Stack<List<AttackResult>> attackResultsPool = new Stack<List<AttackResult>>();
     Stack<Dictionary<AI_NodeState, int>> attackFromNodesPool = new Stack<Dictionary<AI_NodeState, int>>();
@@ -43,37 +41,31 @@ public class AITask_AttackToNode : AITask
         bestAction = null;
 
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return false;
-        // if (toNode.IsVisited) return false; // don't revisit nodes we visited earlier in the recursion; avoid ping-ponging between nodes
 
-        // Collect neighbor nodes
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
-        // Generate nodes to attack from
-        bool haveEnoughWorkersToAttack = GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers);
+        int totalWillingToSend = 0;
+        bool haveEnoughWorkersToAttack = GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers, out totalWillingToSend);
         if (!haveEnoughWorkersToAttack) return false;
+
+        float heuristicBonus = AI_ActionHeuristics.GetAttackHeuristic(toNode, totalWillingToSend);
+        if (heuristicBonus <= 0f) return false;
 
         bestAction = player.AI.GetAIAction();
 
-        // Get reusable collections from the pool or create new ones
         List<AttackState> attackStates = attackStatesPool.Count > 0 ? attackStatesPool.Pop() : new List<AttackState>();
         List<AttackResult> attackResults = attackResultsPool.Count > 0 ? attackResultsPool.Pop() : new List<AttackResult>();
         Dictionary<AI_NodeState, int> attackFromNodes = attackFromNodesPool.Count > 0 ? attackFromNodesPool.Pop() : new Dictionary<AI_NodeState, int>();
 
-        // Clear collections before use
         attackStates.Clear();
         attackResults.Clear();
         attackFromNodes.Clear();
 
-        // Perform attacks from multiple nodes
         foreach (var fromNode in nodesToAttackFrom)
         {
-            // Get an AttackState instance from the pool or create a new one
             AttackState attackState = attackStatePool.Count > 0 ? attackStatePool.Pop() : new AttackState();
-
-            // Reset the attackState to clear any previous data
             attackState.Reset();
 
-            // Record original state before attack
             attackState.FromNode = fromNode;
             attackState.OrigNumInSourceNode = fromNode.NumWorkers;
             attackState.ToNode = toNode;
@@ -84,35 +76,27 @@ public class AITask_AttackToNode : AITask
             attackResults.Add(attackResult);
             attackFromNodes[fromNode] = numSent;
 
-            // Record the attack result and numSent
             attackState.NumSent = numSent;
             attackState.AttackResult = attackResult;
-
-            // Add the attackState to the list
             attackStates.Add(attackState);
         }
 
-        // Create a debugger entry
         var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackToNode(attackFromNodes, toNode, attackResults, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
-        // Determine the score of the combined action
         var actionScore = GetActionScore(curDepth, debuggerEntry);
+        actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Attack);
         if (actionScore > bestAction.Score)
             bestAction.SetTo_AttackToNode(attackFromNodes, toNode, attackResults, actionScore, debuggerEntry);
 
-        // Undo the attacks to reset the state
         for (int a = attackStates.Count - 1; a >= 0; a--)
         {
             var attackState = attackStates[a];
             aiTownState.Undo_AttackFromNode(attackState.FromNode, attackState.ToNode, attackState.AttackResult,
                                             attackState.OrigNumInSourceNode, attackState.OrigNumInDestNode,
                                             attackState.NumSent, attackState.OrigToNodeOwner);
-
-            // Return the AttackState instance to the pool
             attackStatePool.Push(attackState);
         }
 
-        // Return collections to the pool
         attackStatesPool.Push(attackStates);
         attackResultsPool.Push(attackResults);
         attackFromNodesPool.Push(attackFromNodes);
@@ -122,7 +106,7 @@ public class AITask_AttackToNode : AITask
 
     Queue<AI_NodeState> queue = new Queue<AI_NodeState>(10);
     HashSet<AI_NodeState> visited = new HashSet<AI_NodeState>(10);
-    const int MAX_DEPTH = 3;
+    const int MAX_DEPTH = 4;
 
     int GetFriendlyNeighborsWithEnoughWorkers(AI_NodeState toNode, AI_NodeState[] nDeepNeighbors)
     {
@@ -143,7 +127,7 @@ public class AITask_AttackToNode : AITask
                 foreach (var neighbor in currentNode.NeighborNodes)
                     if (neighbor.OwnedBy == player && !visited.Contains(neighbor))
                     {
-                        if (neighbor.NumWorkers >= minWorkersInNodeBeforeConsideringSendingAnyOut)
+                        if (AI_ActionHeuristics.GetWorkersWillingToSend(neighbor, minWorkersInNodeBeforeConsideringSendingAnyOut) > 0)
                             nDeepNeighbors[index++] = neighbor;
                         visited.Add(neighbor);
                         queue.Enqueue(neighbor);
@@ -156,16 +140,19 @@ public class AITask_AttackToNode : AITask
 
     List<AI_NodeState> nodesToAttackFrom = new List<AI_NodeState>(10);
 
-    bool GetNodesToAttackFrom(AI_NodeState[] nodes, int numNodes, int numEnemies)
+    bool GetNodesToAttackFrom(AI_NodeState[] nodes, int numNodes, int numEnemies, out int totalWillingToSend)
     {
         nodesToAttackFrom.Clear();
-        int count = 0;
+        totalWillingToSend = 0;
         for (int i = 0; i < numNodes; i++)
         {
             var node = nodes[i];
+            int willing = AI_ActionHeuristics.GetWorkersWillingToSend(node, minWorkersInNodeBeforeConsideringSendingAnyOut);
+            if (willing <= 0) continue;
+
             nodesToAttackFrom.Add(node);
-            count += node.NumWorkers;
-            if (count > numEnemies)
+            totalWillingToSend += willing;
+            if (totalWillingToSend >= numEnemies)
                 return true;
         }
         return false;
