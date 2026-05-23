@@ -53,8 +53,14 @@ public static class AI_ActionHeuristics
 
     public static float ApplyHeuristicAndPersonality(float simulationScore, float heuristicBonus, PlayerData player, AIHeuristicActionType actionType)
     {
+        // Personality now scales the full final score, not just the heuristic bonus. With the
+        // earlier "bonus only" formula, a sufficiently good simulationScore (e.g. capturing a
+        // resource-rich enemy node) would still dominate even when AggressivenessWeight = 0,
+        // because simulationScore was unaffected by personality. Applying it to the full score
+        // makes weights of 0/2 actually disable/double the action's appeal as the test harness
+        // expects.
         float personality = GetPersonalityMultiplier(player, actionType);
-        return simulationScore + heuristicBonus * personality;
+        return (simulationScore + heuristicBonus) * personality;
     }
 
     public static void UpdateTerritoryDetails(AI_TownState town, PlayerData player)

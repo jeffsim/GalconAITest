@@ -35,6 +35,16 @@ public partial class AITestScene : MonoBehaviour
     public bool DebugOutputStrategyReasons = false;
     public bool DebugOutputActionBeforeScore = false;
     public bool TrackDebugAIInfo = true;
+
+    // When false, recursive AI search skips building the debugger tree entirely.
+    // This avoids per-branch AIDebuggerEntryData pool allocations and the BestNextAction chain wiring.
+    // Cost: AIDebuggerPanel and ShowFullActionPath arrows are empty for the search; planned root action still draws.
+    public bool TrackSearchDebugger = true;
+
+    // When true, the depth-0 entry point uses Phase-1 heuristic candidate generation and only
+    // runs simulate+recurse on the top-K (HybridTopK) candidates, dramatically reducing branching
+    // at the root without lowering MaxAIDepth.
+    public bool EnableHybridSearch = true;
 #endif
 
     public static AITestScene Instance;
@@ -97,6 +107,14 @@ public partial class AITestScene : MonoBehaviour
         Town.Update(); // force an update to get latest AI
         AIDebuggerPanel.ShowBestClicked();
     }
+
+#if DEBUG
+    public void OnToggleSearchDebuggerTrackingClicked()
+    {
+        TrackSearchDebugger = !TrackSearchDebugger;
+        Debug.Log($"AI search debugger tracking: {(TrackSearchDebugger ? "ON" : "OFF")}");
+    }
+#endif
 
     public class PathStep
     {

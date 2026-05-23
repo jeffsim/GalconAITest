@@ -9,6 +9,12 @@ public partial class PlayerAI
         // we'll return the best action from all possible actions at this 'recursive step/turn'
         var bestAction = GetAIAction();
 
+        // Snapshot the pre-action EvaluateScore so peer tasks at this depth can use it as an
+        // optimistic upper bound for branch-and-bound pruning. Saved/restored so deeper recursion
+        // levels can each maintain their own baseline.
+        float prevBaseline = currentDepthBaselineScore;
+        currentDepthBaselineScore = aiTownState.EvaluateScore(curDepth, maxDepth, out _);
+
         // const int numResources = 3;
         // Update townstate at the start of this 'recursive step'; e.g. woodcutters get +wood...
         // for (int i = 0; i < aiTownState.Nodes.Length; i++)
@@ -40,7 +46,8 @@ public partial class PlayerAI
                 if (validTask && action.Score > bestAction.Score)
                 {
                     bestAction = action;
-                    parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
+                    if (parentDebuggerEntry != null)
+                        parentDebuggerEntry.BestNextAction = bestAction.AIDebuggerEntry;
                 }
             }
             node.IsVisited = false;
@@ -54,6 +61,7 @@ public partial class PlayerAI
         //         aiTownState.PlayerTownInventory[node.ResourceThisNodeCanGoGather] -= numResources;
         //     node.NumWorkers = node.aiOrigNumWorkers;
         // }
+        currentDepthBaselineScore = prevBaseline;
         return bestAction.Type == AIActionType.DoNothing ? null : bestAction;
     }
 }

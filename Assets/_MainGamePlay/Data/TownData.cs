@@ -12,6 +12,11 @@ public class TownData
     public Action<int> OnAIDebuggerUpdate { get; internal set; }
     public int TestOnePlayerId = 0;
 
+    // Bumped any time the world state changes in a way the AI cares about (currently: each
+    // Debug_WorldTurn). PlayerAI caches its decision against this and skips the full depth-7
+    // search when the revision is unchanged, so the search no longer runs every Update frame.
+    public int WorldRevision = 0;
+
     public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn, PlayerAIDefn[] playerAIDefns)
     {
         Instance = this;
@@ -218,6 +223,9 @@ public class TownData
                     break;
             }
         }
+
+        // World mutated; invalidate per-player AI decision caches so the next Update re-searches.
+        WorldRevision++;
     }
 
     private NodeData getClosestNodeWithResource(PlayerData player, NodeData startNode, GoodType goodType)

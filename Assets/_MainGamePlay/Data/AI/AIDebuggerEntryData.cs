@@ -138,6 +138,7 @@ public class AIDebuggerEntryData
 
     internal AIDebuggerEntryData AddEntry_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, BuildingDefn buildingDefn, float finalActionScore, int actionNum, int curDepth)
     {
+        if (!AIDebugger.ShouldTrackEntries) return null;
         var newEntry = GetFromPool(
                         AIActionType.ConstructBuildingInEmptyNode,
                         fromNode,
@@ -153,6 +154,7 @@ public class AIDebuggerEntryData
     }
     internal AIDebuggerEntryData AddEntry_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float finalActionScore, int actionNum, int curDepth)
     {
+        if (!AIDebugger.ShouldTrackEntries) return null;
         var newEntry = GetFromPool(
                         AIActionType.SendWorkersToOwnedNode,
                         fromNode,
@@ -170,6 +172,7 @@ public class AIDebuggerEntryData
     internal AIDebuggerEntryData AddEntry_AttackToNode(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth)
     {
         Debug.Assert(attackFromNodes != null);
+        if (!AIDebugger.ShouldTrackEntries) return null;
 
         var newEntry = GetFromPool2(
                         AIActionType.AttackToNode,
@@ -186,6 +189,7 @@ public class AIDebuggerEntryData
 
     internal AIDebuggerEntryData AddEntry_UpgradeBuilding(AI_NodeState fromNode, float finalActionScore, int actionNum, int curDepth)
     {
+        if (!AIDebugger.ShouldTrackEntries) return null;
         var newEntry = GetFromPool(
                          AIActionType.UpgradeBuilding,
                         fromNode,

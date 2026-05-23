@@ -21,6 +21,12 @@ public partial class PlayerAI
     public AIAction BestNextActionToTake = new();
     AIAction[] actionPool;
     int actionPoolIndex;
+
+    // Pre-action EvaluateScore at the current recursion depth.
+    // Cached once per DetermineBestActionToPerform call so each peer task can compute an
+    // optimistic upper bound (baseline + heuristicBonus * personality) for branch-and-bound
+    // without re-running EvaluateScore per candidate.
+    internal float currentDepthBaselineScore;
     public AIAction GetAIAction()
     {
         EnsureActionPoolCapacity(actionPoolIndex + 1);
@@ -62,6 +68,16 @@ public partial class PlayerAI
 
 #if DEBUG
     int lastMaxDepth = -1;
+#endif
+
+    // Decision cache: skip the full search when nothing the AI would key on has changed.
+    // Sentinel -1 for "never searched" so the very first Update always runs.
+    int lastSearchedWorldRevision = -1;
+    int lastSearchedMaxAIDepth = -1;
+#if DEBUG
+    PlayerData lastSearchedDebugPlayer;
+    bool lastSearchedTrackDebugger;
+    bool lastSearchedHybridEnabled;
 #endif
 
     public List<AITask> Tasks = new();
@@ -112,6 +128,20 @@ public partial class PlayerAI
                 actionPool[i].Reset();
         }
 #endif
+
+        // Decision cache: re-run the full search only when an input the AI keys on has changed.
+        // Without this, AITestScene.Update calls Town.Update each frame, triggering a depth-7
+        // search every frame even when the world is idle.
+        bool cacheValid = lastSearchedWorldRevision == townData.WorldRevision
+                       && lastSearchedMaxAIDepth == AITestScene.Instance.MaxAIDepth;
+#if DEBUG
+        cacheValid = cacheValid
+                  && lastSearchedDebugPlayer == AITestScene.Instance.DebugPlayerToViewDetailsOn
+                  && lastSearchedTrackDebugger == AITestScene.Instance.TrackSearchDebugger
+                  && lastSearchedHybridEnabled == AITestScene.Instance.EnableHybridSearch;
+#endif
+        if (cacheValid)
+            return;
 
         // Determine the best action to take, and then take it
         debugOutput_ActionsTried = 0;
@@ -164,7 +194,14 @@ public partial class PlayerAI
 
                     AI_ActionHeuristics.UpdateTerritoryDetails(aiTownState, player);
 
-                    var bestAction = DetermineBestActionToPerform(0, AIDebugger.rootEntry);
+#if DEBUG
+                    bool useHybrid = AITestScene.Instance.EnableHybridSearch;
+#else
+                    const bool useHybrid = true;
+#endif
+                    var bestAction = useHybrid
+                        ? DetermineBestActionToPerform_Hybrid(0, AIDebugger.rootEntry)
+                        : DetermineBestActionToPerform(0, AIDebugger.rootEntry);
                     if (bestAction == null)
                         BestNextActionToTake.SetToNothing();
                     else
@@ -185,6 +222,14 @@ public partial class PlayerAI
             townData.OnAIDebuggerUpdate?.Invoke(player.Id);
             triggerAIDebuggerUpdate = false;
         }
+#endif
+
+        lastSearchedWorldRevision = townData.WorldRevision;
+        lastSearchedMaxAIDepth = AITestScene.Instance.MaxAIDepth;
+#if DEBUG
+        lastSearchedDebugPlayer = AITestScene.Instance.DebugPlayerToViewDetailsOn;
+        lastSearchedTrackDebugger = AITestScene.Instance.TrackSearchDebugger;
+        lastSearchedHybridEnabled = AITestScene.Instance.EnableHybridSearch;
 #endif
     }
 }

@@ -36,6 +36,17 @@ public class AITask_AttackToNode : AITask
     public AITask_AttackToNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut)
         : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
+    public override float PreviewHeuristic(AI_NodeState toNode)
+    {
+        if (toNode.OwnedBy == null || toNode.OwnedBy == player) return 0f;
+
+        int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
+        if (!GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers, out int totalWillingToSend))
+            return 0f;
+
+        return AI_ActionHeuristics.GetAttackHeuristic(toNode, totalWillingToSend);
+    }
+
     override public bool TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
     {
         bestAction = null;
@@ -50,6 +61,9 @@ public class AITask_AttackToNode : AITask
 
         float heuristicBonus = AI_ActionHeuristics.GetAttackHeuristic(toNode, totalWillingToSend);
         if (heuristicBonus <= 0f) return false;
+
+        if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Attack, bestScoreAmongPeerActions))
+            return false;
 
         bestAction = player.AI.GetAIAction();
 
@@ -81,7 +95,7 @@ public class AITask_AttackToNode : AITask
             attackStates.Add(attackState);
         }
 
-        var debuggerEntry = aiDebuggerParentEntry.AddEntry_AttackToNode(attackFromNodes, toNode, attackResults, 0, player.AI.debugOutput_ActionsTried++, curDepth);
+        var debuggerEntry = aiDebuggerParentEntry?.AddEntry_AttackToNode(attackFromNodes, toNode, attackResults, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
         var actionScore = GetActionScore(curDepth, debuggerEntry);
         actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Attack);

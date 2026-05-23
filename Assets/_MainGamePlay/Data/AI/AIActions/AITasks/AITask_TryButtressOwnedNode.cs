@@ -4,6 +4,16 @@ public class AITask_TryButtressOwnedNode : AITask
 {
     public AITask_TryButtressOwnedNode(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
+    public override float PreviewHeuristic(AI_NodeState toNode)
+    {
+        if (toNode.OwnedBy != player) return 0f;
+        // Note: do not gate on PlayerHasExcessWorkers here; the actual source-node check inside
+        // TryTask (fromNode.NumWorkers >= MaxWorkers * 3/4) is the correct precondition. The
+        // global "excess" check disables buttress in balanced states where a high-DefenseWeight
+        // AI should still reinforce a vulnerable frontier from a healthy source.
+        return AI_ActionHeuristics.GetButtressHeuristic(toNode);
+    }
+
     override public bool TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
     {
         bestAction = null;
@@ -11,11 +21,15 @@ public class AITask_TryButtressOwnedNode : AITask
         if (toNode.OwnedBy != player)
             return false;
 
-        if (!AI_ActionHeuristics.PlayerHasExcessWorkers(aiTownState, player))
-            return false;
+        // Source-node validity (fromNode.NumWorkers >= MaxWorkers * 3/4 below) is the real
+        // precondition. The previous PlayerHasExcessWorkers guard blocked buttress in balanced
+        // states even when a high-DefenseWeight personality should reinforce a frontier.
 
         float heuristicBonus = AI_ActionHeuristics.GetButtressHeuristic(toNode);
         if (heuristicBonus <= 0f)
+            return false;
+
+        if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Buttress, bestScoreAmongPeerActions))
             return false;
 
         var fromNode = AI_ActionHeuristics.GetFriendlyNodeWithMostWorkers(toNode, player);
@@ -32,7 +46,7 @@ public class AITask_TryButtressOwnedNode : AITask
 
         int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
         aiTownState.SendWorkersToOwnedNode(fromNode, toNode, .5f, out int numSent);
-        var debuggerEntry = aiDebuggerParentEntry.AddEntry_SendWorkersToOwnedNode(fromNode, toNode, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);
+        var debuggerEntry = aiDebuggerParentEntry?.AddEntry_SendWorkersToOwnedNode(fromNode, toNode, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
         var actionScore = GetActionScore(curDepth, debuggerEntry);
         actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Buttress);

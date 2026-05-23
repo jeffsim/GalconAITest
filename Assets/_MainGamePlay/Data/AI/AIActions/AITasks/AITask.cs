@@ -18,18 +18,53 @@ public abstract class AITask
     protected float GetActionScore(int curDepth, AIDebuggerEntryData debuggerEntry)
     {
 #if DEBUG
-        if (AITestScene.Instance.DebugOutputActionBeforeScore)
+        if (debuggerEntry != null && AITestScene.Instance.DebugOutputActionBeforeScore)
             debuggerEntry.Debug_ActionScoreBeforeSubactions = aiTownState.EvaluateScore(curDepth, maxDepth, out _);
 #endif
 
+        AIAction bestNextAction = null;
+        if (curDepth < maxDepth)
+        {
+#if DEBUG
+            bool useHybrid = AITestScene.Instance.EnableHybridSearch;
+#else
+            const bool useHybrid = true;
+#endif
+            bestNextAction = useHybrid
+                ? player.AI.DetermineBestActionToPerform_Hybrid(curDepth + 1, debuggerEntry)
+                : player.AI.DetermineBestActionToPerform(curDepth + 1, debuggerEntry);
+        }
+
         float actionScore;
-        AIAction bestNextAction = curDepth < maxDepth ? player.AI.DetermineBestActionToPerform(curDepth + 1, debuggerEntry) : null;
         if (bestNextAction != null)
             actionScore = bestNextAction.Score; // Score of the best action after this action
         else
             actionScore = aiTownState.EvaluateScore(curDepth, maxDepth, out _); // Evaluate score of the current state after this action
-        debuggerEntry.FinalActionScore = actionScore;
+        if (debuggerEntry != null)
+            debuggerEntry.FinalActionScore = actionScore;
         return actionScore;
     }
     public abstract bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction);
+
+    // Fast, simulation-free heuristic preview used by Phase 1 of the hybrid search to rank
+    // candidates across (node, task) pairs without paying for simulation+recursion. Returns
+    // 0 when the task is not applicable to fromNode. Default implementation is a conservative
+    // 0 so subclasses must opt in to participate in hybrid candidate generation.
+    public virtual float PreviewHeuristic(AI_NodeState fromNode) => 0f;
+
+    // Optimistic upper bound on this candidate's final score, mirroring the actual scoring
+    // formula in AI_ActionHeuristics.ApplyHeuristicAndPersonality:
+    //   (baseline (pre-action EvaluateScore) + heuristicBonus) * personality
+    // Pre-action simulation only mildly perturbs EvaluateScore for a single action, so an
+    // action whose optimistic heuristic-only score cannot beat the running peer best is
+    // unlikely to win after sim+recurse and can be skipped. Personality = 0 collapses the
+    // bound to zero which prunes every candidate of that type unconditionally — exactly the
+    // behavior expected when a tactic weight is zeroed out.
+    protected bool ShouldPruneByHeuristic(float heuristicBonus, AIHeuristicActionType actionType, float bestScoreAmongPeerActions)
+    {
+        if (bestScoreAmongPeerActions <= 0f) return false; // first candidate; nothing to prune against
+        float personality = AI_ActionHeuristics.GetPersonalityMultiplier(player, actionType);
+        float optimistic = (player.AI.currentDepthBaselineScore + heuristicBonus) * personality;
+        return optimistic <= bestScoreAmongPeerActions;
+    }
 }
