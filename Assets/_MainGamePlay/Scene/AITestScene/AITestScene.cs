@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class AITestScene : MonoBehaviour
+public partial class AITestScene : MonoBehaviour
 {
     [NonSerialized] public TownData Town;
     [SerializeReference] public TownDefn TestTownDefn;
