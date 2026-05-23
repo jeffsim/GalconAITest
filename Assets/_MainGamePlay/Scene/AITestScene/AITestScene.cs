@@ -8,6 +8,10 @@ public class AITestScene : MonoBehaviour
     [NonSerialized] public TownData Town;
     [SerializeReference] public TownDefn TestTownDefn;
 
+    [FoldoutGroup("Players", false)] public PlayerAIDefn Player1AIDefn;
+    [FoldoutGroup("Players", false)] public PlayerAIDefn Player2AIDefn;
+    [FoldoutGroup("Players", false)] public PlayerAIDefn Player3AIDefn;
+
     [FoldoutGroup("Nodes", false)] public NodeGO NodePrefab;
     [HideInInspector][FoldoutGroup("Nodes", false)] public List<NodeGO> Nodes = new();
     [FoldoutGroup("Nodes", false)] public Material NodeConnectionMat;
@@ -46,7 +50,7 @@ public class AITestScene : MonoBehaviour
 
     void ResetTown()
     {
-        Town = new TownData(TestTownDefn, TestWorkerDefn);
+        Town = new TownData(TestTownDefn, TestWorkerDefn, new[] { Player1AIDefn, Player2AIDefn, Player3AIDefn });
 
         NodesFolder.RemoveAllChildren();
         WorkersFolder.RemoveAllChildren();

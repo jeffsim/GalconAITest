@@ -12,15 +12,17 @@ public class TownData
     public Action<int> OnAIDebuggerUpdate { get; internal set; }
     public int TestOnePlayerId = 0;
 
-    public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn)
+    public TownData(TownDefn townDefn, WorkerDefn testWorkerDefn, PlayerAIDefn[] playerAIDefns)
     {
         Instance = this;
 
         // Create players
         Players.Add(null); // no player (e.g. for unowned Node)
-        Players.Add(new PlayerData() { Id = 1, Name = "Player R", Color = Color.red, ControlledByAI = true, WorkerDefn = testWorkerDefn });
-        Players.Add(new PlayerData() { Id = 2, Name = "Player G", Color = Color.green, ControlledByAI = true, WorkerDefn = testWorkerDefn });
-        Players.Add(new PlayerData() { Id = 3, Name = "Player B", Color = Color.blue, ControlledByAI = true, WorkerDefn = testWorkerDefn });
+        for (int i = 0; i < 3; i++)
+        {
+            var aiDefn = playerAIDefns != null && i < playerAIDefns.Length ? playerAIDefns[i] : null;
+            Players.Add(new PlayerData(i + 1, aiDefn, testWorkerDefn));
+        }
 
         // Create Nodes
         foreach (var nodeDefn in townDefn.Nodes)

@@ -5,6 +5,7 @@ public class PlayerData
 {
     public override string ToString() => $"Player ({Name[^1]})";
 
+    public PlayerAIDefn AIDefn;
     public WorkerDefn WorkerDefn;
     public string Name;
     public int Id;
@@ -12,8 +13,22 @@ public class PlayerData
     public bool ControlledByAI;
     public PlayerAI AI;
 
-    public PlayerData()
+    public PlayerData(int id, PlayerAIDefn aiDefn, WorkerDefn workerDefn)
     {
+        Id = id;
+        AIDefn = aiDefn;
+        WorkerDefn = workerDefn;
+        if (aiDefn != null)
+        {
+            Name = aiDefn.Name;
+            Color = aiDefn.Color;
+        }
+        else
+        {
+            Name = $"Player {id}";
+            Color = id switch { 1 => Color.red, 2 => Color.green, 3 => Color.blue, _ => Color.white };
+        }
+        ControlledByAI = true;
         AI = new PlayerAI(this);
     }
 

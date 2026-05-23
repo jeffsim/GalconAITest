@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c4f2a1b9e3d4c5f6a7b8c9d0e1f2a3b, type: 3}
+  m_Name: PlayerAI_Blue
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects: []
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes: []
+  Id: PlayerAI_Blue
+  IsEnabled: 1
+  Name: Player B
+  Color: {r: 0, g: 0, b: 1, a: 1}
+  ExpansionWeight: 1.2
+  DefenseWeight: 1.3
+  AggressivenessWeight: 0.7

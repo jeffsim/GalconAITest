@@ -14,10 +14,10 @@ public partial class Strategy_NonRecursive
 
     const int minWorkersInNodeBeforeConsideringSendingAnyOut = 6;
 
-    float personalityMultiplier_UpgradeNode = 0.7f;
-    float personalityMultiplier_ButtressNode = 1.0f;
-    float personalityMultiplier_BuildBuilding = 1.0f;
-    float personalityMultiplier_CaptureNode = 1.0f;
+    float personalityMultiplier_UpgradeNode = 1f;
+    float personalityMultiplier_ButtressNode = 1f;
+    float personalityMultiplier_BuildBuilding = 1f;
+    float personalityMultiplier_CaptureNode = 1f;
 
     const float excessWorkersScalingFactor = 1f;
     const float excessWorkersScalingFactor2 = 1f;
@@ -55,11 +55,11 @@ public partial class Strategy_NonRecursive
     {
         Town.UpdateState(SourceTownData);
 
-        // TODO: Set personality multipliers based on player's personality
-        personalityMultiplier_UpgradeNode = 0.7f;
-        personalityMultiplier_ButtressNode = 1.0f;
-        personalityMultiplier_BuildBuilding = 1.0f;
-        personalityMultiplier_CaptureNode = 1.0f;
+        var aiDefn = Player.AIDefn;
+        personalityMultiplier_BuildBuilding = aiDefn != null ? aiDefn.ExpansionWeight : 1f;
+        personalityMultiplier_UpgradeNode = personalityMultiplier_BuildBuilding;
+        personalityMultiplier_ButtressNode = aiDefn != null ? aiDefn.DefenseWeight : 1f;
+        personalityMultiplier_CaptureNode = aiDefn != null ? aiDefn.AggressivenessWeight : 1f;
 
         BestAction = Player.AI.GetAIAction();
 

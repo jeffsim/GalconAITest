@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 05009cd41e272b971a40dd237abe04b6
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 162772
+  packageName: ALINE
+  packageVersion: 1.7.9
+  assetPath: Packages/com.arongranberg.aline/Documentation/documentation.html
+  uploadId: 866122

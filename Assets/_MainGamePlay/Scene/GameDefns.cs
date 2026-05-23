@@ -11,6 +11,7 @@ public class GameDefnsMgr
     [SerializeReference] public Dictionary<string, BuildingDefn> BuildingDefns = new();
     [SerializeReference] public Dictionary<string, GoodDefn> GoodDefns = new();
     [SerializeReference] public Dictionary<string, GameSettingsDefn> GameSettingsDefns = new();
+    [SerializeReference] public Dictionary<string, PlayerAIDefn> PlayerAIDefns = new();
     [SerializeReference] public Dictionary<BuildingType, BuildingDefn> BuildingDefnsByType = new();
 
     public void RefreshDefns()
@@ -23,6 +24,7 @@ public class GameDefnsMgr
         loadDefns("Buildings", BuildingDefns);
         loadDefns("Goods", GoodDefns);
         loadDefns("GameSettings", GameSettingsDefns);
+        loadDefns("PlayerAI", PlayerAIDefns);
 
         // load building defns by type
         BuildingDefnsByType.Clear();
@@ -50,6 +52,7 @@ public class GameDefns : SerializedMonoBehaviour
     public Dictionary<string, BuildingDefn> BuildingDefns => GameDefnsMgr.BuildingDefns;
     public Dictionary<string, GoodDefn> GoodDefns => GameDefnsMgr.GoodDefns;
     public Dictionary<string, GameSettingsDefn> GameSettingsDefns => GameDefnsMgr.GameSettingsDefns;
+    public Dictionary<string, PlayerAIDefn> PlayerAIDefns => GameDefnsMgr.PlayerAIDefns;
     public Dictionary<BuildingType, BuildingDefn> BuildingDefnsByType => GameDefnsMgr.BuildingDefnsByType;
 
     void Awake()

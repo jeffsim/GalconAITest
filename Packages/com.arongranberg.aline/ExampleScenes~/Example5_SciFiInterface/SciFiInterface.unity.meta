@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3d05b08d519baf1b08c6c551ce8ae43b
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 162772
+  packageName: ALINE
+  packageVersion: 1.7.9
+  assetPath: Packages/com.arongranberg.aline/ExampleScenes~/Example5_SciFiInterface/SciFiInterface.unity
+  uploadId: 866122
