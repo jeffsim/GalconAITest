@@ -17,8 +17,7 @@ public class AI_NodeState
 
     public int NumEnemiesInNeighborNodes;
     public bool IsOnTerritoryEdge;
-    public int NumWorkersWillingToSend;
-    
+
     public PlayerData OwnedBy;
     public int NodeId;
     internal bool IsResourceNode => CanBeGatheredFrom;

@@ -10,7 +10,7 @@ public enum AIHeuristicActionType
 }
 
 /// <summary>
-/// Heuristic scoring and territory analysis ported from Strategy_NonRecursive for use in recursive search.
+/// Heuristic scoring and territory analysis used by the recursive search.
 /// Returns bonuses scaled to be meaningful alongside EvaluateScore() results (~0-3 range).
 /// </summary>
 public static class AI_ActionHeuristics

@@ -112,9 +112,6 @@ public partial class PlayerAI
         aiTownState.InitializeStaticData(townData);
     }
 
-    RecursiveStrategy2 strategyRecursive;
-    Strategy_NonRecursive strategyNonrecursive;
-
     internal void Update(TownData townData)
     {
         maxDepth = AITestScene.Instance.MaxAIDepth - 1;
@@ -161,72 +158,38 @@ public partial class PlayerAI
         AIDebugger.Clear();
 #endif
 
-        int aiApproach = 4;
-        switch (aiApproach)
+        if (Tasks.Count == 0)
         {
-            case 2: // Another recursive approach
-                {
-                    strategyRecursive ??= new RecursiveStrategy2(player);
-                    var bestAction = strategyRecursive.DecideAction(townData);
+            Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+        }
+        AIDebugger.rootEntry.BestNextAction = null;
 
-                    // BestNextActionToTake.CopyFrom(townData, action);
-                    Debug.Log(strategyRecursive.NumActionsConsidered);
-                    BestNextActionToTake.SetToNothing();
+        AI_ActionHeuristics.UpdateTerritoryDetails(aiTownState, player);
 
-                    // NOTE: This approach doesn't currently set BestNextActionToTake since I'm just trying to get it to work.
-                }
-                break;
-
-            case 3: // trying a nonrecursive approach because FFFS
-                {
-                    AIDebugger.rootEntry.BestNextAction = null;
-                    strategyNonrecursive ??= new Strategy_NonRecursive(townData, player);
-                    var bestAction = strategyNonrecursive.DecideAction();
-                    if (bestAction == null)
-                        BestNextActionToTake.SetToNothing();
-                    else
-                        BestNextActionToTake.CopyFrom(bestAction);
-                    player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
-                }
-                break;
-
-            case 4: // Main working approach
-                {
-                    if (Tasks.Count == 0)
-                    {
-                        Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-                        Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-                        Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-                        Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-                    }
-                    AIDebugger.rootEntry.BestNextAction = null;
-
-                    AI_ActionHeuristics.UpdateTerritoryDetails(aiTownState, player);
-
-                    // Enumerate strategic goals (capture/defend/economic) once per real-game
-                    // Update. The recursive search below is then biased by the demand vector
-                    // these goals imply -- e.g. an aggressive player generates many CaptureNode
-                    // goals which in turn raise demand for Barracks construction resources,
-                    // which then raises the build heuristic for Woodcutters / StoneMiners.
-                    AIGoalEnumerator.EnumerateGoals(player, aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals, goalPool);
-                    AI_ActionHeuristics.UpdateResourceDemand(aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals);
+        // Enumerate strategic goals (capture/defend/economic) once per real-game
+        // Update. The recursive search below is then biased by the demand vector
+        // these goals imply -- e.g. an aggressive player generates many CaptureNode
+        // goals which in turn raise demand for Barracks construction resources,
+        // which then raises the build heuristic for Woodcutters / StoneMiners.
+        AIGoalEnumerator.EnumerateGoals(player, aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals, goalPool);
+        AI_ActionHeuristics.UpdateResourceDemand(aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals);
 
 #if DEBUG
-                    bool useHybrid = AITestScene.Instance.EnableHybridSearch;
+        bool useHybrid = AITestScene.Instance.EnableHybridSearch;
 #else
-                    const bool useHybrid = true;
+        const bool useHybrid = true;
 #endif
-                    var bestAction = useHybrid
-                        ? DetermineBestActionToPerform_Hybrid(0, AIDebugger.rootEntry)
-                        : DetermineBestActionToPerform(0, AIDebugger.rootEntry);
-                    if (bestAction == null)
-                        BestNextActionToTake.SetToNothing();
-                    else
-                        BestNextActionToTake.CopyFrom(bestAction);
-                    player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
-                }
-                break;
-        }
+        var bestAction = useHybrid
+            ? DetermineBestActionToPerform_Hybrid(0, AIDebugger.rootEntry)
+            : DetermineBestActionToPerform(0, AIDebugger.rootEntry);
+        if (bestAction == null)
+            BestNextActionToTake.SetToNothing();
+        else
+            BestNextActionToTake.CopyFrom(bestAction);
+        player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried);
 
