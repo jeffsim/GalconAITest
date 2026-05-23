@@ -25,6 +25,7 @@ MonoBehaviour:
   IsEnabled: 1
   Name: Player G
   Color: {r: 0, g: 1, b: 0, a: 1}
-  ExpansionWeight: 1.13
+  TerritoryExpansionWeight: 1.13
+  EconomicExpansionWeight: 0.85
   DefenseWeight: 1.1
   AggressivenessWeight: 0.67

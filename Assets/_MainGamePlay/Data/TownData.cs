@@ -162,9 +162,10 @@ public class TownData
                             sourceNode.NumWorkers -= numSent;
                             toNode.NumWorkers -= numSent;
 
-                            if (toNode.NumWorkers <= 0)
+                            // Only enemy-owned nodes can be taken by force. Neutral territory
+                            // requires constructing a building (ConstructBuildingInEmptyNode).
+                            if (toNode.NumWorkers <= 0 && toNode.OwnedBy != null)
                             {
-                                // we captured the node
                                 toNode.OwnedBy = player;
                                 toNode.NumWorkers = -toNode.NumWorkers;
                             }

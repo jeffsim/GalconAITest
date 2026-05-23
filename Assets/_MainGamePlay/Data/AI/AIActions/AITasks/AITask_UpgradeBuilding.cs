@@ -14,7 +14,7 @@ public class AITask_UpgradeBuilding : AITask
         if (h <= 0f) return 0f;
 
         // Apply personality so Phase 1 candidate ranking matches actual scoring; Upgrade is
-        // expansion-aligned, so a low-ExpansionWeight AI should not crowd top-K with upgrades.
+        // economic-expansion aligned, so a low-EconomicExpansionWeight AI should not crowd top-K with upgrades.
         return h * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Upgrade);
     }
 

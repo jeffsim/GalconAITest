@@ -181,9 +181,11 @@ public partial class AI_TownState
         //     attackResult = AttackResult.BothSidesDied;
         // }
         // else 
-        if (toNode.NumWorkers <= 0)
+        // AITask_AttackToNode filters out neutral targets, so origToNodeOwner is always non-null
+        // here. The branch is still belt-and-suspenders for direct callers, but we only ever
+        // claim enemy nodes -- neutral expansion goes through SendWorkersToConstructBuildingInEmptyNode.
+        if (toNode.NumWorkers <= 0 && origToNodeOwner != null)
         {
-            // we captured the node
             toNode.OwnedBy = player;
             toNode.NumWorkers = -toNode.NumWorkers;
             attackResult = AttackResult.AttackerWon;

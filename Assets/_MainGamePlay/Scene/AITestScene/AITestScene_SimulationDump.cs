@@ -60,7 +60,7 @@ public partial class AITestScene
             sb.AppendLine($"  Player{slot} AIDefn: (none)");
             return;
         }
-        sb.AppendLine($"  Player{slot} AIDefn: {defn.Id} | exp={defn.ExpansionWeight:F2} def={defn.DefenseWeight:F2} agg={defn.AggressivenessWeight:F2}");
+        sb.AppendLine($"  Player{slot} AIDefn: {defn.Id} | terr={defn.TerritoryExpansionWeight:F2} econ={defn.EconomicExpansionWeight:F2} def={defn.DefenseWeight:F2} agg={defn.AggressivenessWeight:F2}");
     }
 
     void AppendPlayersSection(StringBuilder sb)
@@ -89,7 +89,7 @@ public partial class AITestScene
 
             sb.Append($"  P{player.Id} {player.Name}");
             if (player.AIDefn != null)
-                sb.Append($" [exp={player.AIDefn.ExpansionWeight:F2} def={player.AIDefn.DefenseWeight:F2} agg={player.AIDefn.AggressivenessWeight:F2}]");
+                sb.Append($" [terr={player.AIDefn.TerritoryExpansionWeight:F2} econ={player.AIDefn.EconomicExpansionWeight:F2} def={player.AIDefn.DefenseWeight:F2} agg={player.AIDefn.AggressivenessWeight:F2}]");
             sb.AppendLine();
             sb.AppendLine($"    nodes={nodeCount} workers={totalWorkers} hasExcessWorkers={PlayerHasExcessWorkers(player)}");
 

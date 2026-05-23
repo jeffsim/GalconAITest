@@ -20,9 +20,14 @@ public partial class PlayerAI
     // the depth-0 branching factor.
     public const int HybridTopK = 8;
 
-    // Beam width at recursive plies (depth >= 1). Per the plan, only the top 2-3 child actions
-    // by heuristic pre-score are expanded.
-    public const int HybridBeamWidth = 3;
+    // Beam width at recursive plies (depth >= 1). At maxDepth=11 the total branches are
+    // O(HybridTopK * HybridBeamWidth^(maxDepth-1)). Beam 3 -> 472K leaves; Beam 2 -> 8K leaves.
+    // Beam was 3 originally; reduced after GetUpgradeHeuristic stopped saturating to 3.0,
+    // because the previous saturation was implicitly doing most of the pruning -- peer
+    // Construct/Build/Attack candidates couldn't beat Upgrade's optimistic bound and got
+    // skipped by ShouldPruneByHeuristic. With heuristics now closer together, beam 3 expands
+    // the full tree and the action pool blows up (>100K AIActions per Update).
+    public const int HybridBeamWidth = 2;
 
     const int HybridCandidateBufferSize = HybridTopK;
 

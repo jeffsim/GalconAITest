@@ -6,6 +6,7 @@ public enum AIHeuristicActionType
     Upgrade,
     Buttress,
     Build,
+    Capture,
     Attack,
 }
 
@@ -17,8 +18,6 @@ public static class AI_ActionHeuristics
 {
     const float HeuristicScoreScale = 3f;
 
-    const float excessWorkersScalingFactor = 1f;
-    const float excessWorkersScalingFactor2 = 1f;
     const float nearbyEnemiesScalingFactor = 1f;
     const float buildingResourceScalingFactor = 5f;
     const float buildingStrategicScalingFactor = 8f;
@@ -27,7 +26,13 @@ public static class AI_ActionHeuristics
 
     const float upgradeNodeMinScore = 10f;
     const float upgradeNodeMaxScore = 40f;
-    const float buildBuildingMinScore = 20f;
+    // buildBuildingMinScore was 20 back when GetBuildHeuristic's normalization used the buggy
+    // (clamped - 10) / 30 form, which produced a floor of ~1.0 for any raw <= 20. Now that the
+    // normalization uses the true min/max, 20 was clamping out every "ordinary" build candidate
+    // (Camp/Outpost rawValue 8, defensive interior 8, defensive edge 12) to heuristic 0 -- so
+    // the AI literally stopped building anything except high-shortage gatherers. 5 puts the
+    // typical base values comfortably above the floor without saturating high-shortage cases.
+    const float buildBuildingMinScore = 5f;
     const float buildBuildingMaxScore = 40f;
     const float buttressNodeMinScore = 20f;
     const float buttressNodeMaxScore = 40f;
@@ -51,22 +56,13 @@ public static class AI_ActionHeuristics
 
         return actionType switch
         {
-            AIHeuristicActionType.Upgrade => aiDefn.ExpansionWeight,
-            AIHeuristicActionType.Build => aiDefn.ExpansionWeight,
+            AIHeuristicActionType.Upgrade => aiDefn.EconomicExpansionWeight,
+            AIHeuristicActionType.Build => aiDefn.EconomicExpansionWeight,
+            AIHeuristicActionType.Capture => aiDefn.TerritoryExpansionWeight,
             AIHeuristicActionType.Buttress => aiDefn.DefenseWeight,
             AIHeuristicActionType.Attack => aiDefn.AggressivenessWeight,
             _ => 1f,
         };
-    }
-
-    // Capturing a neutral node is mechanically an Attack (AttackFromNode walks workers in and
-    // claims the empty target) but strategically it's expansion -- "I'm grabbing unclaimed
-    // ground", not "I'm fighting an enemy". Without this split, a peaceful expansionist AI
-    // (agg=0, exp=2) could never grab neutrals (heuristic * agg = 0) even though grabbing
-    // neutrals is exactly the move its personality wants.
-    public static AIHeuristicActionType ResolveCaptureActionType(AI_NodeState toNode)
-    {
-        return toNode.OwnedBy == null ? AIHeuristicActionType.Build : AIHeuristicActionType.Attack;
     }
 
     public static float ApplyHeuristicAndPersonality(float simulationScore, float heuristicBonus, PlayerData player, AIHeuristicActionType actionType)
@@ -230,22 +226,30 @@ public static class AI_ActionHeuristics
         return node.NumWorkers / 2;
     }
 
+    // Maximum raw bonus overcrowding alone can contribute. Sized so a node at 200% capacity
+    // lands roughly in the middle of the heuristic band (raw ~26, h ~1.6) -- enough signal
+    // to rank upgrade as an attractive option without saturating to 3.0 and thereby pruning
+    // away every Construct/Build alternative via branch-and-bound. Only a genuine defensive
+    // imperative below (overcrowded AND threatened) should drive the heuristic to max.
+    const float overcrowdingMaxRawBonus = 15f;
+
     public static float GetUpgradeHeuristic(AI_NodeState node)
     {
         if (node.NumWorkers < node.MaxWorkers) return 0f;
 
         float rawValue = upgradeNodeMinScore * 1.1f;
 
+        // Overcrowding signal: quadratic in PERCENTAGE excess (not absolute count) so the
+        // heuristic doesn't depend on a building's MaxWorkers scale. The previous formulation
+        // added Pow(numExcessiveWorkers, 2) on top, which let a 10-cap Camp with 10 excess
+        // workers saturate the heuristic at 3.0 just from being overcrowded -- which is why
+        // Green's first move was always Upgrade #9: peer Construct/Build alternatives were
+        // then pruned by ShouldPruneByHeuristic before they could even simulate.
         int numExcessiveWorkers = node.NumWorkers - node.MaxWorkers;
-        if (node.NumWorkers > node.MaxWorkers * 1.5f)
-            rawValue = 100;
-        else if (numExcessiveWorkers > 0)
+        if (numExcessiveWorkers > 0)
         {
             float percentExcessive = (float)numExcessiveWorkers / node.MaxWorkers;
-            rawValue += Mathf.Pow(percentExcessive, 2) * excessWorkersScalingFactor;
-
-            if (node.NumEnemiesInNeighborNodes == 0)
-                rawValue += Mathf.Pow(numExcessiveWorkers, 2) * excessWorkersScalingFactor2;
+            rawValue += Mathf.Pow(percentExcessive, 2) * overcrowdingMaxRawBonus;
         }
 
         // Only penalize upgrade when we are ACTUALLY outnumbered (signed delta squared previously
@@ -253,6 +257,11 @@ public static class AI_ActionHeuristics
         int outnumberedBy = node.NumEnemiesInNeighborNodes - node.NumWorkers;
         if (outnumberedBy > 0)
             rawValue -= outnumberedBy * outnumberedBy * nearbyEnemiesScalingFactor;
+
+        // Defensive imperative: a node that's at-or-near capacity, on the territory edge, AND
+        // has actual enemies adjacent NEEDS a capacity bump now. This is the only path that
+        // should drive the heuristic to its max so the upgrade outranks expansion in genuinely
+        // threatened situations -- not in peaceful overcrowding.
         if (node.IsOnTerritoryEdge && node.NumWorkers < node.MaxWorkers * 1.5f && node.NumEnemiesInNeighborNodes > 0)
             rawValue += 35;
 
@@ -298,6 +307,12 @@ public static class AI_ActionHeuristics
         return normalizedValue * HeuristicScoreScale;
     }
 
+    // Small post-normalization boost given to builds on empty neutral targets. Applied AFTER
+    // clamping so it cannot saturate the heuristic the way the earlier in-rawValue +15 did.
+    // This is the "constructing on a neutral literally claims a node" signal -- separate from
+    // the building-type quality signal that the rawValue path already captures.
+    const float neutralTargetBuildBonus = 0.5f;
+
     public static float GetBuildHeuristic(AI_TownState town, BuildingDefn buildingDefn, AI_NodeState toNode)
     {
         float rawValue = 0f;
@@ -325,22 +340,31 @@ public static class AI_ActionHeuristics
         }
 
         float clampedRawValue = Mathf.Clamp(rawValue, buildBuildingMinScore, buildBuildingMaxScore);
-        float normalizedValue = (clampedRawValue - 10f) / 30f;
-        return normalizedValue * HeuristicScoreScale;
+        float normalizedValue = (clampedRawValue - buildBuildingMinScore) / (buildBuildingMaxScore - buildBuildingMinScore);
+        float result = normalizedValue * HeuristicScoreScale;
+
+        // Territory-gain bonus for empty neutral targets. Adding here (after normalization)
+        // means it bumps the final value by a fixed amount without saturating -- earlier I
+        // added it to rawValue before clamp and every neutral candidate maxed out at the same
+        // score, defeating top-K ordering and branch-and-bound pruning.
+        if (toNode.OwnedBy == null)
+            result += neutralTargetBuildBonus;
+
+        return result;
     }
 
-    public static float GetAttackHeuristic(AI_TownState town, AI_NodeState enemyNode, int totalWorkersWillingToSend)
+    public static float GetAttackHeuristic(AI_TownState town, AI_NodeState targetNode, int totalWorkersWillingToSend)
     {
         float rawValue = attackNodeMaxScore / 2f;
 
         // Prefer weaker targets and attacks where we have comfortable force advantage
-        float forceRatio = totalWorkersWillingToSend / (float)Mathf.Max(1, enemyNode.NumWorkers);
+        float forceRatio = totalWorkersWillingToSend / (float)Mathf.Max(1, targetNode.NumWorkers);
         if (forceRatio >= 1.5f)
             rawValue += 10f;
         else if (forceRatio >= 1f)
             rawValue += 5f;
 
-        if (enemyNode.HasBuilding)
+        if (targetNode.HasBuilding)
             rawValue += 5f;
 
         // Resource-aware bonus: if the target node either gathers a resource (e.g. enemy
@@ -349,10 +373,10 @@ public static class AI_ActionHeuristics
         // capture much more highly. This is what turns "capture the forest because I need
         // wood for a Barracks" from accidental into intentional.
         GoodType targetResource = GoodType.Unset;
-        if (enemyNode.CanGoGatherResources)
-            targetResource = enemyNode.ResourceThisNodeCanGoGather;
-        else if (enemyNode.CanBeGatheredFrom)
-            targetResource = enemyNode.ResourceGatheredFromThisNode;
+        if (targetNode.CanGoGatherResources)
+            targetResource = targetNode.ResourceThisNodeCanGoGather;
+        else if (targetNode.CanBeGatheredFrom)
+            targetResource = targetNode.ResourceGatheredFromThisNode;
 
         if (targetResource != GoodType.Unset)
         {

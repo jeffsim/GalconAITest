@@ -45,14 +45,15 @@ public static class AIGoalEnumerator
         var aiDefn = player.AIDefn;
         float aggression = aiDefn != null ? aiDefn.AggressivenessWeight : 1f;
         float defense = aiDefn != null ? aiDefn.DefenseWeight : 1f;
-        float expansion = aiDefn != null ? aiDefn.ExpansionWeight : 1f;
+        float territoryExpansion = aiDefn != null ? aiDefn.TerritoryExpansionWeight : 1f;
+        float economicExpansion = aiDefn != null ? aiDefn.EconomicExpansionWeight : 1f;
 
         var nodes = aiTownState.Nodes;
         int numNodes = aiTownState.NumNodes;
 
-        EnumerateCaptureGoals(player, aiTownState, nodes, numNodes, aggression, expansion, goalsOut, goalPool);
+        EnumerateCaptureGoals(player, aiTownState, nodes, numNodes, aggression, territoryExpansion, goalsOut, goalPool);
         EnumerateDefendGoals(player, nodes, numNodes, defense, goalsOut, goalPool);
-        EnumerateEconomicTierGoals(player, aiTownState, buildableBuildingDefns, numBuildableBuildingDefns, aggression, defense, expansion, goalsOut, goalPool);
+        EnumerateEconomicTierGoals(player, aiTownState, buildableBuildingDefns, numBuildableBuildingDefns, aggression, defense, economicExpansion, goalsOut, goalPool);
     }
 
     static void EnumerateCaptureGoals(
@@ -61,7 +62,7 @@ public static class AIGoalEnumerator
         AI_NodeState[] nodes,
         int numNodes,
         float aggression,
-        float expansion,
+        float territoryExpansion,
         List<AIGoal> goalsOut,
         Stack<AIGoal> goalPool)
     {
@@ -104,11 +105,11 @@ public static class AIGoalEnumerator
             }
 
             // Half the personality mix comes from aggression (taking from a known enemy) and
-            // half from expansion (gaining new ground). For neutral nodes, only expansion
-            // applies -- aggression has no enemy to act on.
+            // half from territory expansion (gaining new ground). For neutral nodes, only
+            // territory expansion applies -- aggression has no enemy to act on.
             float personalityMix = node.OwnedBy != null
-                ? (aggression * 0.5f + expansion * 0.5f)
-                : expansion;
+                ? (aggression * 0.5f + territoryExpansion * 0.5f)
+                : territoryExpansion;
 
             float value = (captureBaseValue + typeBonus) * personalityMix;
             if (value < MinGoalValue) continue;
@@ -175,7 +176,7 @@ public static class AIGoalEnumerator
         int numBuildableBuildingDefns,
         float aggression,
         float defense,
-        float expansion,
+        float economicExpansion,
         List<AIGoal> goalsOut,
         Stack<AIGoal> goalPool)
     {
@@ -207,7 +208,7 @@ public static class AIGoalEnumerator
             }
             else
             {
-                weight = expansion;
+                weight = economicExpansion;
                 reason = "economic tier";
             }
 

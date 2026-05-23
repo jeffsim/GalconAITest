@@ -60,11 +60,20 @@ public abstract class AITask
     // unlikely to win after sim+recurse and can be skipped. Personality = 0 collapses the
     // bound to zero which prunes every candidate of that type unconditionally — exactly the
     // behavior expected when a tactic weight is zeroed out.
+    //
+    // Margin: require optimistic to clear the peer best by a small percentage. Without it,
+    // many candidates whose heuristics land within a few percent of each other (e.g. Upgrade
+    // vs Construct on an overcrowded interior) all survive pruning and each spawn a full
+    // recursive subtree. Empirically that pushed the action pool past 200K per Update with
+    // maxDepth=12. 2% is small enough to keep meaningful contenders, large enough to cut
+    // the bulk of the branches whose simulated result almost certainly tracks their heuristic.
+    protected const float PruningMargin = 1.02f;
+
     protected bool ShouldPruneByHeuristic(float heuristicBonus, AIHeuristicActionType actionType, float bestScoreAmongPeerActions)
     {
         if (bestScoreAmongPeerActions <= 0f) return false; // first candidate; nothing to prune against
         float personality = AI_ActionHeuristics.GetPersonalityMultiplier(player, actionType);
         float optimistic = (player.AI.currentDepthBaselineScore + heuristicBonus) * personality;
-        return optimistic <= bestScoreAmongPeerActions;
+        return optimistic <= bestScoreAmongPeerActions * PruningMargin;
     }
 }

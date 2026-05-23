@@ -24,6 +24,10 @@ public class AITask_ConstructBuilding : AITask
 
     public AITask_ConstructBuilding(PlayerData player, AI_TownState aiTownState, int maxDepth, int minWorkersInNodeBeforeConsideringSendingAnyOut) : base(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut) { }
 
+    // Hybrid search keys Construct off the owned source node (fromNode). One Phase-1 candidate
+    // per owned node keeps top-K diverse; TryTask then iterates this source's empty neutral
+    // neighbors × top buildings in one call so the inner branch-and-bound can prune effectively
+    // across all (toNode, building) pairs while peer best is accumulating.
     public override float PreviewHeuristic(AI_NodeState fromNode)
     {
         if (fromNode.OwnedBy != player) return 0f;
@@ -43,9 +47,10 @@ public class AITask_ConstructBuilding : AITask
         }
         if (bestSiteScore <= 0f) return 0f;
 
-        // Apply personality so Phase 1 candidate ranking matches actual scoring; Construct is
-        // expansion-aligned, so a low-ExpansionWeight AI does not crowd top-K with builds.
-        return bestSiteScore * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Build);
+        // All Construct sites are empty neutrals (territory expansion), so use the Capture
+        // personality. This is what distinguishes "send workers to grab a neutral" from
+        // "upgrade an existing building" -- they should react to different personality knobs.
+        return bestSiteScore * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Capture);
     }
 
     override public bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
@@ -90,7 +95,7 @@ public class AITask_ConstructBuilding : AITask
                 // After top-K sort, scores are descending, so once one is pruned the rest are
                 // weakly dominated.
                 float runningPeerBest = Mathf.Max(bestScoreAmongPeerActions, bestAction.Score);
-                if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Build, runningPeerBest))
+                if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Capture, runningPeerBest))
                     break;
 
                 int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
@@ -99,7 +104,7 @@ public class AITask_ConstructBuilding : AITask
                 var debuggerEntry = aiDebuggerParentEntry?.AddEntry_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
                 var actionScore = GetActionScore(curDepth, debuggerEntry);
-                actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Build);
+                actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Capture);
                 if (actionScore > bestAction.Score)
                     bestAction.SetTo_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, actionScore, debuggerEntry);
 
