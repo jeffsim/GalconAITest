@@ -11,7 +11,7 @@ public class AITask_TryButtressOwnedNode : AITask
         // TryTask (fromNode.NumWorkers >= MaxWorkers * 3/4) is the correct precondition. The
         // global "excess" check disables buttress in balanced states where a high-DefenseWeight
         // AI should still reinforce a vulnerable frontier from a healthy source.
-        float h = AI_ActionHeuristics.GetButtressHeuristic(toNode);
+        float h = AI_ActionHeuristics.GetButtressHeuristic(aiTownState, toNode);
         if (h <= 0f) return 0f;
 
         // Apply personality so Phase 1 candidate ranking matches actual scoring. Without this,
@@ -31,7 +31,7 @@ public class AITask_TryButtressOwnedNode : AITask
         // precondition. The previous PlayerHasExcessWorkers guard blocked buttress in balanced
         // states even when a high-DefenseWeight personality should reinforce a frontier.
 
-        float heuristicBonus = AI_ActionHeuristics.GetButtressHeuristic(toNode);
+        float heuristicBonus = AI_ActionHeuristics.GetButtressHeuristic(aiTownState, toNode);
         if (heuristicBonus <= 0f)
             return false;
 

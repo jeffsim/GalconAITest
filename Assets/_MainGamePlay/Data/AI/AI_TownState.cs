@@ -89,6 +89,44 @@ public partial class AI_TownState
 
     internal int GetNumItem(GoodDefn good) => PlayerTownInventory[good.GoodType];
 
+    internal void CaptureNeutralResourceNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend, out int numSent, out int origSourceWorkers, out int origDestWorkers, out PlayerData origOwner)
+    {
+        origSourceWorkers = sourceNode.NumWorkers;
+        origDestWorkers = destNode.NumWorkers;
+        origOwner = destNode.OwnedBy;
+
+        numSent = Math.Min(Math.Max(0, numToSend), sourceNode.NumWorkers);
+        if (numSent <= 0) return;
+
+        sourceNode.NumWorkers -= numSent;
+
+        if (destNode.OwnedBy == null && destNode.NumWorkers > 0)
+        {
+            if (numSent <= destNode.NumWorkers)
+            {
+                destNode.NumWorkers -= numSent;
+                sourceNode.NumWorkers += numSent;
+                numSent = 0;
+                return;
+            }
+            destNode.NumWorkers = numSent - destNode.NumWorkers;
+        }
+        else
+        {
+            destNode.NumWorkers += numSent;
+        }
+
+        destNode.OwnedBy = player;
+        NodeOwnershipOrWorkersChanged = true;
+    }
+
+    internal void Undo_CaptureNeutralResourceNode(AI_NodeState sourceNode, AI_NodeState destNode, int origSourceWorkers, int origDestWorkers, PlayerData origOwner)
+    {
+        sourceNode.NumWorkers = origSourceWorkers;
+        destNode.NumWorkers = origDestWorkers;
+        destNode.OwnedBy = origOwner;
+    }
+
     internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
     {
         numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));

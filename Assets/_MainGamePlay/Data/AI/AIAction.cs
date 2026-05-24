@@ -10,6 +10,7 @@ public enum AIActionType
     // SendWorkersToEmptyNode,
     SendWorkersToOwnedNode,
     ConstructBuildingInEmptyNode,
+    CaptureNeutralResourceNode,
     ConstructBuildingInOwnedEmptyNode,
     AttackToNode,
     NoAction_GameOver,
@@ -26,10 +27,13 @@ public class AIAction
         {
             AIActionType.SendWorkersToOwnedNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId,
             AIActionType.ConstructBuildingInEmptyNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id,
+            AIActionType.CaptureNeutralResourceNode => "Capture resource #" + DestNode.NodeId + " send " + Count + " from #" + SourceNode.NodeId,
+            AIActionType.UpgradeBuilding => "Upgrade #" + SourceNode.NodeId,
+            AIActionType.AttackToNode => "Attack #" + DestNode.NodeId,
             AIActionType.DoNothing => "Do nothing (No beneficial action found)",
             AIActionType.NoAction_MaxDepth => "Max depth reached",
             AIActionType.NoAction_GameOver => "Game Over",
-            _ => throw new Exception("Unhandled AIActionType: " + Type),
+            _ => Type.ToString(),
         };
     }
 
@@ -140,6 +144,16 @@ public class AIAction
         DestNode = toNode;
         Count = numSent;
         BuildingToConstruct = buildingDefn;
+    }
+
+    internal void SetTo_CaptureNeutralResourceNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float score, AIDebuggerEntryData debuggerEntry)
+    {
+        AIDebuggerEntry = debuggerEntry;
+        Score = score;
+        Type = AIActionType.CaptureNeutralResourceNode;
+        SourceNode = fromNode;
+        DestNode = toNode;
+        Count = numSent;
     }
 
     internal void SetTo_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float score, AIDebuggerEntryData debuggerEntry)

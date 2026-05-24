@@ -69,6 +69,7 @@ public class AI_NodeState
     public void SetResourceNode(BuildingDefn buildingDefn, int turnNumber)
     {
         BuildingDefn = buildingDefn;
+        HasBuilding = true;
         Debug.Assert(buildingDefn.CanBeGatheredFrom);
         CanBeGatheredFrom = buildingDefn.CanBeGatheredFrom;
         ResourceGatheredFromThisNode = buildingDefn.ResourceGatheredFromThisNode.GoodType;

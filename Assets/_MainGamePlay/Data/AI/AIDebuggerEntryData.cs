@@ -180,6 +180,24 @@ public class AIDebuggerEntryData
         return newEntry;
     }
 
+    internal AIDebuggerEntryData AddEntry_CaptureNeutralResourceNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float finalActionScore, int actionNum, int curDepth)
+    {
+        if (!AIDebugger.ShouldTrackEntries) return null;
+        var newEntry = GetFromPool(
+                        AIActionType.CaptureNeutralResourceNode,
+                        fromNode,
+                        toNode,
+                        numSent,
+                        null,
+                        0,
+                        finalActionScore,
+                        actionNum,
+                        curDepth,
+                        this);
+        ChildEntries.Add(newEntry);
+        return newEntry;
+    }
+
     internal AIDebuggerEntryData AddEntry_AttackToNode(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth)
     {
         Debug.Assert(attackFromNodes != null);
@@ -240,6 +258,7 @@ public class AIDebuggerEntryData
         switch (ActionType)
         {
             case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
+            case AIActionType.CaptureNeutralResourceNode: return "Capture resource " + ToNode.NodeId + " send " + NumSent + " from " + FromNode.NodeId;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
             case AIActionType.UpgradeBuilding:
                 // Use snapshotted values; FromNode.BuildingDefn / .BuildingLevel are mutated

@@ -23,4 +23,22 @@ public class PlayerAIDefn : BaseDefn
     [Range(0.05f, 10f)] public float DecisionIntervalSeconds = 1.0f;
     [Tooltip("Uniform +/- variance applied to DecisionIntervalSeconds each time the next decision is scheduled.")]
     [Range(0f, 5f)] public float DecisionVarianceSeconds = 0.5f;
+
+    [Header("Resource Stockpiles")]
+    [Tooltip("Desired minimum wood on hand. Drives MaintainStockpile goals when below target.")]
+    public int TargetWoodStockpile = 15;
+    [Tooltip("Desired minimum stone on hand. Drives MaintainStockpile goals when below target.")]
+    public int TargetStoneStockpile = 15;
+    [Tooltip("Multiplier for how strongly the AI pursues stockpile goals.")]
+    [Range(0f, 2f)] public float ResourceStockpileWeight = 1f;
+
+    public int GetTargetStockpile(GoodType goodType)
+    {
+        return goodType switch
+        {
+            GoodType.Wood => TargetWoodStockpile,
+            GoodType.Stone => TargetStoneStockpile,
+            _ => 0,
+        };
+    }
 }

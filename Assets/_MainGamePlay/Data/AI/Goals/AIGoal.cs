@@ -22,6 +22,10 @@ public enum AIGoalType
     // "We want this kind of building in our economy." Triggered by buildable buildings the
     // player doesn't yet own. Drives demand for the building's construction requirements.
     EconomicTier,
+
+    // "Keep a buffer of this resource on hand." Triggered when inventory falls below the
+    // PlayerAIDefn stockpile target. Drives demand for the resource and staffing of gatherers.
+    MaintainStockpile,
 }
 
 public class AIGoal
@@ -33,6 +37,9 @@ public class AIGoal
 
     // For EconomicTier
     public BuildingDefn TargetBuilding;
+
+    // For MaintainStockpile
+    public GoodType TargetGoodType;
 
     // Higher = more important; combines personality weights with the situational fit.
     public float Value;
@@ -49,6 +56,7 @@ public class AIGoal
         Type = AIGoalType.None;
         TargetNode = null;
         TargetBuilding = null;
+        TargetGoodType = GoodType.Unset;
         Value = 0f;
         HorizonTurns = 0;
         DebugReason = null;

@@ -53,11 +53,15 @@ public class BuildingDefn : BaseDefn
     public GoodDefn ResourceThisNodeCanGoGather;
     [ShowIf("CanGatherResources")]
     public int ResourceProducedPerTurn = 3;
-    // Realtime mode only. How long (seconds) between each unit of resource produced. The
-    // step-mode path keeps using ResourceProducedPerTurn unchanged.
     [ShowIf("CanGatherResources")]
-    [Tooltip("Realtime: seconds between each resource produced. <=0 disables realtime production.")]
+    [Tooltip("Deprecated: use ResourcesPerSecondPerWorker. Kept for reference only.")]
     public float SecondsPerResourceProduced = 1.5f;
+    [ShowIf("@CanGatherResources || CanBeGatheredFrom")]
+    [Tooltip("Step mode: each worker produces this many resources per turn.")]
+    public int ResourceProducedPerWorkerPerTurn = 1;
+    [ShowIf("@CanGatherResources || CanBeGatheredFrom")]
+    [Tooltip("Realtime: each worker produces this many resources per second.")]
+    public float ResourcesPerSecondPerWorker = 0.667f;
 
     // ResourceNode
     [Header("Resource"), Space(10)]

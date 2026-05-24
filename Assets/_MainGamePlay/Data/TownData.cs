@@ -127,23 +127,18 @@ public class TownData
         for (int i = 0; i < Nodes.Count; i++)
         {
             var node = Nodes[i];
+            if (node.OwnedBy == null) continue;
             var building = node.Building;
             if (building == null) continue;
             var defn = building.Defn;
 
-            // Resources (Forest -> Wood, etc). Threshold-driven so each unit produced is a
-            // discrete inventory bump that the AI evaluator can react to. Using SecondsPerX
-            // with carry-over preserves the configured rate even at variable framerates.
-            if (defn.CanGatherResources && defn.SecondsPerResourceProduced > 0f)
+            if (ResourceProduction.ProducesResources(defn))
             {
-                building.ResourceProductionAccum += deltaSeconds;
-                while (building.ResourceProductionAccum >= defn.SecondsPerResourceProduced)
+                int produced = ResourceProduction.Tick(deltaSeconds, ref building.ResourceProductionAccum, defn, node.NumWorkers);
+                if (produced > 0)
                 {
-                    building.ResourceProductionAccum -= defn.SecondsPerResourceProduced;
-                    var goodType = defn.ResourceThisNodeCanGoGather.GoodType;
-                    if (!node.Inventory.ContainsKey(goodType))
-                        node.Inventory[goodType] = 0;
-                    node.Inventory[goodType] += 1;
+                    var goodType = ResourceProduction.GetProducedGoodType(defn);
+                    ResourceProduction.CreditInventory(node.Inventory, goodType, produced);
                     somethingChanged = true;
                 }
             }
@@ -429,18 +424,12 @@ public class TownData
                     int numToSend = Math.Min(action.Count, fromNode.NumWorkers);
                     if (numToSend <= 0) return;
 
-                    // Mark the target as "I'm capturing this neutral with a building intent" so
-                    // (a) other AIs see it as taken via AI mirror's PendingCaptureBy hook, and
-                    // (b) WE don't immediately re-issue a Construct on the same node next tick.
                     if (toNode.PendingCaptureBy == null)
                     {
                         toNode.PendingCaptureBy = player;
                         toNode.PendingConstructBuilding = action.BuildingToConstruct;
                     }
 
-                    // Pre-consume the construction resources from the player's town inventory
-                    // (greedy, like the step-mode path). For now we deliberately don't gate on
-                    // transport -- the prompt explicitly excludes that.
                     if (action.BuildingToConstruct != null)
                     {
                         foreach (var req in action.BuildingToConstruct.ConstructionRequirements)
@@ -458,6 +447,24 @@ public class TownData
                     }
 
                     SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.CaptureAndConstruct, action.BuildingToConstruct);
+                    fromNode.NumWorkers -= numToSend;
+                    WorldRevision++;
+                }
+                break;
+
+            case AIActionType.CaptureNeutralResourceNode:
+                {
+                    var fromNode = action.SourceNode?.RealNode;
+                    var toNode = action.DestNode?.RealNode;
+                    if (fromNode == null || toNode == null) return;
+                    if (fromNode.OwnedBy != player) return;
+                    if (toNode.OwnedBy != null) return;
+                    if (toNode.Building == null || !toNode.Building.Defn.CanBeGatheredFrom) return;
+
+                    int numToSend = Math.Min(action.Count, fromNode.NumWorkers);
+                    if (numToSend <= 0) return;
+
+                    SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.Reinforce, null);
                     fromNode.NumWorkers -= numToSend;
                     WorldRevision++;
                 }
@@ -534,18 +541,23 @@ public class TownData
 
     internal void Debug_WorldTurn()
     {
-        // Update resource gathering nodes
+        // Update resource gathering nodes (owned only; production scales with workers).
         foreach (var node in Nodes)
         {
+            if (node.OwnedBy == null) continue;
             if (node.Building == null) continue;
+            var defn = node.Building.Defn;
 
-            if (node.Building.Defn.CanGatherResources)
+            if (ResourceProduction.ProducesResources(defn))
             {
-                // TODO: assume a resource node is nearby and not depleted
-                if (node.Inventory.ContainsKey(node.Building.Defn.ResourceThisNodeCanGoGather.GoodType))
-                    node.Inventory[node.Building.Defn.ResourceThisNodeCanGoGather.GoodType] += node.Building.Defn.ResourceProducedPerTurn;
+                int produced = ResourceProduction.GetProducedPerTurn(defn, node.NumWorkers);
+                if (produced > 0)
+                {
+                    var goodType = ResourceProduction.GetProducedGoodType(defn);
+                    ResourceProduction.CreditInventory(node.Inventory, goodType, produced);
+                }
             }
-            if (node.Building.Defn.CanGenerateWorkers)
+            if (defn.CanGenerateWorkers)
             {
                 if (node.NumWorkers < node.Building.MaxWorkers)
                     node.NumWorkers = Math.Min(node.Building.MaxWorkers, node.NumWorkers + node.Building.WorkersGeneratedPerTurn);
@@ -681,6 +693,33 @@ public class TownData
                     }
 
                     break;
+                    }
+
+                case AIActionType.CaptureNeutralResourceNode:
+                    {
+                        if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) break;
+                        if (toNode.OwnedBy != null) break;
+                        if (toNode.Building == null || !toNode.Building.Defn.CanBeGatheredFrom) break;
+
+                        int captureSent = moveToMake.Count;
+                        fromNode.NumWorkers -= captureSent;
+
+                        if (toNode.NumWorkers > 0)
+                        {
+                            if (captureSent <= toNode.NumWorkers)
+                            {
+                                toNode.NumWorkers -= captureSent;
+                                break;
+                            }
+                            toNode.NumWorkers = captureSent - toNode.NumWorkers;
+                        }
+                        else
+                        {
+                            toNode.NumWorkers = captureSent;
+                        }
+
+                        toNode.OwnedBy = player;
+                        break;
                     }
 
                 case AIActionType.SendWorkersToOwnedNode:

@@ -43,16 +43,16 @@ public partial class PlayerAI
         {
             var node = nodes[i];
             if (node.OwnedBy != player) continue;
-            if (!node.HasBuilding) continue;
 
-            if (node.CanGoGatherResources)
+            if (node.CanGoGatherResources || node.CanBeGatheredFrom)
             {
-                // Read the per-building yield rather than a hardcoded constant so the AI's
-                // multi-step planning agrees with the real Debug_WorldTurn yield.
-                int produced = node.BuildingDefn != null ? node.BuildingDefn.ResourceProducedPerTurn : 0;
+                var defn = node.BuildingDefn;
+                int produced = defn != null ? ResourceProduction.GetProducedPerTurn(defn, node.NumWorkers) : 0;
                 if (produced > 0)
                 {
-                    var goodType = node.ResourceThisNodeCanGoGather;
+                    var goodType = node.CanBeGatheredFrom
+                        ? node.ResourceGatheredFromThisNode
+                        : node.ResourceThisNodeCanGoGather;
                     if (aiTownState.PlayerTownInventory.TryGetValue(goodType, out int prevInv))
                         aiTownState.PlayerTownInventory[goodType] = prevInv + produced;
                     else
@@ -62,6 +62,8 @@ public partial class PlayerAI
                     resourcesAdded[goodType] = prevDelta + produced;
                 }
             }
+
+            if (!node.HasBuilding && !node.CanBeGatheredFrom) continue;
 
             if (node.CanGenerateWorkers && node.WorkersGeneratedPerTurn > 0)
             {

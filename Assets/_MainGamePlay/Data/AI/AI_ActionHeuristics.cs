@@ -122,6 +122,10 @@ public static class AI_ActionHeuristics
                     // recursive task) handles it via worker shuffling. v2 could add demand
                     // for defensive buildings.
                     break;
+
+                case AIGoalType.MaintainStockpile:
+                    AddStockpileToDemand(demand, town, goal);
+                    break;
             }
         }
 
@@ -131,6 +135,23 @@ public static class AI_ActionHeuristics
             if (barracksDefn != null)
                 AddBuildingReqsToDemand(demand, barracksDefn, totalCaptureUrgency);
         }
+    }
+
+    static void AddStockpileToDemand(Dictionary<GoodType, int> demand, AI_TownState town, AIGoal goal)
+    {
+        if (goal.TargetGoodType == GoodType.Unset) return;
+
+        float urgency = goal.Value / System.Math.Max(1, goal.HorizonTurns);
+        int target = town.player.AIDefn != null ? town.player.AIDefn.GetTargetStockpile(goal.TargetGoodType) : 0;
+        int have = town.PlayerTownInventory.TryGetValue(goal.TargetGoodType, out int v) ? v : 0;
+        int deficit = target - have;
+        if (deficit <= 0) return;
+
+        // Demand at least the stockpile target, scaled up by urgency so critical shortfalls
+        // push harder toward gatherers and worker staffing.
+        int contribution = Math.Max(deficit, (int)(target * urgency * 0.1f));
+        demand.TryGetValue(goal.TargetGoodType, out int prev);
+        demand[goal.TargetGoodType] = prev + contribution;
     }
 
     static void AddBuildingReqsToDemand(Dictionary<GoodType, int> demand, BuildingDefn bd, float urgency)
@@ -168,9 +189,42 @@ public static class AI_ActionHeuristics
         if (goodType == GoodType.Unset) return 0;
         int wanted = town.ResourceDemand.TryGetValue(goodType, out int d) ? d : resourceDemandFloor;
         if (wanted < resourceDemandFloor) wanted = resourceDemandFloor;
+
+        // Also treat PlayerAIDefn stockpile targets as implicit demand so the AI keeps
+        // producing even when no construction goals are active.
+        int stockpileTarget = town.player.AIDefn != null ? town.player.AIDefn.GetTargetStockpile(goodType) : 0;
+        if (stockpileTarget > wanted) wanted = stockpileTarget;
+
         int owned = town.PlayerTownInventory.TryGetValue(goodType, out int o) ? o : 0;
         int shortage = wanted - owned;
         return shortage < 0 ? 0 : shortage;
+    }
+
+    // How many workers this node should have to meet current resource demand. Scales up
+    // with shortage so 1/10 workers in a forest is not "good enough" when wood is needed.
+    public static int GetDesiredWorkersForResourceNode(AI_TownState town, AI_NodeState node)
+    {
+        if (!node.CanBeGatheredFrom && !node.CanGoGatherResources) return 0;
+        if (node.MaxWorkers <= 0) return 0;
+
+        GoodType resource = node.CanBeGatheredFrom
+            ? node.ResourceGatheredFromThisNode
+            : node.ResourceThisNodeCanGoGather;
+        int shortage = GetResourceShortage(town, resource);
+        if (shortage <= 0) return Math.Min(1, node.NumWorkers);
+
+        int wanted = town.ResourceDemand.TryGetValue(resource, out int d) ? d : resourceDemandFloor;
+        float fillRatio = Mathf.Clamp01((float)shortage / Mathf.Max(1, wanted));
+        int desired = Math.Max(1, (int)Math.Ceiling(node.MaxWorkers * fillRatio));
+        return Math.Min(desired, node.MaxWorkers);
+    }
+
+    public static bool NodeProducesResource(AI_NodeState node, GoodType goodType)
+    {
+        if (goodType == GoodType.Unset) return false;
+        if (node.CanBeGatheredFrom && node.ResourceGatheredFromThisNode == goodType) return true;
+        if (node.CanGoGatherResources && node.ResourceThisNodeCanGoGather == goodType) return true;
+        return false;
     }
 
     public static void UpdateTerritoryDetails(AI_TownState town, PlayerData player)
@@ -314,7 +368,9 @@ public static class AI_ActionHeuristics
         return normalizedValue * HeuristicScoreScale;
     }
 
-    public static float GetButtressHeuristic(AI_NodeState toNode)
+    const float resourceStaffingScalingFactor = 8f;
+
+    public static float GetButtressHeuristic(AI_TownState town, AI_NodeState toNode)
     {
         float rawValue = 0f;
 
@@ -332,11 +388,29 @@ public static class AI_ActionHeuristics
         if (toNode.IsOnTerritoryEdge)
             rawValue += territoryEdgeScalingFactor;
 
+        // Staff resource-producing nodes when we need more output. Production scales with
+        // worker count, so understaffing a forest while short on wood is a real mistake.
+        if (toNode.CanBeGatheredFrom || toNode.CanGoGatherResources)
+        {
+            int desired = GetDesiredWorkersForResourceNode(town, toNode);
+            if (toNode.NumWorkers < desired)
+            {
+                float workerDeficit = desired - toNode.NumWorkers;
+                GoodType resource = toNode.CanBeGatheredFrom
+                    ? toNode.ResourceGatheredFromThisNode
+                    : toNode.ResourceThisNodeCanGoGather;
+                int shortage = GetResourceShortage(town, resource);
+                if (shortage > 0)
+                {
+                    rawValue += 12f;
+                    rawValue += workerDeficit * workerDeficit * resourceStaffingScalingFactor * Mathf.Max(1f, shortage * 0.1f);
+                }
+            }
+        }
+
         // Reinforce understaffed nodes ONLY when there is something to defend against. An
-        // interior Woodcutter at 18/40 doesn't need workers shipped to it (gathering is
-        // per-tick, not worker-count-dependent). Without this gate, a dominant player ends
-        // up with a pile of phantom buttress candidates against its own peaceful interior
-        // and never reaches Phase 2 attack candidates.
+        // interior gatherer at half capacity with no threat does not need a defensive buttress;
+        // resource staffing above handles the economic case.
         if (toNode.NumWorkers < toNode.MaxWorkers / 2
             && (toNode.IsOnTerritoryEdge || toNode.NumEnemiesInNeighborNodes > 0))
         {
@@ -395,6 +469,11 @@ public static class AI_ActionHeuristics
             result += neutralTargetBuildBonus;
 
         return result;
+    }
+
+    public static float GetCaptureResourceNodeHeuristic(AI_TownState town, AI_NodeState targetNode, int workersToSend)
+    {
+        return GetAttackHeuristic(town, targetNode, workersToSend);
     }
 
     public static float GetAttackHeuristic(AI_TownState town, AI_NodeState targetNode, int totalWorkersWillingToSend)

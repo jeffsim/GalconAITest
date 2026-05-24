@@ -25,10 +25,13 @@ MonoBehaviour:
   IsEnabled: 1
   Name: Player R
   Color: {r: 1, g: 0, b: 0, a: 1}
-  TerritoryExpansionWeight: 0.088
-  EconomicExpansionWeight: 0.088
-  DefenseWeight: 1.928
-  AggressivenessWeight: 0.012
-  AttackOverkillMultiplier: 1.31
+  TerritoryExpansionWeight: 0.709
+  EconomicExpansionWeight: 0.489
+  DefenseWeight: 1.058
+  AggressivenessWeight: 0.806
+  AttackOverkillMultiplier: 1.172
   DecisionIntervalSeconds: 1
   DecisionVarianceSeconds: 0.5
+  TargetWoodStockpile: 15
+  TargetStoneStockpile: 15
+  ResourceStockpileWeight: 1

@@ -84,30 +84,28 @@ public partial class AI_TownState
                         {
                             var addedScore = 1.5f;
 
-                            // The longer we've owned the node, the more useful it is.  Use node.TurnBuildingWasBuilt, which goes from 0 to maxStateDepth, to weight the score
-                            // where turn 0 is the first turn, and maxStateDepth is the last turn
-                            // building built turn 0; currently on turn 10; multiply score by 10
-                            // building built turn 5; currently on turn 10; multiply score by 5
-                            // TODO: Change turnbuildingwasbuilt into max of [4] turns ago; otherwise this becomes huge.  Can't just use min, need to subtract from curturn#
+                            // The longer we've owned the node, the more useful it is.
                             addedScore += (maxStateDepth - node.TurnBuildingWasBuilt + 1) * 1.5f;
 
-#if DEBUG
-                            scoreReasons?.ScoresFrom_ResourceGatherersCloseToResourceNodes.Add(new DebugAIStateReason() { Node = node, ScoreValue = 2f });
-#endif
-
-                            // The more we globally need the resource that this node can gather, the higher the utility of it
-                            // if (GlobalResourceNeeds.TryGetValue(resourceType, out int globalResourceNeed))
-                            // {
-                            //     addedScore += globalResourceNeed * .1f;
-                            // }
-
-                            // The more of the resource that this building can gather we already own, the lower the utility of it
                             var resourceType = node.ResourceThisNodeCanGoGather;
-                            
                             int numResource = PlayerTownInventory[resourceType];
-
                             addedScore = Math.Max(0, addedScore - numResource * .1f);
+
+                            // Reward staffing gatherers: output scales with workers.
+                            if (node.BuildingDefn != null && node.NumWorkers > 0)
+                            {
+                                float rate = ResourceProduction.GetResourcesPerSecond(node.BuildingDefn, node.NumWorkers);
+                                addedScore += rate * 0.5f;
+                            }
+
                             score += addedScore;
+                        }
+
+                        // Owned resource nodes (forest/stone): value scales with workers assigned.
+                        if (node.CanBeGatheredFrom && node.BuildingDefn != null && node.NumWorkers > 0)
+                        {
+                            float rate = ResourceProduction.GetResourcesPerSecond(node.BuildingDefn, node.NumWorkers);
+                            score += rate * 0.75f;
                         }
 
                         // Defensive buildings are useful if...

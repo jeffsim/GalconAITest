@@ -142,6 +142,9 @@ public partial class AITestScene
                 case AIGoalType.EconomicTier:
                     target = goal.TargetBuilding != null ? goal.TargetBuilding.BuildingType.ToString() : "?";
                     break;
+                case AIGoalType.MaintainStockpile:
+                    target = goal.TargetGoodType.ToString();
+                    break;
                 default:
                     target = "?";
                     break;
@@ -249,6 +252,8 @@ public partial class AITestScene
                 return $"Support {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId} (score {action.Score:F2})";
             case AIActionType.ConstructBuildingInEmptyNode:
                 return $"Build {action.BuildingToConstruct?.Id} send {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId} (score {action.Score:F2})";
+            case AIActionType.CaptureNeutralResourceNode:
+                return $"Capture resource #{action.DestNode?.NodeId} send {action.Count} from #{action.SourceNode?.NodeId} (score {action.Score:F2})";
             case AIActionType.UpgradeBuilding:
                 return $"Upgrade #{action.SourceNode?.NodeId} (score {action.Score:F2})";
             case AIActionType.AttackToNode:
@@ -284,6 +289,8 @@ public partial class AITestScene
                 return $"Support {entry.NumSent} #{entry.FromNode?.NodeId} -> #{entry.ToNode?.NodeId} score={entry.FinalActionScore:F2}";
             case AIActionType.ConstructBuildingInEmptyNode:
                 return $"Build {entry.BuildingDefn?.Id} #{entry.FromNode?.NodeId} -> #{entry.ToNode?.NodeId} score={entry.FinalActionScore:F2}";
+            case AIActionType.CaptureNeutralResourceNode:
+                return $"Capture resource #{entry.ToNode?.NodeId} from #{entry.FromNode?.NodeId} score={entry.FinalActionScore:F2}";
             case AIActionType.UpgradeBuilding:
                 return $"Upgrade #{entry.FromNode?.NodeId} score={entry.FinalActionScore:F2}";
             case AIActionType.AttackToNode:

@@ -36,6 +36,8 @@ MonoBehaviour:
   CanBeGatheredFrom: 1
   ResourceGatheredFromThisNode: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d,
     type: 2}
+  ResourceProducedPerWorkerPerTurn: 1
+  ResourcesPerSecondPerWorker: 0.667
   CanCraftGoods: 0
   CraftableGoods: []
   CanGenerateWorkers: 0

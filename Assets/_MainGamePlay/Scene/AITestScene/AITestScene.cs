@@ -75,6 +75,7 @@ public partial class AITestScene : MonoBehaviour
     {
         Instance = this;
         EnsureRealtimeControlPanel();
+        EnsureAIDebugDumpButton();
         ResetTown();
 
         // Application.targetFrameRate = 60;
@@ -247,6 +248,17 @@ public partial class AITestScene : MonoBehaviour
                         actionIndex + ". Send " + action.Count + ", build\n" + action.BuildingToConstruct.Id);
                 break;
 
+            case AIActionType.CaptureNeutralResourceNode:
+                if (action.SourceNode != null && action.DestNode != null)
+                {
+                    string resourceLabel = action.DestNode.CanBeGatheredFrom
+                        ? action.DestNode.ResourceGatheredFromThisNode.ToString()
+                        : "resource";
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color,
+                        actionIndex + ". Capture " + resourceLabel + "\n" + action.Count + " workers");
+                }
+                break;
+
             case AIActionType.AttackToNode:
                 if (action.AttackFromNodes != null && action.DestNode != null)
                 {
@@ -283,6 +295,17 @@ public partial class AITestScene : MonoBehaviour
             case AIActionType.ConstructBuildingInEmptyNode:
                 if (action.FromNode != null && action.ToNode != null)
                     DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Send " + action.NumSent + ", build\n" + action.BuildingDefn.Id);
+                break;
+
+            case AIActionType.CaptureNeutralResourceNode:
+                if (action.FromNode != null && action.ToNode != null)
+                {
+                    string resourceLabel = action.ToNode.CanBeGatheredFrom
+                        ? action.ToNode.ResourceGatheredFromThisNode.ToString()
+                        : "resource";
+                    DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color,
+                        actionIndex + ". Capture " + resourceLabel + "\n" + action.NumSent + " workers");
+                }
                 break;
 
             case AIActionType.AttackToNode:

@@ -24,6 +24,7 @@ public static class AIGoalEnumerator
     const float defendValuePerWorker = 1f;
 
     const float economicBaseValue = 5f;
+    const float stockpileValuePerMissingUnit = 0.5f;
 
     public static void EnumerateGoals(
         PlayerData player,
@@ -53,6 +54,7 @@ public static class AIGoalEnumerator
 
         EnumerateCaptureGoals(player, aiTownState, nodes, numNodes, aggression, territoryExpansion, goalsOut, goalPool);
         EnumerateDefendGoals(player, nodes, numNodes, defense, goalsOut, goalPool);
+        EnumerateStockpileGoals(player, aiTownState, economicExpansion, goalsOut, goalPool);
         EnumerateEconomicTierGoals(player, aiTownState, buildableBuildingDefns, numBuildableBuildingDefns, aggression, defense, economicExpansion, goalsOut, goalPool);
     }
 
@@ -167,6 +169,50 @@ public static class AIGoalEnumerator
             goal.DebugReason = "deficit " + ((int)deficit) + " vs enemy force " + enemyForce;
             goalsOut.Add(goal);
         }
+    }
+
+    static void EnumerateStockpileGoals(
+        PlayerData player,
+        AI_TownState aiTownState,
+        float economicExpansion,
+        List<AIGoal> goalsOut,
+        Stack<AIGoal> goalPool)
+    {
+        var aiDefn = player.AIDefn;
+        float stockpileWeight = aiDefn != null ? aiDefn.ResourceStockpileWeight : 1f;
+        float weight = economicExpansion * stockpileWeight;
+        if (weight <= 0f) return;
+
+        TryAddStockpileGoal(player, aiTownState, GoodType.Wood, weight, goalsOut, goalPool);
+        TryAddStockpileGoal(player, aiTownState, GoodType.Stone, weight, goalsOut, goalPool);
+    }
+
+    static void TryAddStockpileGoal(
+        PlayerData player,
+        AI_TownState aiTownState,
+        GoodType goodType,
+        float weight,
+        List<AIGoal> goalsOut,
+        Stack<AIGoal> goalPool)
+    {
+        int target = player.AIDefn != null ? player.AIDefn.GetTargetStockpile(goodType) : 0;
+        if (target <= 0) return;
+
+        int have = aiTownState.PlayerTownInventory.TryGetValue(goodType, out int v) ? v : 0;
+        int deficit = target - have;
+        if (deficit <= 0) return;
+
+        float value = deficit * stockpileValuePerMissingUnit * weight;
+        if (value < MinGoalValue) return;
+
+        var goal = goalPool.Count > 0 ? goalPool.Pop() : new AIGoal();
+        goal.Reset();
+        goal.Type = AIGoalType.MaintainStockpile;
+        goal.TargetGoodType = goodType;
+        goal.Value = value;
+        goal.HorizonTurns = Math.Max(1, deficit);
+        goal.DebugReason = $"stockpile {goodType}: have {have}, want {target}";
+        goalsOut.Add(goal);
     }
 
     static void EnumerateEconomicTierGoals(
