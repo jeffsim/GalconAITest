@@ -148,9 +148,8 @@ public partial class PlayerAI
         NextRealtimeDecisionTime = currentWorldTime + delta;
     }
 
-    // In realtime mode the world is constantly mutating outside of WorldRevision bumps (workers
-    // arriving, resources accumulating). The "skip search if revision unchanged" cache is unsafe
-    // there, so we force a fresh search whenever the realtime path drives Update.
+    // Called by the realtime scheduled-decision path before Update() so the decision cache
+    // is guaranteed stale and the full search runs.
     internal void InvalidateDecisionCache()
     {
         lastSearchedWorldRevision = -1;
@@ -180,8 +179,9 @@ public partial class PlayerAI
 #endif
 
         // Decision cache: re-run the full search only when an input the AI keys on has changed.
-        // Without this, AITestScene.Update calls Town.Update each frame, triggering a depth-7
-        // search every frame even when the world is idle.
+        // In realtime mode the scheduled-decision path calls InvalidateDecisionCache() before
+        // Update(), so the cache is always stale when it matters. In step mode this avoids
+        // redundant searches when the world hasn't changed between frames.
         bool cacheValid = lastSearchedWorldRevision == townData.WorldRevision
                        && lastSearchedMaxAIDepth == AITestScene.Instance.MaxAIDepth;
 #if DEBUG
@@ -190,9 +190,7 @@ public partial class PlayerAI
                   && lastSearchedTrackDebugger == AITestScene.Instance.TrackSearchDebugger
                   && lastSearchedHybridEnabled == AITestScene.Instance.EnableHybridSearch;
 #endif
-        // Realtime mutates between WorldRevision bumps (in-flight workers, production carry).
-        // Keep BestNextActionToTake in sync for the per-player "next move" arrow overlay.
-        if (cacheValid && (AITestScene.Instance == null || !AITestScene.Instance.Realtime))
+        if (cacheValid)
             return;
 
         // Determine the best action to take, and then take it
@@ -207,6 +205,7 @@ public partial class PlayerAI
         if (Tasks.Count == 0)
         {
             Tasks.Add(new AITask_CaptureNeutralResourceNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_MultiSourceCaptureNeutralNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));

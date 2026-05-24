@@ -198,6 +198,23 @@ public class AIDebuggerEntryData
         return newEntry;
     }
 
+    internal AIDebuggerEntryData AddEntry_CaptureNeutralNode(Dictionary<AI_NodeState, int> captureFromNodes, AI_NodeState toNode, BuildingDefn buildingDefn, float finalActionScore, int actionNum, int curDepth)
+    {
+        if (!AIDebugger.ShouldTrackEntries) return null;
+        var newEntry = GetFromPool2(
+                        AIActionType.CaptureNeutralNode,
+                        toNode,
+                        captureFromNodes,
+                        null,
+                        finalActionScore,
+                        actionNum,
+                        curDepth,
+                        this);
+        newEntry.BuildingDefn = buildingDefn;
+        ChildEntries.Add(newEntry);
+        return newEntry;
+    }
+
     internal AIDebuggerEntryData AddEntry_AttackToNode(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth)
     {
         Debug.Assert(attackFromNodes != null);
@@ -259,6 +276,11 @@ public class AIDebuggerEntryData
         {
             case AIActionType.ConstructBuildingInEmptyNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId + " to build " + BuildingDefn.Id;
             case AIActionType.CaptureNeutralResourceNode: return "Capture resource " + ToNode.NodeId + " send " + NumSent + " from " + FromNode.NodeId;
+            case AIActionType.CaptureNeutralNode:
+                var sent = NumSentFromEachNode.Values.Sum();
+                var from = string.Join(",", NumSentFromEachNode.Select(n => n.Key.NodeId));
+                var buildId = BuildingDefn != null ? BuildingDefn.Id : "?";
+                return "Multi-source build " + buildId + " on " + ToNode.NodeId + " with " + sent + " from " + from;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
             case AIActionType.UpgradeBuilding:
                 // Use snapshotted values; FromNode.BuildingDefn / .BuildingLevel are mutated

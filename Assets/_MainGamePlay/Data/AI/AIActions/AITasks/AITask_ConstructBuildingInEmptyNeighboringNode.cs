@@ -69,6 +69,7 @@ public class AITask_ConstructBuilding : AITask
             if (toNode.OwnedBy != null) continue;
             if (toNode.HasBuilding) continue;
             if (toNode.IsVisited) continue;
+            if (AI_ActionHeuristics.IsCaptureAlreadyCommitted(toNode, player)) continue;
 
             int topCount = SelectTopBuildingsForSite(toNode);
             if (topCount == 0) continue;

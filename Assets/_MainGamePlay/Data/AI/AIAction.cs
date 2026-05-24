@@ -11,6 +11,7 @@ public enum AIActionType
     SendWorkersToOwnedNode,
     ConstructBuildingInEmptyNode,
     CaptureNeutralResourceNode,
+    CaptureNeutralNode,
     ConstructBuildingInOwnedEmptyNode,
     AttackToNode,
     NoAction_GameOver,
@@ -28,6 +29,7 @@ public class AIAction
             AIActionType.SendWorkersToOwnedNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId,
             AIActionType.ConstructBuildingInEmptyNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id,
             AIActionType.CaptureNeutralResourceNode => "Capture resource #" + DestNode.NodeId + " send " + Count + " from #" + SourceNode.NodeId,
+            AIActionType.CaptureNeutralNode => "Multi-source build " + (BuildingToConstruct != null ? BuildingToConstruct.Id : "?") + " on #" + DestNode.NodeId,
             AIActionType.UpgradeBuilding => "Upgrade #" + SourceNode.NodeId,
             AIActionType.AttackToNode => "Attack #" + DestNode.NodeId,
             AIActionType.DoNothing => "Do nothing (No beneficial action found)",
@@ -154,6 +156,18 @@ public class AIAction
         SourceNode = fromNode;
         DestNode = toNode;
         Count = numSent;
+    }
+
+    internal void SetTo_CaptureNeutralNode(Dictionary<AI_NodeState, int> captureFromNodes, AI_NodeState toNode, BuildingDefn buildingDefn, float score, AIDebuggerEntryData debuggerEntry)
+    {
+        AIDebuggerEntry = debuggerEntry;
+        Score = score;
+        Type = AIActionType.CaptureNeutralNode;
+        DestNode = toNode;
+        BuildingToConstruct = buildingDefn;
+        AttackFromNodes.Clear();
+        foreach (var kvp in captureFromNodes)
+            AttackFromNodes[kvp.Key] = kvp.Value;
     }
 
     internal void SetTo_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float score, AIDebuggerEntryData debuggerEntry)

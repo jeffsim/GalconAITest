@@ -36,6 +36,14 @@ public class NodeData
     public PlayerData PendingCaptureBy;
     public BuildingDefn PendingConstructBuilding;
 
+    // "Attack heat": rolling memory of recent hostile pressure on this node. Incremented when
+    // an enemy worker arrives and attacks (defender lost, attacker died, or node flipped), and
+    // decayed each realtime tick. Lets the AI recognize "this node is a chokepoint being hit
+    // repeatedly" even when the current frontier snapshot looks calm (e.g. attackers have
+    // already arrived and resolved, but more are inbound). Mirrored into AI_NodeState so the
+    // recursive search can read it.
+    public float AttackHeat;
+
     public NodeData(NodeDefn nodeDefn, PlayerData player)
     {
         OwnedBy = player;

@@ -135,6 +135,15 @@ public partial class AI_TownState
         NodeOwnershipOrWorkersChanged = true;
     }
 
+    internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend, out int numSent)
+    {
+        numSent = Math.Min(Math.Max(0, numToSend), sourceNode.NumWorkers);
+        if (numSent <= 0) return;
+        sourceNode.NumWorkers -= numSent;
+        destNode.NumWorkers += numSent;
+        NodeOwnershipOrWorkersChanged = true;
+    }
+
     internal void Undo_SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, int numSent)
     {
         sourceNode.NumWorkers += numSent;
@@ -231,6 +240,116 @@ public partial class AI_TownState
         {
             PlayerTownInventory[resource2] += resource2Amount;
         }
+    }
+
+    // Multi-source variant of SendWorkersToConstructBuildingInEmptyNode for contested empty
+    // neutrals. Workers are deducted from each source, applied as one wave against the target
+    // garrison, then the building is placed if the wave succeeds.
+    internal void SendMultiSourceWorkersToConstructBuildingInEmptyNode(
+        Dictionary<AI_NodeState, int> sendFromNodes,
+        AI_NodeState buildInNode,
+        BuildingDefn buildingDefn,
+        int turnNumber,
+        Dictionary<AI_NodeState, int> origSourceWorkers,
+        out GoodType resource1,
+        out int resource1Amount,
+        out GoodType resource2,
+        out int resource2Amount,
+        out int origDestWorkers,
+        out PlayerData origOwner)
+    {
+        origSourceWorkers.Clear();
+        foreach (var kvp in sendFromNodes)
+            origSourceWorkers[kvp.Key] = kvp.Key.NumWorkers;
+        origDestWorkers = buildInNode.NumWorkers;
+        origOwner = buildInNode.OwnedBy;
+
+        int totalArriving = 0;
+        foreach (var kvp in sendFromNodes)
+        {
+            int numToSend = Math.Min(kvp.Value, kvp.Key.NumWorkers);
+            kvp.Key.NumWorkers -= numToSend;
+            totalArriving += numToSend;
+        }
+
+        if (totalArriving <= 0)
+        {
+            resource1 = GoodType.Unset;
+            resource1Amount = 0;
+            resource2 = GoodType.Unset;
+            resource2Amount = 0;
+            return;
+        }
+
+        if (buildInNode.OwnedBy == null && buildInNode.NumWorkers > 0)
+        {
+            if (totalArriving <= buildInNode.NumWorkers)
+            {
+                buildInNode.NumWorkers -= totalArriving;
+                resource1 = GoodType.Unset;
+                resource1Amount = 0;
+                resource2 = GoodType.Unset;
+                resource2Amount = 0;
+                return;
+            }
+            buildInNode.NumWorkers = totalArriving - buildInNode.NumWorkers;
+        }
+        else
+        {
+            buildInNode.NumWorkers += totalArriving;
+        }
+
+        buildInNode.OwnedBy = player;
+        buildInNode.SetBuilding(buildingDefn, turnNumber);
+
+        var reqs = buildingDefn.ConstructionRequirements;
+        if (reqs.Count > 0)
+        {
+            resource1 = reqs[0].Good.GoodType;
+            resource1Amount = reqs[0].Amount;
+            PlayerTownInventory[resource1] -= resource1Amount;
+        }
+        else
+        {
+            resource1 = GoodType.Unset;
+            resource1Amount = 0;
+        }
+
+        if (reqs.Count > 1)
+        {
+            resource2 = reqs[1].Good.GoodType;
+            resource2Amount = reqs[1].Amount;
+            PlayerTownInventory[resource2] -= resource2Amount;
+        }
+        else
+        {
+            resource2 = GoodType.Unset;
+            resource2Amount = 0;
+        }
+
+        NodeOwnershipOrWorkersChanged = true;
+    }
+
+    internal void Undo_SendMultiSourceWorkersToConstructBuildingInEmptyNode(
+        Dictionary<AI_NodeState, int> origSourceWorkers,
+        AI_NodeState buildInNode,
+        GoodType resource1,
+        int resource1Amount,
+        GoodType resource2,
+        int resource2Amount,
+        int origDestWorkers,
+        PlayerData origOwner)
+    {
+        foreach (var kvp in origSourceWorkers)
+            kvp.Key.NumWorkers = kvp.Value;
+        buildInNode.NumWorkers = origDestWorkers;
+        buildInNode.OwnedBy = origOwner;
+        buildInNode.ClearBuilding();
+
+        if (resource1 != GoodType.Unset)
+            PlayerTownInventory[resource1] += resource1Amount;
+        if (resource2 != GoodType.Unset)
+            PlayerTownInventory[resource2] += resource2Amount;
     }
 
     internal void AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, int numToSend, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner)

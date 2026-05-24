@@ -117,6 +117,7 @@ public class TownData
         WorldTime += deltaSeconds;
 
         TickBuildingProduction(deltaSeconds);
+        TickAttackHeatDecay(deltaSeconds);
         AdvanceInFlightWorkers(deltaSeconds, gameSpeed);
         DriveRealtimeAI();
     }
@@ -271,6 +272,9 @@ public class TownData
 
         // Enemy destination: 1:1 trade. If a defender exists we kill one and the attacker dies.
         // If defenders are zero, ownership flips to the arriving worker.
+        // In both branches the defending node took a hostile arrival -- bump its AttackHeat so
+        // the owner's AI can recognize this node has been under attack and prioritize defense.
+        dest.AttackHeat += AttackHeatPerHostileArrival;
         if (dest.NumWorkers > 0)
         {
             dest.NumWorkers--;
@@ -279,6 +283,29 @@ public class TownData
 
         dest.OwnedBy = arrivingPlayer;
         dest.NumWorkers = 1;
+    }
+
+    // Per-arrival heat added to a defender's AttackHeat. Tuned so a sustained stream of attacks
+    // (e.g. 1 attacker/sec) accumulates noticeably faster than the decay below depletes it.
+    public const float AttackHeatPerHostileArrival = 1f;
+
+    // Per-second exponential decay rate applied to every node's AttackHeat. 0.5 means heat
+    // halves every second; a single arrival yields ~0 heat in ~5s of quiet.
+    public const float AttackHeatDecayPerSecond = 0.5f;
+
+    void TickAttackHeatDecay(float deltaSeconds)
+    {
+        if (deltaSeconds <= 0f) return;
+        // Exponential decay: heat *= e^(-k * dt). For small dt this is well approximated by
+        // (1 - k*dt) but we use the exact form to stay stable across large GameSpeed multipliers.
+        float factor = Mathf.Exp(-AttackHeatDecayPerSecond * deltaSeconds);
+        for (int i = 0; i < Nodes.Count; i++)
+        {
+            var n = Nodes[i];
+            if (n.AttackHeat <= 0f) continue;
+            n.AttackHeat *= factor;
+            if (n.AttackHeat < 0.01f) n.AttackHeat = 0f;
+        }
     }
 
     // After a wave of arrivals, recompute PendingCaptureBy on each node: a node still has a
@@ -459,13 +486,51 @@ public class TownData
                     if (fromNode == null || toNode == null) return;
                     if (fromNode.OwnedBy != player) return;
                     if (toNode.OwnedBy != null) return;
+                    if (toNode.PendingCaptureBy != null) return;
                     if (toNode.Building == null || !toNode.Building.Defn.CanBeGatheredFrom) return;
 
                     int numToSend = Math.Min(action.Count, fromNode.NumWorkers);
                     if (numToSend <= 0) return;
 
+                    toNode.PendingCaptureBy = player;
                     SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.Reinforce, null);
                     fromNode.NumWorkers -= numToSend;
+                    WorldRevision++;
+                }
+                break;
+
+            case AIActionType.CaptureNeutralNode:
+                {
+                    var toNode = action.DestNode?.RealNode;
+                    if (toNode == null || toNode.OwnedBy != null) return;
+                    if (toNode.PendingCaptureBy != null) return;
+                    if (action.BuildingToConstruct == null) return;
+
+                    toNode.PendingCaptureBy = player;
+                    toNode.PendingConstructBuilding = action.BuildingToConstruct;
+
+                    foreach (var req in action.BuildingToConstruct.ConstructionRequirements)
+                    {
+                        int remaining = req.Amount;
+                        while (remaining > 0)
+                        {
+                            var srcNode = getClosestNodeWithResource(player, toNode, req.Good.GoodType);
+                            if (srcNode == null) break;
+                            int take = Math.Min(remaining, srcNode.Inventory[req.Good.GoodType]);
+                            srcNode.Inventory[req.Good.GoodType] -= take;
+                            remaining -= take;
+                        }
+                    }
+
+                    foreach (var kvp in action.AttackFromNodes)
+                    {
+                        var fromNode = kvp.Key.RealNode;
+                        if (fromNode == null || fromNode.OwnedBy != player) continue;
+                        int numToSend = Math.Min(kvp.Value, fromNode.NumWorkers);
+                        if (numToSend <= 0) continue;
+                        SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.CaptureAndConstruct, action.BuildingToConstruct);
+                        fromNode.NumWorkers -= numToSend;
+                    }
                     WorldRevision++;
                 }
                 break;
@@ -626,6 +691,11 @@ public class TownData
                             sourceNode.NumWorkers -= numSent;
                             toNode.NumWorkers -= numSent;
 
+                            // Step-mode attack heat: defender takes hostile arrivals proportional
+                            // to numSent. Matches the per-worker bumps the realtime path adds in
+                            // ResolveWorkerArrival so the AttackHeat signal is consistent across modes.
+                            toNode.AttackHeat += AttackHeatPerHostileArrival * numSent;
+
                             // Only enemy-owned nodes can be taken by force. Neutral territory
                             // requires constructing a building (ConstructBuildingInEmptyNode).
                             if (toNode.NumWorkers <= 0 && toNode.OwnedBy != null)
@@ -722,6 +792,56 @@ public class TownData
                         break;
                     }
 
+                case AIActionType.CaptureNeutralNode:
+                    {
+                        if (toNode.OwnedBy != null || toNode.Building != null) break;
+                        if (moveToMake.BuildingToConstruct == null) break;
+
+                        int totalSent = 0;
+                        foreach (var kvp in moveToMake.AttackFromNodes)
+                        {
+                            var sourceNode = kvp.Key.RealNode;
+                            if (sourceNode == null || sourceNode.OwnedBy != player) continue;
+                            int numSent = Math.Min(kvp.Value, sourceNode.NumWorkers);
+                            if (numSent <= 0) continue;
+                            sourceNode.NumWorkers -= numSent;
+                            totalSent += numSent;
+                        }
+
+                        if (totalSent <= 0) break;
+
+                        if (toNode.NumWorkers > 0)
+                        {
+                            if (totalSent <= toNode.NumWorkers)
+                            {
+                                toNode.NumWorkers -= totalSent;
+                                break;
+                            }
+                            toNode.NumWorkers = totalSent - toNode.NumWorkers;
+                        }
+                        else
+                        {
+                            toNode.NumWorkers = totalSent;
+                        }
+
+                        toNode.OwnedBy = player;
+                        toNode.ConstructBuilding(new BuildingData(moveToMake.BuildingToConstruct));
+
+                        foreach (var req in moveToMake.BuildingToConstruct.ConstructionRequirements)
+                        {
+                            int remainingNeeded = req.Amount;
+                            while (remainingNeeded > 0)
+                            {
+                                var node = getClosestNodeWithResource(player, toNode, req.Good.GoodType);
+                                if (node == null) break;
+                                var amountToTake = Math.Min(remainingNeeded, node.Inventory[req.Good.GoodType]);
+                                node.Inventory[req.Good.GoodType] -= amountToTake;
+                                remainingNeeded -= amountToTake;
+                            }
+                        }
+                        break;
+                    }
+
                 case AIActionType.SendWorkersToOwnedNode:
 
                     // Can player still send enough workers from source node?
@@ -731,6 +851,16 @@ public class TownData
                     toNode.NumWorkers += moveToMake.Count;
                     break;
             }
+        }
+
+        // Step-mode AttackHeat decay: one "turn" of decay per Debug_WorldTurn. Per-second decay
+        // constant is used as a per-turn factor for simplicity; step mode is mostly legacy.
+        for (int i = 0; i < Nodes.Count; i++)
+        {
+            var n = Nodes[i];
+            if (n.AttackHeat <= 0f) continue;
+            n.AttackHeat *= (1f - AttackHeatDecayPerSecond);
+            if (n.AttackHeat < 0.01f) n.AttackHeat = 0f;
         }
 
         // World mutated; invalidate per-player AI decision caches so the next Update re-searches.

@@ -259,6 +259,16 @@ public partial class AITestScene : MonoBehaviour
                 }
                 break;
 
+            case AIActionType.CaptureNeutralNode:
+                if (action.AttackFromNodes != null && action.DestNode != null)
+                {
+                    string buildLabel = action.BuildingToConstruct != null ? action.BuildingToConstruct.Id : "?";
+                    foreach (var kvp in action.AttackFromNodes)
+                        DrawArrow(kvp.Key.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color,
+                            actionIndex + ". Build " + buildLabel + "\n" + kvp.Value + " workers");
+                }
+                break;
+
             case AIActionType.AttackToNode:
                 if (action.AttackFromNodes != null && action.DestNode != null)
                 {
@@ -308,6 +318,16 @@ public partial class AITestScene : MonoBehaviour
                 }
                 break;
 
+            case AIActionType.CaptureNeutralNode:
+                if (action.NumSentFromEachNode != null && action.ToNode != null)
+                {
+                    string buildLabel = action.BuildingDefn != null ? action.BuildingDefn.Id : "?";
+                    foreach (var kvp in action.NumSentFromEachNode)
+                        DrawArrow(kvp.Key.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color,
+                            actionIndex + ". Build " + buildLabel + "\n" + kvp.Value + " workers");
+                }
+                break;
+
             case AIActionType.AttackToNode:
                 if (action.NumSentFromEachNode != null && action.ToNode != null)
                 {
@@ -344,9 +364,9 @@ public partial class AITestScene : MonoBehaviour
                 Town.RealtimeTick(dt, GameSpeed);
                 SyncInFlightWorkerGOs();
             }
-            // Refresh each AI's BestNextActionToTake every frame (same as step mode) so we can
-            // draw one "next move I'd make now" arrow per player between scheduled decisions.
-            Town.Update();
+            // In realtime mode, AI searches only run when each player's own decision timer
+            // fires (inside RealtimeTick -> DriveRealtimeAI). The arrow overlay uses whatever
+            // action was last computed; no per-frame search needed.
         }
         else
         {

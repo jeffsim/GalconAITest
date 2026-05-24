@@ -1,0 +1,12 @@
+---
+description: Do not dump large code blocks in responses
+alwaysApply: true
+---
+
+# No Code Dumps
+
+When explaining changes or analysis, do NOT paste large code blocks or full file contents into the response. The user will not read them and they waste tokens.
+
+- Describe what you changed and why in plain language.
+- Use short inline references (e.g. `ClassName.MethodName`) to point at specific code.
+- Only show code if the user explicitly asks to see it, or if a tiny snippet (< 5 lines) is essential for clarity.

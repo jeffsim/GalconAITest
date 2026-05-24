@@ -145,6 +145,9 @@ public partial class AITestScene
                 case AIGoalType.MaintainStockpile:
                     target = goal.TargetGoodType.ToString();
                     break;
+                case AIGoalType.StrategicUpgrade:
+                    target = goal.TargetNode != null ? $"#{goal.TargetNode.NodeId}" : "?";
+                    break;
                 default:
                     target = "?";
                     break;
@@ -254,6 +257,8 @@ public partial class AITestScene
                 return $"Build {action.BuildingToConstruct?.Id} send {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId} (score {action.Score:F2})";
             case AIActionType.CaptureNeutralResourceNode:
                 return $"Capture resource #{action.DestNode?.NodeId} send {action.Count} from #{action.SourceNode?.NodeId} (score {action.Score:F2})";
+            case AIActionType.CaptureNeutralNode:
+                return $"Build {action.BuildingToConstruct?.Id} on #{action.DestNode?.NodeId} {FormatAttackFrom(action)} (score {action.Score:F2})";
             case AIActionType.UpgradeBuilding:
                 return $"Upgrade #{action.SourceNode?.NodeId} (score {action.Score:F2})";
             case AIActionType.AttackToNode:

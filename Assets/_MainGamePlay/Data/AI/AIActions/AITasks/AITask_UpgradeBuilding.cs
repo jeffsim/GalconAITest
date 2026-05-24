@@ -10,7 +10,8 @@ public class AITask_UpgradeBuilding : AITask
         var buildingInNode = fromNode.BuildingDefn;
         if (buildingInNode == null || !buildingInNode.CanBeUpgraded) return 0f;
         if (fromNode.NumWorkers < fromNode.MaxWorkers) return 0f;
-        float h = AI_ActionHeuristics.GetUpgradeHeuristic(fromNode);
+        float riskTolerance = AI_ActionHeuristics.GetUpgradeRiskTolerance(player);
+        float h = AI_ActionHeuristics.GetUpgradeHeuristic(fromNode, riskTolerance);
         if (h <= 0f) return 0f;
 
         // Apply personality so Phase 1 candidate ranking matches actual scoring; Upgrade is
@@ -32,7 +33,8 @@ public class AITask_UpgradeBuilding : AITask
         if (fromNode.NumWorkers < fromNode.MaxWorkers)
             return false;
 
-        float heuristicBonus = AI_ActionHeuristics.GetUpgradeHeuristic(fromNode);
+        float riskTolerance = AI_ActionHeuristics.GetUpgradeRiskTolerance(player);
+        float heuristicBonus = AI_ActionHeuristics.GetUpgradeHeuristic(fromNode, riskTolerance);
         if (heuristicBonus <= 0f)
             return false;
 

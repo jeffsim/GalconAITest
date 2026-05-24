@@ -68,10 +68,42 @@ public partial class AI_TownState
                     }
                     else
                     {
-                        // upgraded buildings are more useful than non-upgraded buildings
-                        // todo: temp - should be based on building type, game state, how much we need the building, etc.
-                        float buildingUpgradeModifier = .15f; // set this to 'value' of upgrades. 
-                        score += buildingUpgradeModifier * (node.BuildingLevel - 1);
+                        // Upgrade value. The flat 0.15/level was too small for the recursive
+                        // search to recognize upgrade-then-X chains; the immediate cost of
+                        // halving workers outweighed it by EvaluateScore's standards. The
+                        // context-aware terms below let the search "see" why the higher cap
+                        // matters before it ever has to fill it.
+                        int levelsAboveStarting = node.BuildingLevel - 1;
+                        if (levelsAboveStarting > 0)
+                        {
+                            score += 0.15f * levelsAboveStarting;
+
+                            // Frontier nodes: bigger cap means better force projection. The
+                            // bonus is per level (not per MaxWorkers) so it doesn't double up
+                            // with the resource-throughput term below for gatherers that also
+                            // happen to be on the frontier.
+                            if (node.IsOnTerritoryEdge)
+                                score += 0.5f * levelsAboveStarting;
+
+                            // Resource gatherers/sources: higher cap raises eventual throughput,
+                            // weighted by the shortage of the produced good. Search sees value
+                            // immediately even though current NumWorkers was halved by the upgrade.
+                            if (node.CanGoGatherResources || node.CanBeGatheredFrom)
+                            {
+                                GoodType resource = node.CanBeGatheredFrom
+                                    ? node.ResourceGatheredFromThisNode
+                                    : node.ResourceThisNodeCanGoGather;
+                                int shortage = AI_ActionHeuristics.GetResourceShortage(this, resource);
+                                if (shortage > 0)
+                                    score += 0.05f * shortage * levelsAboveStarting;
+                            }
+
+                            // Worker generators: higher cap means more useful workers can
+                            // accumulate here, which is the entire reason to ever upgrade a
+                            // Camp/Outpost. Scaled by level so each step is meaningful.
+                            if (node.CanGenerateWorkers)
+                                score += 0.4f * levelsAboveStarting;
+                        }
 
                         // Discourage having too many workers in a building
                         if (node.NumWorkers > node.MaxWorkers * 2f)

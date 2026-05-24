@@ -56,6 +56,7 @@ public static class AIGoalEnumerator
         EnumerateDefendGoals(player, nodes, numNodes, defense, goalsOut, goalPool);
         EnumerateStockpileGoals(player, aiTownState, economicExpansion, goalsOut, goalPool);
         EnumerateEconomicTierGoals(player, aiTownState, buildableBuildingDefns, numBuildableBuildingDefns, aggression, defense, economicExpansion, goalsOut, goalPool);
+        EnumerateStrategicUpgradeGoals(player, nodes, numNodes, aggression, economicExpansion, goalsOut, goalPool);
     }
 
     static void EnumerateCaptureGoals(
@@ -142,14 +143,7 @@ public static class AIGoalEnumerator
             var node = nodes[i];
             if (node.OwnedBy != player) continue;
 
-            int enemyForce = 0;
-            var neighbors = node.NeighborNodes;
-            for (int n = 0; n < neighbors.Count; n++)
-            {
-                var nb = neighbors[n];
-                if (nb.OwnedBy != null && nb.OwnedBy != player)
-                    enemyForce += nb.NumWorkers;
-            }
+            int enemyForce = AI_ActionHeuristics.GetFrontierPressure(node);
             if (enemyForce <= 0) continue;
 
             // Value scales with deficit (enemy force vs ours). At parity or surplus the goal
@@ -270,6 +264,74 @@ public static class AIGoalEnumerator
             goal.Value = value;
             goal.HorizonTurns = horizon;
             goal.DebugReason = reason;
+            goalsOut.Add(goal);
+        }
+    }
+
+    const float strategicUpgradeBaseValue = 4f;
+    const float strategicUpgradeResourceBonus = 3f;
+
+    static void EnumerateStrategicUpgradeGoals(
+        PlayerData player,
+        AI_NodeState[] nodes,
+        int numNodes,
+        float aggression,
+        float economicExpansion,
+        List<AIGoal> goalsOut,
+        Stack<AIGoal> goalPool)
+    {
+        // Mix of aggression (the upgrade enables an attack) and economic expansion (upgrading
+        // is itself an economic action). Equal blend; both must be > 0 for the goal to matter.
+        float weight = (aggression + economicExpansion) * 0.5f;
+        if (weight <= 0f) return;
+
+        for (int i = 0; i < numNodes; i++)
+        {
+            var node = nodes[i];
+            if (node.OwnedBy != player) continue;
+            if (node.BuildingDefn == null || !node.BuildingDefn.CanBeUpgraded) continue;
+            if (node.NumWorkers < node.MaxWorkers) continue;
+
+            int currentCap = node.MaxWorkers;
+            int postUpgradeCap = currentCap * 2;
+            int forceNow = currentCap / 2;
+            int forcePostUpgrade = postUpgradeCap / 2;
+
+            AI_NodeState bestTarget = null;
+            float bestTargetBonus = 0f;
+            var neighbors = node.NeighborNodes;
+            for (int n = 0; n < neighbors.Count; n++)
+            {
+                var nb = neighbors[n];
+                if (nb.OwnedBy == player) continue;
+                if (nb.NumWorkers <= 0) continue;
+                int needed = (int)System.Math.Ceiling(nb.NumWorkers * 1.5f);
+                if (forceNow >= needed) continue;
+                if (forcePostUpgrade < needed) continue;
+                float bonus = strategicUpgradeBaseValue;
+                if (nb.IsResourceNode || nb.CanGenerateWorkers)
+                    bonus += strategicUpgradeResourceBonus;
+                if (bonus > bestTargetBonus)
+                {
+                    bestTargetBonus = bonus;
+                    bestTarget = nb;
+                }
+            }
+
+            if (bestTarget == null) continue;
+
+            float value = bestTargetBonus * weight;
+            if (value < MinGoalValue) continue;
+
+            var goal = goalPool.Count > 0 ? goalPool.Pop() : new AIGoal();
+            goal.Reset();
+            goal.Type = AIGoalType.StrategicUpgrade;
+            goal.TargetNode = node;
+            goal.Value = value;
+            // Upgrading is immediate (one ply) but the payoff requires accumulation; use a
+            // small horizon to keep urgency comparable to capture goals.
+            goal.HorizonTurns = 3;
+            goal.DebugReason = $"upgrade #{node.NodeId} to threaten #{bestTarget.NodeId}";
             goalsOut.Add(goal);
         }
     }

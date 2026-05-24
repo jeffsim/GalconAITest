@@ -66,6 +66,19 @@ public static class AI_ActionHeuristics
         };
     }
 
+    // How willing this AI is to upgrade a threatened node without first overloading it.
+    // 1.0 = aggressive (upgrades immediately, accepts halved garrison under fire)
+    // 0.0 = cautious (demands full overload buffer before upgrading under threat)
+    // Derived from the ratio of AggressivenessWeight to DefenseWeight.
+    public static float GetUpgradeRiskTolerance(PlayerData player)
+    {
+        var aiDefn = player.AIDefn;
+        if (aiDefn == null) return 0.5f;
+        float sum = aiDefn.AggressivenessWeight + aiDefn.DefenseWeight;
+        if (sum <= 0f) return 0.5f;
+        return Mathf.Clamp01(aiDefn.AggressivenessWeight / sum);
+    }
+
     public static float ApplyHeuristicAndPersonality(float simulationScore, float heuristicBonus, PlayerData player, AIHeuristicActionType actionType)
     {
         // Personality now scales the full final score, not just the heuristic bonus. With the
@@ -227,6 +240,54 @@ public static class AI_ActionHeuristics
         return false;
     }
 
+    public static bool NeutralNeighborTouchesEnemy(AI_NodeState neutral, PlayerData player)
+    {
+        if (neutral.OwnedBy != null) return false;
+        var neighbors = neutral.NeighborNodes;
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            var nb = neighbors[i];
+            if (nb.OwnedBy != null && nb.OwnedBy != player)
+                return true;
+        }
+        return false;
+    }
+
+    public static int GetFrontierPressure(AI_NodeState node) =>
+        node.NumEnemiesInNeighborNodes + node.NumContestedNeutralWorkersNearby;
+
+    // How many "virtual enemies" each unit of AttackHeat translates to. The buttress and
+    // frontier heuristics treat the result as if it were live enemy force adjacent to the
+    // node, so this controls how aggressively past attacks bias the AI toward reinforcing
+    // a chokepoint when the current snapshot of enemy neighbors looks calm.
+    const float attackHeatToPressureMultiplier = 1.5f;
+
+    // AttackHeat level above which a defender node is considered "in emergency" by
+    // GetButtressSourceNode even if effective pressure is otherwise low. Tuned so a single
+    // recent attacker doesn't immediately trip emergency, but a couple in quick succession
+    // does. Heat decays at AttackHeatDecayPerSecond (TownData) so the threshold falls off
+    // naturally when attacks stop.
+    public const float AttackHeatEmergencyThreshold = 2f;
+
+    // AttackHeat level above which an owned node is treated as a chokepoint that should
+    // retain workers for defense (used in offensive willing-to-send guard).
+    public const float AttackHeatChokepointThreshold = 1f;
+
+    // Effective frontier pressure: live snapshot pressure plus a heat-driven inflation so
+    // chokepoint nodes that have been attacked repeatedly (but currently look "fine" because
+    // the previous wave has been killed and the next wave is in transit) still register as
+    // needing defense. Also adds 1:1 the count of in-flight hostile workers targeting this
+    // node so the AI can prepare for telegraphed waves BEFORE they begin landing -- AttackHeat
+    // alone is post-hoc and only fires after the first attacker resolves.
+    public static int GetEffectiveFrontierPressure(AI_NodeState node)
+    {
+        int snapshot = GetFrontierPressure(node);
+        int heatBonus = node.AttackHeat > 0f
+            ? (int)System.Math.Ceiling(node.AttackHeat * attackHeatToPressureMultiplier)
+            : 0;
+        return snapshot + heatBonus + node.IncomingHostileWorkers;
+    }
+
     public static void UpdateTerritoryDetails(AI_TownState town, PlayerData player)
     {
         var nodes = town.Nodes;
@@ -236,6 +297,7 @@ public static class AI_ActionHeuristics
             var node = nodes[i];
             node.IsOnTerritoryEdge = false;
             node.NumEnemiesInNeighborNodes = 0;
+            node.NumContestedNeutralWorkersNearby = 0;
         }
 
         for (int i = 0; i < numNodes; i++)
@@ -251,6 +313,8 @@ public static class AI_ActionHeuristics
                 {
                     if (nn.OwnedBy != null)
                         node.NumEnemiesInNeighborNodes += nn.NumWorkers;
+                    else if (NeutralNeighborTouchesEnemy(nn, player))
+                        node.NumContestedNeutralWorkersNearby += nn.NumWorkers;
                     node.IsOnTerritoryEdge = true;
                 }
             }
@@ -278,6 +342,30 @@ public static class AI_ActionHeuristics
     {
         if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return 0;
         if (node.NumWorkers < node.MaxWorkers * 3f / 4f) return 0;
+        // Chokepoint drain guard: a node that's been getting attacked is a chokepoint -- don't
+        // drain it to launch attacks/captures elsewhere. Solves the observed pathology where
+        // Green's chokepoint #3 kept losing workers to offensive sends despite being under
+        // sustained attack itself.
+        if (node.AttackHeat >= AttackHeatChokepointThreshold) return 0;
+        return node.NumWorkers / 2;
+    }
+
+    // When a frontier node is under real pressure, allow sources below 75% capacity to pitch in.
+    // The destAttackHeat parameter lets the caller signal "destination is a chokepoint that's
+    // been getting attacked even if the current snapshot looks quiet". In that case we drop
+    // the source-capacity threshold from 75% to 50% so a mid-staffed interior node can still
+    // reinforce a hot frontier. Emergency cases (effective pressure exceeds the destination's
+    // garrison) remain fully relaxed: source can give down to its minimum garrison.
+    public static int GetWorkersWillingToSendForDefense(AI_NodeState node, int minWorkersInNodeBeforeConsideringSendingAnyOut, bool emergency, float destAttackHeat = 0f)
+    {
+        if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return 0;
+        if (emergency)
+            return Math.Max(1, node.NumWorkers - minWorkersInNodeBeforeConsideringSendingAnyOut + 1);
+
+        // Destination has chokepoint-level heat but isn't in emergency: relax source threshold
+        // to 50% so mid-staffed neighbors can pitch in without waiting to hit 75%.
+        float capacityThreshold = destAttackHeat >= AttackHeatChokepointThreshold ? 0.5f : 0.75f;
+        if (node.NumWorkers < node.MaxWorkers * capacityThreshold) return 0;
         return node.NumWorkers / 2;
     }
 
@@ -285,6 +373,37 @@ public static class AI_ActionHeuristics
     {
         if (threat <= 0) return 1;
         return Math.Max(1, (int)Math.Ceiling(threat * overkillMultiplier));
+    }
+
+    // Minimum workers to commit in one capture dispatch. Prevents drip-feeding 1 worker per
+    // AI decision tick on safe neutrals; capped by willing so a single source still sends
+    // the largest batch it can (e.g. 5) rather than failing until multi-source can muster 10.
+    public const int MinCaptureWaveSize = 10;
+
+    // Realtime: a neutral already has an in-flight capture wave from this player.
+    public static bool IsCaptureAlreadyCommitted(AI_NodeState toNode, PlayerData player) =>
+        toNode?.RealNode != null
+        && toNode.RealNode.PendingCaptureBy == player
+        && toNode.RealNode.OwnedBy == null;
+
+    public static int GetCaptureDispatchSize(int threat, float overkillMultiplier, int willing)
+    {
+        int threatBased = GetTargetForceWithOverkill(threat, overkillMultiplier);
+        return Math.Max(threatBased, Math.Min(MinCaptureWaveSize, willing));
+    }
+
+    // Multi-source flanking on a shared gateway neutral: garrison-only sizing plus a small
+    // overkill buffer is enough; full adjacent-enemy stacking made capture unplanable.
+    public static int GetGatewayCaptureTargetForce(AI_NodeState target, PlayerData player, float overkillMultiplier, int numSources)
+    {
+        int threat = GetGatewayCaptureThreat(target, player);
+        int targetForce = GetTargetForceWithOverkill(threat, overkillMultiplier);
+        if (numSources >= 2 && NeutralNeighborTouchesEnemy(target, player))
+        {
+            int relaxed = threat + Math.Max(1, (int)Math.Ceiling(overkillMultiplier));
+            targetForce = Math.Min(targetForce, relaxed);
+        }
+        return Math.Max(targetForce, MinCaptureWaveSize);
     }
 
     public static int GetAdjacentEnemyThreat(AI_NodeState node, PlayerData player)
@@ -306,6 +425,43 @@ public static class AI_ActionHeuristics
         return threat + GetAdjacentEnemyThreat(toNode, player);
     }
 
+    // For a neutral gateway we share with an enemy (e.g. #11 between Red and Blue): sizing a
+    // capture only needs to beat the garrison ON the node, not every enemy worker one hop away.
+    // Counting adjacent enemies made Red need 29 workers when it only had 14 and gave up on
+    // capture while buttress-shuffling forever.
+    public static int GetGatewayCaptureThreat(AI_NodeState toNode, PlayerData player)
+    {
+        if (toNode.OwnedBy != null) return GetNeutralCaptureThreat(toNode, player);
+        if (!NeutralNeighborTouchesEnemy(toNode, player)) return GetNeutralCaptureThreat(toNode, player);
+        foreach (var nb in toNode.NeighborNodes)
+            if (nb.OwnedBy == player) return Math.Max(0, toNode.NumWorkers);
+        return GetNeutralCaptureThreat(toNode, player);
+    }
+
+    // Workers this owned node should hold given current frontier pressure. Uses effective
+    // pressure (snapshot + heat) so chokepoints under sustained attack are sized for what
+    // they've BEEN absorbing, not just what's visible at the current instant.
+    public static int GetDesiredFrontierWorkers(AI_NodeState node)
+    {
+        int pressure = GetEffectiveFrontierPressure(node);
+        if (pressure <= 0) return 0;
+        return Math.Min(node.MaxWorkers, Math.Max(1, pressure));
+    }
+
+    public static int GetFrontierWorkerDeficit(AI_NodeState node) =>
+        Math.Max(0, GetDesiredFrontierWorkers(node) - node.NumWorkers);
+
+    public static bool NeedsFrontierButtress(AI_NodeState node)
+    {
+        const int minDeficit = 2;
+        return GetFrontierWorkerDeficit(node) >= minDeficit;
+    }
+
+    public static bool IsUnderstaffedFrontier(AI_NodeState node) =>
+        node.IsOnTerritoryEdge
+        && node.MaxWorkers > 0
+        && node.NumWorkers < node.MaxWorkers * understaffedFrontierThreshold;
+
     // Size a neutral capture: 1 worker on safe frontiers; enough to clear unowned garrison on
     // the target and hold against adjacent enemy garrisons on contested ones.
     public static bool TryGetCaptureWorkersToSend(AI_NodeState fromNode, AI_NodeState toNode, PlayerData player, int minWorkersInNodeBeforeConsideringSendingAnyOut, float overkillMultiplier, out int numToSend)
@@ -317,7 +473,7 @@ public static class AI_ActionHeuristics
         if (willing <= 0) return false;
 
         int threat = GetNeutralCaptureThreat(toNode, player);
-        int target = GetTargetForceWithOverkill(threat, overkillMultiplier);
+        int target = GetCaptureDispatchSize(threat, overkillMultiplier, willing);
         if (willing < target) return false;
 
         numToSend = target;
@@ -331,7 +487,17 @@ public static class AI_ActionHeuristics
     // imperative below (overcrowded AND threatened) should drive the heuristic to max.
     const float overcrowdingMaxRawBonus = 15f;
 
-    public static float GetUpgradeHeuristic(AI_NodeState node)
+    // Raw bonus per neighboring target that becomes plausibly attackable after upgrading.
+    // Resource/worker-generating nodes are worth more; ordinary territory captures less.
+    const float upgradeAttackPotentialBonusPerTarget = 6f;
+    const float upgradeAttackPotentialResourceBonus = 4f;
+
+    // Overkill multiplier used when judging "could I beat this target with the post-upgrade
+    // accumulated workforce?". Conservative (1.5x defender) so the AI doesn't upgrade based
+    // on barely-marginal plans.
+    const float upgradeAttackPotentialOverkillMultiplier = 1.5f;
+
+    public static float GetUpgradeHeuristic(AI_NodeState node, float riskTolerance = 0.5f)
     {
         if (node.NumWorkers < node.MaxWorkers) return 0f;
 
@@ -350,72 +516,130 @@ public static class AI_ActionHeuristics
             rawValue += Mathf.Pow(percentExcessive, 2) * overcrowdingMaxRawBonus;
         }
 
-        // Only penalize upgrade when we are ACTUALLY outnumbered (signed delta squared previously
-        // discounted upgrades for over-defended nodes too, which it shouldn't).
+        // Defensive imperative: a frontier node at/above capacity under hostile pressure NEEDS
+        // a capacity bump. Uses effective pressure so chokepoints under sustained attack still
+        // fire even when the current snapshot looks light. No upper-cap on worker count — an
+        // overloaded node preparing for upgrade should still benefit from this signal.
+        bool defensiveImperative = node.IsOnTerritoryEdge
+            && GetEffectiveFrontierPressure(node) > 0;
+
+        // Outnumbered penalty scaled by personality: a cautious AI (riskTolerance~0) gets the
+        // full penalty when NOT under defensive imperative and a reduced penalty even when IS
+        // under imperative (it wants to wait for overload). A risky AI (riskTolerance~1) gets
+        // no penalty under imperative and reduced penalty otherwise — it's willing to upgrade
+        // immediately and accept the halved garrison.
         int outnumberedBy = node.NumEnemiesInNeighborNodes - node.NumWorkers;
         if (outnumberedBy > 0)
-            rawValue -= outnumberedBy * outnumberedBy * nearbyEnemiesScalingFactor;
+        {
+            float penaltyScale = defensiveImperative ? (1f - riskTolerance) : 1f;
+            rawValue -= outnumberedBy * outnumberedBy * nearbyEnemiesScalingFactor * penaltyScale;
+        }
 
-        // Defensive imperative: a node that's at-or-near capacity, on the territory edge, AND
-        // has actual enemies adjacent NEEDS a capacity bump now. This is the only path that
-        // should drive the heuristic to its max so the upgrade outranks expansion in genuinely
-        // threatened situations -- not in peaceful overcrowding.
-        if (node.IsOnTerritoryEdge && node.NumWorkers < node.MaxWorkers * 1.5f && node.NumEnemiesInNeighborNodes > 0)
+        if (defensiveImperative)
             rawValue += 35;
+
+        // Forward-looking "attack potential unlocked" signal: if the current cap can't muster
+        // enough force to attack a nearby enemy/neutral target but the post-upgrade cap could,
+        // that target becomes the strategic reason to upgrade. Without this signal the
+        // recursive search rarely discovers upgrade-then-attack chains -- the search would
+        // have to spend depth on upgrade (immediately halving workers) and then several more
+        // plies accumulating before the payoff is visible to EvaluateScore.
+        rawValue += GetUpgradeAttackPotentialBonus(node);
 
         float clampedRawValue = Mathf.Clamp(rawValue, upgradeNodeMinScore, upgradeNodeMaxScore);
         float normalizedValue = (clampedRawValue - upgradeNodeMinScore) / (upgradeNodeMaxScore - upgradeNodeMinScore);
         return normalizedValue * HeuristicScoreScale;
     }
 
+    static float GetUpgradeAttackPotentialBonus(AI_NodeState node)
+    {
+        int currentCap = node.MaxWorkers;
+        if (currentCap <= 0) return 0f;
+        int postUpgradeCap = currentCap * 2;
+
+        float total = 0f;
+        var neighbors = node.NeighborNodes;
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            var nb = neighbors[i];
+            if (nb.OwnedBy == node.OwnedBy) continue;
+            int defenders = nb.NumWorkers;
+            if (defenders <= 0) continue;
+
+            // Plausible attack force = ceil(half the cap), the same heuristic used by
+            // GetWorkersWillingToSend (NumWorkers / 2 once at full cap).
+            int forceNow = currentCap / 2;
+            int forcePostUpgrade = postUpgradeCap / 2;
+            int needed = (int)Math.Ceiling(defenders * upgradeAttackPotentialOverkillMultiplier);
+
+            // Already attackable now -> upgrade is not the unlocker for this target.
+            if (forceNow >= needed) continue;
+            // Even post-upgrade can't beat it -> upgrade alone wouldn't unlock it.
+            if (forcePostUpgrade < needed) continue;
+
+            float perTarget = upgradeAttackPotentialBonusPerTarget;
+            if (nb.IsResourceNode || nb.CanGenerateWorkers)
+                perTarget += upgradeAttackPotentialResourceBonus;
+            total += perTarget;
+        }
+        return total;
+    }
+
     const float resourceStaffingScalingFactor = 8f;
+
+    // A frontier node below this fill ratio is considered dangerously understaffed
+    // regardless of whether adjacent enemies are currently visible (they may have
+    // already departed as in-flight attackers).
+    const float understaffedFrontierThreshold = 0.25f;
 
     public static float GetButtressHeuristic(AI_TownState town, AI_NodeState toNode)
     {
         float rawValue = 0f;
+        float riskTolerance = GetUpgradeRiskTolerance(town.player);
 
-        // Only reward buttressing when we are ACTUALLY outnumbered. The previous formulation
-        // squared the signed delta, so an over-defended node (e.g. 220 workers vs 60 enemies,
-        // delta = -160) produced the same huge bonus as a genuinely besieged one (delta = +160).
-        // That meant a dominant player with many over-defended frontiers generated a wall of
-        // false-positive Buttress candidates that crowded all real attacks out of Phase 1's top-K
-        // and the AI sat on top of an enormous economy doing nothing. Match the DefendFrontier
-        // goal enumerator's clamping (deficit = max(0, enemies - ours)) here.
-        int outnumberedBy = toNode.NumEnemiesInNeighborNodes - toNode.NumWorkers;
-        if (outnumberedBy > 0)
-            rawValue += outnumberedBy * outnumberedBy * nearbyEnemiesScalingFactor;
+        int frontierDeficit = GetFrontierWorkerDeficit(toNode);
+        bool understaffedFrontier = toNode.IsOnTerritoryEdge
+            && toNode.MaxWorkers > 0
+            && toNode.NumWorkers < toNode.MaxWorkers * understaffedFrontierThreshold;
+        bool needsUpgradeOverload = NeedsUpgradeOverloadButtress(toNode, riskTolerance);
 
-        if (toNode.IsOnTerritoryEdge)
+        if (frontierDeficit <= 0 && !understaffedFrontier && !NeedsResourceStaffingButtress(town, toNode) && !needsUpgradeOverload)
+            return 0f;
+
+        if (frontierDeficit > 0)
+            rawValue += frontierDeficit * frontierDeficit * nearbyEnemiesScalingFactor;
+
+        if (toNode.IsOnTerritoryEdge && frontierDeficit > 0)
             rawValue += territoryEdgeScalingFactor;
 
-        // Staff resource-producing nodes when we need more output. Production scales with
-        // worker count, so understaffing a forest while short on wood is a real mistake.
-        if (toNode.CanBeGatheredFrom || toNode.CanGoGatherResources)
+        if (understaffedFrontier)
         {
-            int desired = GetDesiredWorkersForResourceNode(town, toNode);
-            if (toNode.NumWorkers < desired)
-            {
-                float workerDeficit = desired - toNode.NumWorkers;
-                GoodType resource = toNode.CanBeGatheredFrom
-                    ? toNode.ResourceGatheredFromThisNode
-                    : toNode.ResourceThisNodeCanGoGather;
-                int shortage = GetResourceShortage(town, resource);
-                if (shortage > 0)
-                {
-                    rawValue += 12f;
-                    rawValue += workerDeficit * workerDeficit * resourceStaffingScalingFactor * Mathf.Max(1f, shortage * 0.1f);
-                }
-            }
+            float capacityDeficit = toNode.MaxWorkers - toNode.NumWorkers;
+            rawValue += capacityDeficit * insufficientWorkersScalingFactor;
         }
 
-        // Reinforce understaffed nodes ONLY when there is something to defend against. An
-        // interior gatherer at half capacity with no threat does not need a defensive buttress;
-        // resource staffing above handles the economic case.
-        if (toNode.NumWorkers < toNode.MaxWorkers / 2
-            && (toNode.IsOnTerritoryEdge || toNode.NumEnemiesInNeighborNodes > 0))
+        // Overload for upgrade: a frontier node at max capacity under pressure needs workers
+        // beyond its current cap so that after upgrade (halves workers) it's still defensible.
+        // This is a high-priority defensive action — weighted similarly to understaffed frontier.
+        if (needsUpgradeOverload)
         {
-            float workersDeficit = toNode.MaxWorkers - toNode.NumWorkers;
-            rawValue += workersDeficit * workersDeficit * insufficientWorkersScalingFactor;
+            int desiredOverload = GetDesiredOverloadForUpgrade(toNode, riskTolerance);
+            int overloadDeficit = desiredOverload - toNode.NumWorkers;
+            rawValue += overloadDeficit * insufficientWorkersScalingFactor;
+            rawValue += territoryEdgeScalingFactor;
+        }
+
+        // Staff resource-producing nodes when we need more output.
+        if (NeedsResourceStaffingButtress(town, toNode))
+        {
+            int desired = GetDesiredWorkersForResourceNode(town, toNode);
+            float workerDeficit = desired - toNode.NumWorkers;
+            GoodType resource = toNode.CanBeGatheredFrom
+                ? toNode.ResourceGatheredFromThisNode
+                : toNode.ResourceThisNodeCanGoGather;
+            int shortage = GetResourceShortage(town, resource);
+            rawValue += 12f;
+            rawValue += workerDeficit * workerDeficit * resourceStaffingScalingFactor * Mathf.Max(1f, shortage * 0.1f);
         }
 
         if (rawValue < buttressNodeMinScore) return 0f;
@@ -423,6 +647,56 @@ public static class AI_ActionHeuristics
         float clampedRawValue = Mathf.Clamp(rawValue, buttressNodeMinScore, buttressNodeMaxScore);
         float normalizedValue = (clampedRawValue - buttressNodeMinScore) / (buttressNodeMaxScore - buttressNodeMinScore);
         return normalizedValue * HeuristicScoreScale;
+    }
+
+    // A frontier node at capacity with an upgradeable building under pressure needs workers
+    // ABOVE max so that after upgrade (which halves workers) it remains defensible. Returns
+    // the desired pre-upgrade worker count, or 0 if overloading isn't needed.
+    //
+    // riskTolerance (0-1): a cautious AI (0) demands full overload so post-upgrade garrison
+    // matches the pressure. A risky AI (1) is fine upgrading at capacity — no overload needed.
+    public static int GetDesiredOverloadForUpgrade(AI_NodeState node, float riskTolerance)
+    {
+        if (node.NumWorkers < node.MaxWorkers) return 0;
+        if (node.BuildingDefn == null || !node.BuildingDefn.CanBeUpgraded) return 0;
+        if (!node.IsOnTerritoryEdge) return 0;
+        int pressure = GetEffectiveFrontierPressure(node);
+        if (pressure <= 0) return 0;
+
+        // A fully risky AI doesn't need any overload — it upgrades at capacity immediately.
+        if (riskTolerance >= 1f) return 0;
+
+        // After upgrade: maxWorkers doubles, workers halve. We want post-upgrade workers to
+        // be at least enough to survive the pressure. Target: have enough pre-upgrade so that
+        // (preUpgradeWorkers / 2) >= min(pressure, newMax/2). Effectively: overload to at
+        // least 2 * min(pressure, MaxWorkers) capped at 2x current max (the post-upgrade cap).
+        int postUpgradeMax = node.MaxWorkers * 2;
+        int desiredPostUpgrade = Math.Min(pressure, postUpgradeMax / 2);
+        int fullDesiredPreUpgrade = Math.Max(node.MaxWorkers + 1, desiredPostUpgrade * 2);
+        fullDesiredPreUpgrade = Math.Min(fullDesiredPreUpgrade, postUpgradeMax);
+
+        // Interpolate between "just at capacity" (risky) and full overload (cautious).
+        // Ensure at least MaxWorkers+2 for partial-risk AIs so post-upgrade has > 1 worker.
+        int minPreUpgrade = node.MaxWorkers + 2;
+        int desiredPreUpgrade = (int)Mathf.Lerp(minPreUpgrade, fullDesiredPreUpgrade, 1f - riskTolerance);
+        return Math.Max(minPreUpgrade, desiredPreUpgrade);
+    }
+
+    public static bool NeedsUpgradeOverloadButtress(AI_NodeState node, float riskTolerance)
+    {
+        int desired = GetDesiredOverloadForUpgrade(node, riskTolerance);
+        return desired > 0 && node.NumWorkers < desired;
+    }
+
+    public static bool NeedsResourceStaffingButtress(AI_TownState town, AI_NodeState toNode)
+    {
+        if (!toNode.CanBeGatheredFrom && !toNode.CanGoGatherResources) return false;
+        int desired = GetDesiredWorkersForResourceNode(town, toNode);
+        if (toNode.NumWorkers >= desired) return false;
+        GoodType resource = toNode.CanBeGatheredFrom
+            ? toNode.ResourceGatheredFromThisNode
+            : toNode.ResourceThisNodeCanGoGather;
+        return GetResourceShortage(town, resource) > 0;
     }
 
     // Small post-normalization boost given to builds on empty neutral targets. Applied AFTER
@@ -476,6 +750,14 @@ public static class AI_ActionHeuristics
         return GetAttackHeuristic(town, targetNode, workersToSend);
     }
 
+    public static float GetCaptureNeutralNodeHeuristic(AI_TownState town, AI_NodeState targetNode, int workersToSend)
+    {
+        float h = GetAttackHeuristic(town, targetNode, workersToSend);
+        if (NeutralNeighborTouchesEnemy(targetNode, town.player))
+            h += 1.5f;
+        return h;
+    }
+
     public static float GetAttackHeuristic(AI_TownState town, AI_NodeState targetNode, int totalWorkersWillingToSend)
     {
         float rawValue = attackNodeMaxScore / 2f;
@@ -510,6 +792,65 @@ public static class AI_ActionHeuristics
         float clampedRawValue = Mathf.Clamp(rawValue, attackNodeMinScore, attackNodeMaxScore);
         float normalizedValue = (clampedRawValue - attackNodeMinScore) / (attackNodeMaxScore - attackNodeMinScore);
         return normalizedValue * HeuristicScoreScale;
+    }
+
+    public static AI_NodeState GetButtressSourceNode(AI_NodeState toNode, PlayerData player, int minWorkersInNodeBeforeConsideringSendingAnyOut)
+    {
+        // Use effective pressure for the emergency check so a chokepoint with high AttackHeat
+        // (recently hammered, but currently quiet) is treated as an emergency and pulls workers
+        // from sources below the normal 75% capacity threshold.
+        bool emergency = GetEffectiveFrontierPressure(toNode) > toNode.NumWorkers
+                         || toNode.NumContestedNeutralWorkersNearby > toNode.NumWorkers / 2
+                         || toNode.AttackHeat >= AttackHeatEmergencyThreshold;
+
+        AI_NodeState best = null;
+        int bestWilling = 0;
+        Queue<AI_NodeState> queue = new();
+        HashSet<AI_NodeState> visited = new();
+        queue.Enqueue(toNode);
+        visited.Add(toNode);
+
+        while (queue.Count > 0)
+        {
+            var node = queue.Dequeue();
+            if (node.OwnedBy == player && node != toNode)
+            {
+                // Don't drain a hotter node to help a cooler one. A node that's seen more
+                // recent attacks than the destination is itself the more urgent defender.
+                bool sourceHotterThanDest = node.AttackHeat >= AttackHeatChokepointThreshold
+                                            && node.AttackHeat > toNode.AttackHeat;
+                if (!sourceHotterThanDest)
+                {
+                    int keepAtSource = Math.Max(minWorkersInNodeBeforeConsideringSendingAnyOut, GetDesiredFrontierWorkers(node));
+                    int excess = node.NumWorkers - keepAtSource;
+                    if (excess > 0)
+                    {
+                        int willing = GetWorkersWillingToSendForDefense(node, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat);
+                        willing = Math.Min(willing, excess);
+                        if (willing > bestWilling)
+                        {
+                            bestWilling = willing;
+                            best = node;
+                        }
+                    }
+                }
+            }
+            foreach (var neighbor in node.NeighborNodes)
+            {
+                if (!visited.Contains(neighbor))
+                {
+                    visited.Add(neighbor);
+                    queue.Enqueue(neighbor);
+                }
+            }
+        }
+
+        return best;
+    }
+
+    public static bool CanButtressFromAnySource(AI_NodeState toNode, PlayerData player, int minWorkersInNodeBeforeConsideringSendingAnyOut)
+    {
+        return GetButtressSourceNode(toNode, player, minWorkersInNodeBeforeConsideringSendingAnyOut) != null;
     }
 
     public static AI_NodeState GetFriendlyNodeWithMostWorkers(AI_NodeState toNode, PlayerData player)

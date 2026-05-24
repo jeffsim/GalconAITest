@@ -19,6 +19,7 @@ public class AITask_CaptureNeutralResourceNode : AITask
         foreach (var toNode in fromNode.NeighborNodes)
         {
             if (!IsCapturableResourceNode(toNode)) continue;
+            if (AI_ActionHeuristics.IsCaptureAlreadyCommitted(toNode, player)) continue;
 
             float overkill = player.AIDefn != null ? player.AIDefn.AttackOverkillMultiplier : 1f;
             if (!AI_ActionHeuristics.TryGetCaptureWorkersToSend(fromNode, toNode, player, minWorkersInNodeBeforeConsideringSendingAnyOut, overkill, out int numToSend))
@@ -44,6 +45,7 @@ public class AITask_CaptureNeutralResourceNode : AITask
         foreach (var toNode in fromNode.NeighborNodes)
         {
             if (!IsCapturableResourceNode(toNode)) continue;
+            if (AI_ActionHeuristics.IsCaptureAlreadyCommitted(toNode, player)) continue;
             if (toNode.IsVisited) continue;
 
             if (!AI_ActionHeuristics.TryGetCaptureWorkersToSend(fromNode, toNode, player, minWorkersInNodeBeforeConsideringSendingAnyOut, overkill, out int numToSend))

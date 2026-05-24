@@ -42,6 +42,8 @@ public class AITask_AttackToNode : AITask
         // Neutral expansion is ConstructBuilding (send workers + build), not AttackToNode.
         if (toNode.OwnedBy == null) return 0f;
         if (toNode.OwnedBy == player) return 0f;
+        // Don't pile on if we already have enough in-flight to take this node.
+        if (toNode.AttackAlreadySufficient) return 0f;
 
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
         if (!TryPlanAttackAllocations(nDeepNeighbors, num, toNode.NumWorkers, GetAttackOverkillMultiplier(), attackPlanScratch, out int totalPlanned))
@@ -60,6 +62,8 @@ public class AITask_AttackToNode : AITask
         // Only enemy-owned nodes. Neutral territory is captured by constructing a building
         // (AITask_ConstructBuilding), not by walking workers onto an empty node.
         if (toNode.OwnedBy == null || toNode.OwnedBy == player) return false;
+        // Don't pile on if we already have enough in-flight to take this node.
+        if (toNode.AttackAlreadySufficient) return false;
 
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 

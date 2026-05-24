@@ -16,7 +16,28 @@ public class AI_NodeState
     public int WorkersAdded;
 
     public int NumEnemiesInNeighborNodes;
+    // Neutral neighbors that also touch an enemy — e.g. #11 between Red #12 and Blue #27.
+    public int NumContestedNeutralWorkersNearby;
     public bool IsOnTerritoryEdge;
+
+    // Mirror of RealNode.AttackHeat at the time of the last UpdateState. Read by the buttress
+    // and frontier heuristics so a node hit repeatedly by attackers shows demand for reinforcement
+    // even when the current snapshot of enemy neighbors looks light.
+    public float AttackHeat;
+
+    // Forward-looking hostile-wave count: sum of every non-viewer player's in-flight workers
+    // currently targeting this node, populated only when Update is called with the owning
+    // viewerPlayer. AttackHeat is post-hoc (memory of arrivals); this is predictive (an
+    // inbound wave that hasn't started landing yet still shows as defense pressure). Used by
+    // GetEffectiveFrontierPressure so the buttress and upgrade heuristics can prepare for
+    // telegraphed attacks rather than only react to them.
+    public int IncomingHostileWorkers;
+
+    // True when an enemy node already has enough of our in-flight attackers to beat its
+    // effective defense (garrison + defender reinforcements). The attack task should not
+    // commit additional waves when this is set — it would just drip-feed workers that
+    // arrive after the node is already captured.
+    public bool AttackAlreadySufficient;
 
     public PlayerData OwnedBy;
     public int NodeId;
@@ -155,6 +176,10 @@ public class AI_NodeState
         NumWorkers = RealNode.NumWorkers;
         MaxWorkers = RealNode.Building?.MaxWorkers ?? 0;
         WorkersGeneratedPerTurn = RealNode.Building?.WorkersGeneratedPerTurn ?? 0;
+        AttackHeat = RealNode.AttackHeat;
+        // Default to 0/false; the per-player branches below populate these when viewerPlayer is set.
+        IncomingHostileWorkers = 0;
+        AttackAlreadySufficient = false;
 
         if (viewerPlayer != null)
         {
@@ -186,13 +211,38 @@ public class AI_NodeState
                 // Friendly node: my own incoming reinforcements add to perceived strength so I
                 // don't reinforce harder than necessary while help is already on the way.
                 NumWorkers += RealNode.GetIncomingFor(viewerPlayer);
+
+                // Predictive hostile-wave awareness: sum every non-viewer player's incoming
+                // workers targeting this node. Used by GetEffectiveFrontierPressure so a
+                // telegraphed wave shows up as defense pressure BEFORE the first attacker
+                // resolves and bumps AttackHeat. Without this, a friendly node could see
+                // 10 enemies in flight and still think frontierPressure = 0.
+                int hostile = 0;
+                foreach (var kvp in RealNode.IncomingByPlayer)
+                {
+                    if (kvp.Key == null || kvp.Key == viewerPlayer) continue;
+                    hostile += kvp.Value;
+                }
+                IncomingHostileWorkers = hostile;
             }
             else if (OwnedBy != null)
             {
-                // Enemy node: my own incoming attackers reduce the defender count (1:1 trade)
-                // so I don't keep piling on after I've already committed enough to take it.
+                // Enemy node: include the defender's own incoming reinforcements in the
+                // perceived garrison — they'll arrive and bolster the defense, so sizing
+                // an attack purely against the current snapshot leads to drip-feeding
+                // insufficient waves into a node that's being constantly resupplied.
+                int defenderReinforcements = RealNode.GetIncomingFor(OwnedBy);
+                int effectiveDefense = NumWorkers + defenderReinforcements;
+
+                // Subtract our committed attackers (1:1 trade assumption).
                 int incomingAttackers = RealNode.GetIncomingFor(viewerPlayer);
-                NumWorkers = Math.Max(0, NumWorkers - incomingAttackers);
+                AttackAlreadySufficient = incomingAttackers >= effectiveDefense;
+
+                // Floor at 1 while the enemy still owns the node so frontier pressure on
+                // adjacent friendly nodes never fully vanishes — otherwise the buttress
+                // heuristic goes blind to depleted frontier nodes whose enemy neighbor
+                // "looks" neutralized by in-flight attackers that haven't arrived yet.
+                NumWorkers = Math.Max(1, effectiveDefense - incomingAttackers);
             }
         }
     }

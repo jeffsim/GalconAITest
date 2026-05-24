@@ -26,6 +26,13 @@ public enum AIGoalType
     // "Keep a buffer of this resource on hand." Triggered when inventory falls below the
     // PlayerAIDefn stockpile target. Drives demand for the resource and staffing of gatherers.
     MaintainStockpile,
+
+    // "Upgrade this node so its higher cap unlocks an attack we can't currently make."
+    // Triggered when an at-capacity owned node has a buildable upgrade and a nearby
+    // enemy/neutral target that the upgraded cap (but not the current cap) could plausibly
+    // muster enough force to attack. Surfaces strategic intent in the goals list; the actual
+    // upgrade scoring lives in GetUpgradeHeuristic.GetUpgradeAttackPotentialBonus.
+    StrategicUpgrade,
 }
 
 public class AIGoal

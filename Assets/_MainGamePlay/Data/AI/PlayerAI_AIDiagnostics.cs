@@ -7,6 +7,7 @@ public partial class PlayerAI
     static readonly string[] TaskNames =
     {
         "CaptureNeutralResource",
+        "MultiSourceCaptureNeutral",
         "Buttress",
         "Attack",
         "Construct",
@@ -43,8 +44,9 @@ public partial class PlayerAI
             if (from.OwnedBy != player) continue;
 
             int willing = AI_ActionHeuristics.GetWorkersWillingToSend(from, minWorkersInNodeBeforeConsideringSendingAnyOut);
-            float upgradePreview = Tasks.Count > 4 ? Tasks[4].PreviewHeuristic(from) : 0f;
-            sb.AppendLine($"  from #{from.NodeId} workers={from.NumWorkers}/{from.MaxWorkers} willingSend={willing} upgradeEligible={(from.BuildingDefn != null && from.BuildingDefn.CanBeUpgraded && from.NumWorkers >= from.MaxWorkers)} previewUpgrade={upgradePreview:F2}");
+            int frontierPressure = AI_ActionHeuristics.GetFrontierPressure(from);
+            float upgradePreview = Tasks.Count > 5 ? Tasks[5].PreviewHeuristic(from) : 0f;
+            sb.AppendLine($"  from #{from.NodeId} workers={from.NumWorkers}/{from.MaxWorkers} willingSend={willing} contestedNeutralNear={from.NumContestedNeutralWorkersNearby} frontierPressure={frontierPressure} upgradeEligible={(from.BuildingDefn != null && from.BuildingDefn.CanBeUpgraded && from.NumWorkers >= from.MaxWorkers)} previewUpgrade={upgradePreview:F2} canButtressSource={AI_ActionHeuristics.CanButtressFromAnySource(from, player, minWorkersInNodeBeforeConsideringSendingAnyOut)}");
 
             foreach (var to in from.NeighborNodes)
             {
@@ -76,13 +78,19 @@ public partial class PlayerAI
                     int shortage = AI_ActionHeuristics.GetResourceShortage(aiTownState, to.ResourceGatheredFromThisNode);
                     sb.AppendLine($"       CaptureResource: eligible=Y canSend={canCapture} send={send} previewH={captureH:F2} shortage({to.ResourceGatheredFromThisNode})={shortage}");
                 }
+                else if (!to.HasBuilding)
+                {
+                    int emergencyWilling = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(from, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency: true);
+                    sb.AppendLine($"       MultiSourceCapture: emergencyWillingFromThisNode={emergencyWilling} touchesEnemy={AI_ActionHeuristics.NeutralNeighborTouchesEnemy(to, player)}");
+                }
                 else
                 {
                     sb.AppendLine("       CaptureResource: SKIP (not CanBeGatheredFrom)");
                 }
 
                 int threat = AI_ActionHeuristics.GetNeutralCaptureThreat(to, player);
-                sb.AppendLine($"       neutralThreat={threat} targetForce={AI_ActionHeuristics.GetTargetForceWithOverkill(threat, overkill)}");
+                int gatewayThreat = AI_ActionHeuristics.GetGatewayCaptureThreat(to, player);
+                sb.AppendLine($"       neutralThreat={threat} gatewayThreat={gatewayThreat} targetForce={AI_ActionHeuristics.GetTargetForceWithOverkill(threat, overkill)} gatewayTarget={AI_ActionHeuristics.GetGatewayCaptureTargetForce(to, player, overkill, 3)}");
             }
         }
     }
