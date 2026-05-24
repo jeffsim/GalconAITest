@@ -70,6 +70,7 @@ public partial class AITestScene : MonoBehaviour
     Slider gameSpeedSlider;
     Text gameSpeedLabel;
     Text statusLabel;
+    float speedBeforePause = 1f;
 
     void OnEnable()
     {
@@ -382,6 +383,7 @@ public partial class AITestScene : MonoBehaviour
                 ClearAllInFlightWorkerGOs();
         }
 
+        HandleRealtimeSpeedInput();
         RefreshRealtimeControlLabels();
 
         foreach (var player in Town.Players)
@@ -619,6 +621,33 @@ public partial class AITestScene : MonoBehaviour
         t.alignment = TextAnchor.MiddleLeft;
         t.text = text;
         return t;
+    }
+
+    void HandleRealtimeSpeedInput()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Realtime = true;
+            if (GameSpeed > 0f)
+            {
+                speedBeforePause = GameSpeed;
+                GameSpeed = 0f;
+            }
+            else
+                GameSpeed = speedBeforePause > 0f ? speedBeforePause : 1f;
+            return;
+        }
+
+        for (int speed = 1; speed <= 6; speed++)
+        {
+            if (!Input.GetKeyDown(KeyCode.Alpha0 + speed) && !Input.GetKeyDown(KeyCode.Keypad0 + speed))
+                continue;
+
+            Realtime = true;
+            GameSpeed = speed;
+            speedBeforePause = speed;
+            return;
+        }
     }
 
     void RefreshRealtimeControlLabels()
