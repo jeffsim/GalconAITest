@@ -17,7 +17,8 @@ public enum AIActionType
     NoAction_GameOver,
     NoAction_MaxDepth,
     RootAction,
-    UpgradeBuilding
+    UpgradeBuilding,
+    SendMultiSourceWorkersToOwnedNode,
 };
 
 public class AIAction
@@ -27,6 +28,7 @@ public class AIAction
         return Type switch
         {
             AIActionType.SendWorkersToOwnedNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId,
+            AIActionType.SendMultiSourceWorkersToOwnedNode => "Multi-source support of #" + DestNode.NodeId,
             AIActionType.ConstructBuildingInEmptyNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id,
             AIActionType.CaptureNeutralResourceNode => "Capture resource #" + DestNode.NodeId + " send " + Count + " from #" + SourceNode.NodeId,
             AIActionType.CaptureNeutralNode => "Multi-source build " + (BuildingToConstruct != null ? BuildingToConstruct.Id : "?") + " on #" + DestNode.NodeId,
@@ -178,6 +180,18 @@ public class AIAction
         SourceNode = fromNode;
         DestNode = toNode;
         Count = numSent;
+    }
+
+    internal void SetTo_SendMultiSourceWorkersToOwnedNode(Dictionary<AI_NodeState, int> sendFromNodes, AI_NodeState toNode, float score, AIDebuggerEntryData debuggerEntry)
+    {
+        AIDebuggerEntry = debuggerEntry;
+        Score = score;
+        Type = AIActionType.SendMultiSourceWorkersToOwnedNode;
+        DestNode = toNode;
+        SourceNode = null;
+        AttackFromNodes.Clear();
+        foreach (var kvp in sendFromNodes)
+            AttackFromNodes[kvp.Key] = kvp.Value;
     }
 
     // New method

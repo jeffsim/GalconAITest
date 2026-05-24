@@ -155,6 +155,46 @@ public partial class AI_TownState
         destNode.NumWorkers -= numSent;
     }
 
+    // Multi-source friendly reinforcement. Each source contributes its allocated count
+    // (clamped by GetMaxSendableWorkers); the sum lands on the dest node in one wave. Used
+    // by AITask_MultiSourceButtress so the realtime AI can stack reinforcements from
+    // multiple interior nodes in a single decision tick instead of dripping one per cycle.
+    internal void SendMultiSourceWorkersToOwnedNode(
+        Dictionary<AI_NodeState, int> sendFromNodes,
+        AI_NodeState destNode,
+        Dictionary<AI_NodeState, int> origSourceWorkers,
+        out int origDestWorkers,
+        out int totalSent)
+    {
+        origSourceWorkers.Clear();
+        foreach (var kvp in sendFromNodes)
+            origSourceWorkers[kvp.Key] = kvp.Key.NumWorkers;
+        origDestWorkers = destNode.NumWorkers;
+
+        totalSent = 0;
+        foreach (var kvp in sendFromNodes)
+        {
+            int numToSend = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(kvp.Key.NumWorkers));
+            if (numToSend <= 0) continue;
+            kvp.Key.NumWorkers -= numToSend;
+            totalSent += numToSend;
+        }
+
+        if (totalSent <= 0) return;
+        destNode.NumWorkers += totalSent;
+        NodeOwnershipOrWorkersChanged = true;
+    }
+
+    internal void Undo_SendMultiSourceWorkersToOwnedNode(
+        Dictionary<AI_NodeState, int> origSourceWorkers,
+        AI_NodeState destNode,
+        int origDestWorkers)
+    {
+        foreach (var kvp in origSourceWorkers)
+            kvp.Key.NumWorkers = kvp.Value;
+        destNode.NumWorkers = origDestWorkers;
+    }
+
     internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, int turnNumber, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, int numToSend, out int numSent)
     {
         // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).

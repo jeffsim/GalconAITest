@@ -450,6 +450,26 @@ public class TownData
                 }
                 break;
 
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                {
+                    var toNode = action.DestNode?.RealNode;
+                    if (toNode == null || toNode.OwnedBy != player) return;
+                    foreach (var kvp in action.AttackFromNodes)
+                    {
+                        var fromNode = kvp.Key.RealNode;
+                        if (fromNode == null || fromNode.OwnedBy != player) continue;
+                        // Game rule: each source must retain at least 1 worker; re-clamp
+                        // against live NumWorkers since interior sources may have shifted
+                        // between plan time and execute time.
+                        int numToSend = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
+                        if (numToSend <= 0) continue;
+                        SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.Reinforce, null);
+                        fromNode.NumWorkers -= numToSend;
+                    }
+                    WorldRevision++;
+                }
+                break;
+
             case AIActionType.ConstructBuildingInEmptyNode:
                 {
                     var fromNode = action.SourceNode?.RealNode;
@@ -902,6 +922,24 @@ public class TownData
                     fromNode.NumWorkers -= moveToMake.Count;
                     toNode.NumWorkers += moveToMake.Count;
                     break;
+
+                case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                    {
+                        if (toNode == null || toNode.OwnedBy != player) break;
+                        int totalSupport = 0;
+                        foreach (var kvp in moveToMake.AttackFromNodes)
+                        {
+                            var sourceNode = kvp.Key.RealNode;
+                            if (sourceNode == null || sourceNode.OwnedBy != player) continue;
+                            // Game rule: each source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                            int numSent = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
+                            if (numSent <= 0) continue;
+                            sourceNode.NumWorkers -= numSent;
+                            totalSupport += numSent;
+                        }
+                        toNode.NumWorkers += totalSupport;
+                        break;
+                    }
             }
         }
 

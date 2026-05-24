@@ -278,6 +278,8 @@ public partial class AITestScene
                 return "DoNothing";
             case AIActionType.SendWorkersToOwnedNode:
                 return $"Support {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId} (score {action.Score:F2})";
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                return $"Multi-source support #{action.DestNode?.NodeId} {FormatAttackFrom(action)} (score {action.Score:F2})";
             case AIActionType.ConstructBuildingInEmptyNode:
                 return $"Build {action.BuildingToConstruct?.Id} send {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId} (score {action.Score:F2})";
             case AIActionType.CaptureNeutralResourceNode:
@@ -317,6 +319,12 @@ public partial class AITestScene
         {
             case AIActionType.SendWorkersToOwnedNode:
                 return $"Support {entry.NumSent} #{entry.FromNode?.NodeId} -> #{entry.ToNode?.NodeId} score={entry.FinalActionScore:F2}";
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                {
+                    int totalSupport = 0;
+                    foreach (var kvp in entry.NumSentFromEachNode) totalSupport += kvp.Value;
+                    return $"Multi-source support #{entry.ToNode?.NodeId} ({totalSupport} from {entry.NumSentFromEachNode.Count} sources) score={entry.FinalActionScore:F2}";
+                }
             case AIActionType.ConstructBuildingInEmptyNode:
                 return $"Build {entry.BuildingDefn?.Id} #{entry.FromNode?.NodeId} -> #{entry.ToNode?.NodeId} score={entry.FinalActionScore:F2}";
             case AIActionType.CaptureNeutralResourceNode:

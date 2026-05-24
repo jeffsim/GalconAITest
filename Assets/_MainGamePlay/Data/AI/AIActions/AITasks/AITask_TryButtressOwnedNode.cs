@@ -106,9 +106,14 @@ public class AITask_TryButtressOwnedNode : AITask
     bool IsButtressOscillation(AI_NodeState fromNode, AI_NodeState toNode)
     {
         var last = player.AI.LastActionToTake;
-        if (last == null || last.Type != AIActionType.SendWorkersToOwnedNode)
-            return false;
+        if (last == null) return false;
         // Block immediate reverse shuffle: last was A->B, now trying B->A.
-        return last.SourceNode == toNode && last.DestNode == fromNode;
+        if (last.Type == AIActionType.SendWorkersToOwnedNode)
+            return last.SourceNode == toNode && last.DestNode == fromNode;
+        // Multi-source variant: last action lands workers on B from {A, ...}; now trying B->A
+        // would undo part of that reinforcement on the next tick.
+        if (last.Type == AIActionType.SendMultiSourceWorkersToOwnedNode)
+            return last.DestNode == fromNode && last.AttackFromNodes != null && last.AttackFromNodes.ContainsKey(toNode);
+        return false;
     }
 }

@@ -323,6 +323,15 @@ public partial class AITestScene : MonoBehaviour
                         actionIndex + ". Support " + action.Count);
                 break;
 
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                if (action.AttackFromNodes != null && action.DestNode != null)
+                {
+                    foreach (var kvp in action.AttackFromNodes)
+                        DrawArrow(kvp.Key.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color,
+                            actionIndex + ". Support " + kvp.Value);
+                }
+                break;
+
             case AIActionType.UpgradeBuilding:
                 if (action.SourceNode != null)
                     DrawCircle(action.SourceNode.RealNode.WorldLoc, 1, color, actionIndex + ". Upgrade");
@@ -377,6 +386,14 @@ public partial class AITestScene : MonoBehaviour
             case AIActionType.SendWorkersToOwnedNode:
                 if (action.FromNode != null && action.ToNode != null)
                     DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Support " + action.NumSent);
+                break;
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                if (action.NumSentFromEachNode != null && action.ToNode != null)
+                {
+                    foreach (var kvp in action.NumSentFromEachNode)
+                        DrawArrow(kvp.Key.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color,
+                            actionIndex + ". Support " + kvp.Value);
+                }
                 break;
 
             case AIActionType.UpgradeBuilding:

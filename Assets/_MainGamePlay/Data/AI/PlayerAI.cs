@@ -207,6 +207,7 @@ public partial class PlayerAI
             Tasks.Add(new AITask_CaptureNeutralResourceNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_MultiSourceCaptureNeutralNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
+            Tasks.Add(new AITask_MultiSourceButtress(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
             Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));

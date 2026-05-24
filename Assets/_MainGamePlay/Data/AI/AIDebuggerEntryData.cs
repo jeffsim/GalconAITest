@@ -215,6 +215,22 @@ public class AIDebuggerEntryData
         return newEntry;
     }
 
+    internal AIDebuggerEntryData AddEntry_SendMultiSourceWorkersToOwnedNode(Dictionary<AI_NodeState, int> sendFromNodes, AI_NodeState toNode, float finalActionScore, int actionNum, int curDepth)
+    {
+        if (!AIDebugger.ShouldTrackEntries) return null;
+        var newEntry = GetFromPool2(
+                        AIActionType.SendMultiSourceWorkersToOwnedNode,
+                        toNode,
+                        sendFromNodes,
+                        null,
+                        finalActionScore,
+                        actionNum,
+                        curDepth,
+                        this);
+        ChildEntries.Add(newEntry);
+        return newEntry;
+    }
+
     internal AIDebuggerEntryData AddEntry_AttackToNode(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float finalActionScore, int actionNum, int curDepth)
     {
         Debug.Assert(attackFromNodes != null);
@@ -282,6 +298,10 @@ public class AIDebuggerEntryData
                 var buildId = BuildingDefn != null ? BuildingDefn.Id : "?";
                 return "Multi-source build " + buildId + " on " + ToNode.NodeId + " with " + sent + " from " + from;
             case AIActionType.SendWorkersToOwnedNode: return "Send " + NumSent + " from " + FromNode.NodeId + "=>" + ToNode.NodeId;
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                var supportSent = NumSentFromEachNode.Values.Sum();
+                var supportFrom = string.Join(",", NumSentFromEachNode.Select(n => n.Key.NodeId));
+                return "Multi-source support " + ToNode.NodeId + " with " + supportSent + " from " + supportFrom;
             case AIActionType.UpgradeBuilding:
                 // Use snapshotted values; FromNode.BuildingDefn / .BuildingLevel are mutated
                 // by sibling search branches and may be null/wrong by the time this renders.
