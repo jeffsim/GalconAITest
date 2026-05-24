@@ -66,6 +66,11 @@ public class TownData
                 toNode.NodeConnections.Add(new NodeConnection() { Start = toNode, End = fromNode, TravelCost = 1, IsBidirectional = true });
         }
 
+        // One-time chokepoint scoring -- must run AFTER connections are wired and BEFORE
+        // any AI_NodeState mirrors are built (player.InitializeStaticData below), since
+        // those copy NodeData.ChokepointScore into AI_NodeState.ChokepointScore once.
+        ChokepointAnalysis.Compute(this);
+
         foreach (var player in Players)
             player?.InitializeStaticData(this);
     }
@@ -414,7 +419,10 @@ public class TownData
                     var toNode = action.DestNode?.RealNode;
                     if (fromNode == null || toNode == null) return;
                     if (fromNode.OwnedBy != player) return;
-                    int numToSend = Math.Min(action.Count, fromNode.NumWorkers);
+                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                    // Workers may have left the source between AI plan time and execute time, so
+                    // re-clamp against the live count rather than trusting action.Count alone.
+                    int numToSend = Math.Min(action.Count, NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
                     if (numToSend <= 0) return;
                     SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.Reinforce, null);
                     fromNode.NumWorkers -= numToSend;
@@ -431,7 +439,9 @@ public class TownData
                         var fromNode = kvp.Key.RealNode;
                         if (fromNode == null) continue;
                         if (fromNode.OwnedBy != player) continue;
-                        int numToSend = Math.Min(kvp.Value, fromNode.NumWorkers);
+                        // Game rule: each source must retain at least 1 worker; an empty source
+                        // would itself be captured. Re-clamp against live NumWorkers.
+                        int numToSend = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
                         if (numToSend <= 0) continue;
                         SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.Attack, null);
                         fromNode.NumWorkers -= numToSend;
@@ -448,7 +458,8 @@ public class TownData
                     if (fromNode.OwnedBy != player) return;
                     if (toNode.OwnedBy != null) return;
 
-                    int numToSend = Math.Min(action.Count, fromNode.NumWorkers);
+                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                    int numToSend = Math.Min(action.Count, NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
                     if (numToSend <= 0) return;
 
                     if (toNode.PendingCaptureBy == null)
@@ -489,7 +500,8 @@ public class TownData
                     if (toNode.PendingCaptureBy != null) return;
                     if (toNode.Building == null || !toNode.Building.Defn.CanBeGatheredFrom) return;
 
-                    int numToSend = Math.Min(action.Count, fromNode.NumWorkers);
+                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                    int numToSend = Math.Min(action.Count, NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
                     if (numToSend <= 0) return;
 
                     toNode.PendingCaptureBy = player;
@@ -526,7 +538,8 @@ public class TownData
                     {
                         var fromNode = kvp.Key.RealNode;
                         if (fromNode == null || fromNode.OwnedBy != player) continue;
-                        int numToSend = Math.Min(kvp.Value, fromNode.NumWorkers);
+                        // Game rule: each source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                        int numToSend = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
                         if (numToSend <= 0) continue;
                         SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.CaptureAndConstruct, action.BuildingToConstruct);
                         fromNode.NumWorkers -= numToSend;
@@ -545,11 +558,14 @@ public class TownData
     {
         var defn = player.WorkerDefn ?? DefaultWorkerDefn;
 
-        // Compute the multi-hop path along NodeConnections once; every worker in the group
-        // shares the same List reference so they all walk the same route and we don't pay
-        // BFS-per-worker. If there is no graph path (disconnected), fall back to a direct
-        // two-node "path" so behavior degrades to as-the-crow-flies rather than crashing.
-        var path = FindPath(fromNode, toNode);
+        // Prefer a path whose INTERMEDIATE nodes are all owned by `player`. Only the final
+        // destination may be hostile/neutral. Without this, a Reinforce or capture group can
+        // walk through a parallel-but-shorter enemy node and get intercepted there before
+        // reaching the planned destination -- the AI's planning logic only considers
+        // friendly-chain neighbors when picking sources, so the realtime walker should
+        // honor the same constraint. Falls back to unrestricted BFS so disconnected /
+        // pinch-out cases still produce a valid path rather than null.
+        var path = FindPath(fromNode, toNode, player);
         if (path == null || path.Count < 2)
             path = new List<NodeData> { fromNode, toNode };
 
@@ -567,9 +583,30 @@ public class TownData
     // sufficient. Returns null if no path exists.
     public static List<NodeData> FindPath(NodeData from, NodeData to)
     {
+        return FindPath(from, to, null);
+    }
+
+    // Owner-aware variant: when preferredOwner != null, the BFS first tries to find a path
+    // where every INTERMEDIATE node (everything except `from` and `to`) is owned by that
+    // player. This matches the AI's planning assumption that workers walk their own
+    // territory and only meet hostile ground at the final destination. If no such path
+    // exists, we fall back to the unrestricted BFS so behavior never gets worse than the
+    // owner-blind version.
+    public static List<NodeData> FindPath(NodeData from, NodeData to, PlayerData preferredOwner)
+    {
         if (from == null || to == null) return null;
         if (from == to) return new List<NodeData> { from };
 
+        if (preferredOwner != null)
+        {
+            var preferred = BFSFindPath(from, to, preferredOwner);
+            if (preferred != null) return preferred;
+        }
+        return BFSFindPath(from, to, null);
+    }
+
+    static List<NodeData> BFSFindPath(NodeData from, NodeData to, PlayerData requireIntermediateOwner)
+    {
         var prev = new Dictionary<NodeData, NodeData>();
         var queue = new Queue<NodeData>();
         prev[from] = null;
@@ -586,6 +623,13 @@ public class TownData
                 var next = conns[i].End;
                 if (next == null) continue;
                 if (prev.ContainsKey(next)) continue;
+                // When restricting intermediates: a candidate next-hop is only acceptable
+                // if it's the final destination (where we're allowed to land regardless of
+                // ownership) or it's owned by the required player (so it'll pass through
+                // without being intercepted). `from` was seeded into prev above so we never
+                // re-evaluate it here.
+                if (requireIntermediateOwner != null && next != to && next.OwnedBy != requireIntermediateOwner)
+                    continue;
                 prev[next] = cur;
                 queue.Enqueue(next);
             }
@@ -660,7 +704,11 @@ public class TownData
                         foreach (var attackFromNode in attackFromNodes.Keys)
                         {
                             var sourceNode = attackFromNode.RealNode;
-                            var numSent = attackFromNodes[attackFromNode];
+                            // Game rule: each source must retain at least 1 worker
+                            // (NodeData.GetMaxSendableWorkers); a source drained to 0 by an
+                            // attack would be immediately captured itself.
+                            var numSent = Math.Min(attackFromNodes[attackFromNode], NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
+                            if (numSent <= 0) continue;
                             // var attackResult = attackResults[i++];
 
                             // // Subtract units sent from the source node
@@ -710,8 +758,9 @@ public class TownData
                     {
                     // First verify that the action is still valid; e.g. another player hasn't captured the target node, the source node still has workers and is owned by player, etc
 
-                    // Can player still send enough workers from source node?
-                    if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) break;
+                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                    // Can player still send enough workers from source node without draining it?
+                    if (NodeData.GetMaxSendableWorkers(fromNode.NumWorkers) < moveToMake.Count || fromNode.OwnedBy != player) break;
 
                     // Is target node still capturable?
                     if (toNode.OwnedBy != null) break;
@@ -767,7 +816,8 @@ public class TownData
 
                 case AIActionType.CaptureNeutralResourceNode:
                     {
-                        if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) break;
+                        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                        if (NodeData.GetMaxSendableWorkers(fromNode.NumWorkers) < moveToMake.Count || fromNode.OwnedBy != player) break;
                         if (toNode.OwnedBy != null) break;
                         if (toNode.Building == null || !toNode.Building.Defn.CanBeGatheredFrom) break;
 
@@ -802,7 +852,8 @@ public class TownData
                         {
                             var sourceNode = kvp.Key.RealNode;
                             if (sourceNode == null || sourceNode.OwnedBy != player) continue;
-                            int numSent = Math.Min(kvp.Value, sourceNode.NumWorkers);
+                            // Game rule: each source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                            int numSent = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
                             if (numSent <= 0) continue;
                             sourceNode.NumWorkers -= numSent;
                             totalSent += numSent;
@@ -844,8 +895,9 @@ public class TownData
 
                 case AIActionType.SendWorkersToOwnedNode:
 
-                    // Can player still send enough workers from source node?
-                    if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) continue;
+                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+                    // Can player still send enough workers from source node without draining it?
+                    if (NodeData.GetMaxSendableWorkers(fromNode.NumWorkers) < moveToMake.Count || fromNode.OwnedBy != player) continue;
 
                     fromNode.NumWorkers -= moveToMake.Count;
                     toNode.NumWorkers += moveToMake.Count;

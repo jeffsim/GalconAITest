@@ -95,7 +95,8 @@ public partial class AI_TownState
         origDestWorkers = destNode.NumWorkers;
         origOwner = destNode.OwnedBy;
 
-        numSent = Math.Min(Math.Max(0, numToSend), sourceNode.NumWorkers);
+        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+        numSent = Math.Min(Math.Max(0, numToSend), NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
         if (numSent <= 0) return;
 
         sourceNode.NumWorkers -= numSent;
@@ -129,7 +130,10 @@ public partial class AI_TownState
 
     internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, float percentToSend, out int numSent)
     {
-        numSent = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
+        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+        int requested = Math.Max(1, (int)(sourceNode.NumWorkers * percentToSend));
+        numSent = Math.Min(requested, NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
+        if (numSent <= 0) return;
         sourceNode.NumWorkers -= numSent;
         destNode.NumWorkers += numSent;
         NodeOwnershipOrWorkersChanged = true;
@@ -137,7 +141,8 @@ public partial class AI_TownState
 
     internal void SendWorkersToOwnedNode(AI_NodeState sourceNode, AI_NodeState destNode, int numToSend, out int numSent)
     {
-        numSent = Math.Min(Math.Max(0, numToSend), sourceNode.NumWorkers);
+        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+        numSent = Math.Min(Math.Max(0, numToSend), NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
         if (numSent <= 0) return;
         sourceNode.NumWorkers -= numSent;
         destNode.NumWorkers += numSent;
@@ -152,7 +157,8 @@ public partial class AI_TownState
 
     internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, int turnNumber, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, int numToSend, out int numSent)
     {
-        numSent = Math.Min(Math.Max(0, numToSend), sendFromNode.NumWorkers);
+        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+        numSent = Math.Min(Math.Max(0, numToSend), NodeData.GetMaxSendableWorkers(sendFromNode.NumWorkers));
         if (numSent <= 0)
         {
             resource1 = GoodType.Unset;
@@ -267,7 +273,9 @@ public partial class AI_TownState
         int totalArriving = 0;
         foreach (var kvp in sendFromNodes)
         {
-            int numToSend = Math.Min(kvp.Value, kvp.Key.NumWorkers);
+            // Game rule: each source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+            int numToSend = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(kvp.Key.NumWorkers));
+            if (numToSend <= 0) continue;
             kvp.Key.NumWorkers -= numToSend;
             totalArriving += numToSend;
         }
@@ -359,7 +367,9 @@ public partial class AI_TownState
         origToNodeOwner = toNode.OwnedBy;
 
         // For now, assume 1:1 attack.  In the future support e.g. stronger attackers, defensive bonus, etc.
-        numSent = Math.Min(Math.Max(0, numToSend), fromNode.NumWorkers);
+        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers); a
+        // source drained to 0 by an attack would be immediately captured itself.
+        numSent = Math.Min(Math.Max(0, numToSend), NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
         if (numSent <= 0)
         {
             attackResult = AttackResult.Undefined;

@@ -50,6 +50,28 @@ public static class AI_ActionHeuristics
     // the bonus, so this is intentionally aggressive on critical-resource captures.
     const float attackResourceShortageScalingFactor = 5f;
 
+    // Chokepoint multiplier scaling: a node with ChokepointScore = 1.0 has its capture /
+    // attack / buttress heuristic multiplied by (1 + scale). Tuned so the structural value
+    // of holding a map-level chokepoint is meaningful but doesn't completely override the
+    // dynamic situation -- a non-chokepoint that's actually under attack should still beat a
+    // chokepoint that's safe. Scale=1.5 means a peak chokepoint is worth 2.5x an ordinary
+    // node of identical local conditions.
+    public const float ChokepointCaptureScale = 1.5f;
+    public const float ChokepointDefenseScale = 1.5f;
+    public const float ChokepointAttackScale = 1.5f;
+    public const float ChokepointGoalScale = 1.5f;
+
+    // Returns 1 + score * scale, floor 1. Intended to multiply an already-personality-free
+    // heuristic so the chokepoint multiplier composes cleanly with personality multipliers
+    // applied later in ApplyHeuristicAndPersonality.
+    public static float GetChokepointMultiplier(AI_NodeState node, float scale)
+    {
+        if (node == null) return 1f;
+        float score = node.ChokepointScore;
+        if (score <= 0f) return 1f;
+        return 1f + score * scale;
+    }
+
     public static float GetPersonalityMultiplier(PlayerData player, AIHeuristicActionType actionType)
     {
         var aiDefn = player.AIDefn;
@@ -347,7 +369,9 @@ public static class AI_ActionHeuristics
         // Green's chokepoint #3 kept losing workers to offensive sends despite being under
         // sustained attack itself.
         if (node.AttackHeat >= AttackHeatChokepointThreshold) return 0;
-        return node.NumWorkers / 2;
+        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers);
+        // keep heuristic consistent with what simulation / real-game executors will actually do.
+        return Math.Min(node.NumWorkers / 2, NodeData.GetMaxSendableWorkers(node.NumWorkers));
     }
 
     // When a frontier node is under real pressure, allow sources below 75% capacity to pitch in.
@@ -359,14 +383,17 @@ public static class AI_ActionHeuristics
     public static int GetWorkersWillingToSendForDefense(AI_NodeState node, int minWorkersInNodeBeforeConsideringSendingAnyOut, bool emergency, float destAttackHeat = 0f)
     {
         if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return 0;
+        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
+        // Clamp at the end so neither emergency nor normal paths can over-promise.
+        int maxSendable = NodeData.GetMaxSendableWorkers(node.NumWorkers);
         if (emergency)
-            return Math.Max(1, node.NumWorkers - minWorkersInNodeBeforeConsideringSendingAnyOut + 1);
+            return Math.Min(maxSendable, Math.Max(1, node.NumWorkers - minWorkersInNodeBeforeConsideringSendingAnyOut + 1));
 
         // Destination has chokepoint-level heat but isn't in emergency: relax source threshold
         // to 50% so mid-staffed neighbors can pitch in without waiting to hit 75%.
         float capacityThreshold = destAttackHeat >= AttackHeatChokepointThreshold ? 0.5f : 0.75f;
         if (node.NumWorkers < node.MaxWorkers * capacityThreshold) return 0;
-        return node.NumWorkers / 2;
+        return Math.Min(maxSendable, node.NumWorkers / 2);
     }
 
     public static int GetTargetForceWithOverkill(int threat, float overkillMultiplier)
@@ -646,7 +673,11 @@ public static class AI_ActionHeuristics
 
         float clampedRawValue = Mathf.Clamp(rawValue, buttressNodeMinScore, buttressNodeMaxScore);
         float normalizedValue = (clampedRawValue - buttressNodeMinScore) / (buttressNodeMaxScore - buttressNodeMinScore);
-        return normalizedValue * HeuristicScoreScale;
+        // Chokepoint amplifier: defending a structural chokepoint matters more than defending
+        // an ordinary frontier of equivalent pressure. Applied after normalization so the
+        // multiplier composes linearly with peer-action priorities rather than getting clipped
+        // by the buttressNodeMaxScore ceiling.
+        return normalizedValue * HeuristicScoreScale * GetChokepointMultiplier(toNode, ChokepointDefenseScale);
     }
 
     // A frontier node at capacity with an upgradeable building under pressure needs workers
@@ -742,6 +773,11 @@ public static class AI_ActionHeuristics
         if (toNode.OwnedBy == null)
             result += neutralTargetBuildBonus;
 
+        // Chokepoint amplifier on neutral construct sites: building on an empty chokepoint
+        // is worth more than building on an off-route empty node. Matched to the capture
+        // scale so Construct on a chokepoint and AttackToNode on a chokepoint move together.
+        result *= GetChokepointMultiplier(toNode, ChokepointCaptureScale);
+
         return result;
     }
 
@@ -791,7 +827,10 @@ public static class AI_ActionHeuristics
 
         float clampedRawValue = Mathf.Clamp(rawValue, attackNodeMinScore, attackNodeMaxScore);
         float normalizedValue = (clampedRawValue - attackNodeMinScore) / (attackNodeMaxScore - attackNodeMinScore);
-        return normalizedValue * HeuristicScoreScale;
+        // Chokepoint amplifier: capturing / attacking a structural chokepoint is worth more
+        // than an equivalent off-route node. Applies to both AttackToNode (enemy chokepoints)
+        // and the capture variants below (neutral/resource chokepoints) since both call here.
+        return normalizedValue * HeuristicScoreScale * GetChokepointMultiplier(targetNode, ChokepointAttackScale);
     }
 
     public static AI_NodeState GetButtressSourceNode(AI_NodeState toNode, PlayerData player, int minWorkersInNodeBeforeConsideringSendingAnyOut)
@@ -810,6 +849,11 @@ public static class AI_ActionHeuristics
         queue.Enqueue(toNode);
         visited.Add(toNode);
 
+        // Only walk through player-owned territory. A "friendly source" reachable only via
+        // enemy/neutral nodes isn't usable as a buttress source -- the workers would have
+        // to cross hostile ground to arrive, and realtime ResolveWorkerArrival intercepts
+        // them at the first hostile intermediate. Restricting BFS expansion to friendly
+        // neighbors guarantees any returned source has a fully player-owned path to toNode.
         while (queue.Count > 0)
         {
             var node = queue.Dequeue();
@@ -837,11 +881,10 @@ public static class AI_ActionHeuristics
             }
             foreach (var neighbor in node.NeighborNodes)
             {
-                if (!visited.Contains(neighbor))
-                {
-                    visited.Add(neighbor);
-                    queue.Enqueue(neighbor);
-                }
+                if (visited.Contains(neighbor)) continue;
+                if (neighbor.OwnedBy != player) continue;
+                visited.Add(neighbor);
+                queue.Enqueue(neighbor);
             }
         }
 

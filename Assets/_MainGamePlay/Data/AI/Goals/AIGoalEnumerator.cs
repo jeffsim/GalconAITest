@@ -114,7 +114,12 @@ public static class AIGoalEnumerator
                 ? (aggression * 0.5f + territoryExpansion * 0.5f)
                 : territoryExpansion;
 
-            float value = (captureBaseValue + typeBonus) * personalityMix;
+            // Chokepoint amplifier: a CaptureNode goal targeting a structural chokepoint is
+            // worth significantly more than capturing a leaf node. Surfaces in the goal-list
+            // dump as an inflated `val=` so the user can tell at a glance which captures the
+            // AI considers strategically important vs. opportunistic.
+            float chokepointMult = AI_ActionHeuristics.GetChokepointMultiplier(node, AI_ActionHeuristics.ChokepointGoalScale);
+            float value = (captureBaseValue + typeBonus) * personalityMix * chokepointMult;
             if (value < MinGoalValue) continue;
 
             int horizon = EstimateCaptureHorizon(node);
@@ -125,6 +130,8 @@ public static class AIGoalEnumerator
             goal.TargetNode = node;
             goal.Value = value;
             goal.HorizonTurns = horizon;
+            if (node.ChokepointScore > 0.05f)
+                reason += $" (choke={node.ChokepointScore:F2})";
             goal.DebugReason = reason;
             goalsOut.Add(goal);
         }
@@ -151,7 +158,11 @@ public static class AIGoalEnumerator
             // direct attention elsewhere.
             float deficit = enemyForce - node.NumWorkers;
             if (deficit < 0f) deficit = 0f;
-            float value = (1f + deficit) * defendValuePerWorker * defense;
+            // Chokepoint amplifier on defense: losing a chokepoint is structurally worse than
+            // losing a leaf, so the same enemy pressure on a chokepoint produces a much
+            // higher-value DefendFrontier goal.
+            float chokepointMult = AI_ActionHeuristics.GetChokepointMultiplier(node, AI_ActionHeuristics.ChokepointDefenseScale);
+            float value = (1f + deficit) * defendValuePerWorker * defense * chokepointMult;
             if (value < MinGoalValue) continue;
 
             var goal = goalPool.Count > 0 ? goalPool.Pop() : new AIGoal();
@@ -160,7 +171,10 @@ public static class AIGoalEnumerator
             goal.TargetNode = node;
             goal.Value = value;
             goal.HorizonTurns = 1; // defense is always immediate
-            goal.DebugReason = "deficit " + ((int)deficit) + " vs enemy force " + enemyForce;
+            string reason = "deficit " + ((int)deficit) + " vs enemy force " + enemyForce;
+            if (node.ChokepointScore > 0.05f)
+                reason += $" (choke={node.ChokepointScore:F2})";
+            goal.DebugReason = reason;
             goalsOut.Add(goal);
         }
     }

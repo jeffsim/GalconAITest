@@ -76,7 +76,6 @@ public partial class AITestScene : MonoBehaviour
     {
         Instance = this;
         EnsureRealtimeControlPanel();
-        EnsureAIDebugDumpButton();
         ResetTown();
 
         // Application.targetFrameRate = 60;
@@ -184,6 +183,38 @@ public partial class AITestScene : MonoBehaviour
 
         draw.Label2D(pos, label, 20, Drawing.LabelAlignment.Center, Color.black);
         draw.Label2D(pos + new Vector3(-.02f, 0.02f, .05f), label, 20, Drawing.LabelAlignment.Center, Color.white);
+    }
+
+    // Overlay a yellow "★ score" ring around every chokepoint node. Radius scales with
+    // ChokepointScore so the eye can immediately tell which chokepoint is structurally
+    // most important (peak = 1.0 yields the biggest ring). Drawn every frame because
+    // Drawing.Draw.ingame state is not persistent and the rest of the overlay redraws here.
+    void DrawChokepointOverlay()
+    {
+        if (Town == null) return;
+        var draw = Drawing.Draw.ingame;
+        for (int i = 0; i < Town.Nodes.Count; i++)
+        {
+            var node = Town.Nodes[i];
+            float score = node.ChokepointScore;
+            if (score <= 0.05f) continue;
+
+            float radius = 0.55f + score * 0.7f;
+            // Bright yellow at peak, dimmer for lower-scoring chokepoints so the user can
+            // visually rank them at a glance.
+            var color = new Color(1f, 0.85f, 0f, 0.35f + 0.55f * score);
+            var pos = node.WorldLoc + new Vector3(0, 0.02f, 0);
+            draw.PushLineWidth(3);
+            draw.PushColor(color);
+            draw.Circle(pos, Vector3.up, radius);
+            draw.PopColor();
+            draw.PopLineWidth();
+
+            string label = $"\u2605 {score:F2}";
+            var labelPos = pos + new Vector3(0, 0.02f, -radius - 0.25f);
+            draw.Label2D(labelPos, label, 16, Drawing.LabelAlignment.Center, Color.black);
+            draw.Label2D(labelPos + new Vector3(-.02f, 0.02f, .05f), label, 16, Drawing.LabelAlignment.Center, new Color(1f, 0.85f, 0f, 1f));
+        }
     }
 
     void DrawCircle(Vector3 pos, float radius, Color color, string label)
@@ -388,6 +419,8 @@ public partial class AITestScene : MonoBehaviour
 
         foreach (var player in Town.Players)
             DrawNextAISteps(player);
+
+        DrawChokepointOverlay();
 #if DEBUG
         if (lastShowDebuggerAI != ShowDebuggerAI)
         {

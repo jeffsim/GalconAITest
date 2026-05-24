@@ -41,6 +41,8 @@ public partial class AITestScene
         AppendNodesSection(sb);
         sb.AppendLine();
         AppendGraphSection(sb);
+        sb.AppendLine();
+        AppendChokepointsSection(sb);
 
         return sb.ToString();
     }
@@ -216,6 +218,12 @@ public partial class AITestScene
                     sb.Append($" buttressH={buttressH:F2}");
             }
 
+            // Chokepoint score is static for the map but attaching it here makes per-node
+            // diagnostics self-contained -- you don't have to cross-reference the chokepoints
+            // section to see why a node is getting boosted priority.
+            if (node.ChokepointScore > 0.05f)
+                sb.Append($" choke={node.ChokepointScore:F2}");
+
             string inv = FormatInventory(node);
             if (inv.Length > 0)
                 sb.Append($" | {inv}");
@@ -242,6 +250,23 @@ public partial class AITestScene
                 sb.AppendLine($"  #{key.Item1} -- #{key.Item2}{(conn.IsBidirectional ? "" : " (dir)")}");
             }
         }
+    }
+
+    void AppendChokepointsSection(StringBuilder sb)
+    {
+        sb.AppendLine("--- CHOKEPOINTS (inter-camp betweenness, 1.0 = peak) ---");
+        var ranked = new System.Collections.Generic.List<NodeData>();
+        foreach (var node in Town.Nodes)
+            if (node.ChokepointScore > 0.05f)
+                ranked.Add(node);
+        ranked.Sort((a, b) => b.ChokepointScore.CompareTo(a.ChokepointScore));
+        if (ranked.Count == 0)
+        {
+            sb.AppendLine("  (none -- map has fewer than 2 starting camps or all camps are isolated)");
+            return;
+        }
+        foreach (var node in ranked)
+            sb.AppendLine($"  #{node.NodeId} score={node.ChokepointScore:F2}");
     }
 
     static string FormatAIAction(AIAction action)

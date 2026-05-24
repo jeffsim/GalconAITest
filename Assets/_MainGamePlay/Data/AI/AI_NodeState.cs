@@ -33,6 +33,12 @@ public class AI_NodeState
     // telegraphed attacks rather than only react to them.
     public int IncomingHostileWorkers;
 
+    // Static [0, 1] score from ChokepointAnalysis -- mirrored from RealNode.ChokepointScore
+    // once at construction (chokepoint topology never changes during play). Used by the
+    // capture / attack / buttress heuristics to prioritize map-level structural chokepoints
+    // over equally-valued non-chokepoint candidates.
+    public float ChokepointScore;
+
     // True when an enemy node already has enough of our in-flight attackers to beat its
     // effective defense (garrison + defender reinforcements). The attack task should not
     // commit additional waves when this is set — it would just drip-feed workers that
@@ -128,6 +134,9 @@ public class AI_NodeState
         // set static fields
         RealNode = nodeData;
         NodeId = nodeData.NodeId;
+        // Static for the lifetime of the map; ChokepointAnalysis runs once in TownData ctor
+        // before any AI_NodeState is constructed, so RealNode.ChokepointScore is final here.
+        ChokepointScore = nodeData.ChokepointScore;
         Update();
     }
 

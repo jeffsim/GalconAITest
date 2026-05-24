@@ -44,6 +44,14 @@ public class NodeData
     // recursive search can read it.
     public float AttackHeat;
 
+    // Static structural chokepoint score in [0, 1]. Computed once at map load by
+    // ChokepointAnalysis based on inter-camp betweenness centrality: a node with score 1.0
+    // sits on essentially every shortest path between starting camps; 0 means it's off
+    // those routes entirely. AI heuristics multiply Capture / Attack / Buttress priorities
+    // by (1 + score * scale) so chokepoints draw heavier offense AND defense than ordinary
+    // nodes regardless of who currently owns them.
+    public float ChokepointScore;
+
     public NodeData(NodeDefn nodeDefn, PlayerData player)
     {
         OwnedBy = player;
@@ -81,5 +89,16 @@ public class NodeData
         if (player == null) return;
         IncomingByPlayer.TryGetValue(player, out var cur);
         IncomingByPlayer[player] = Math.Max(0, cur + delta);
+    }
+
+    // === Core game rule ===
+    // A node must NEVER reach 0 workers. A node with 0 workers is considered captured
+    // (or dead) and immediately flips ownership / is lost. Therefore the maximum number
+    // of workers that can leave a node in any single send / attack / capture / construct
+    // dispatch is (NumWorkers - 1). All worker-dispatch code (real-time executor,
+    // step-mode executor, and AI simulation) must clamp against this value.
+    public static int GetMaxSendableWorkers(int numWorkers)
+    {
+        return numWorkers > 1 ? numWorkers - 1 : 0;
     }
 }

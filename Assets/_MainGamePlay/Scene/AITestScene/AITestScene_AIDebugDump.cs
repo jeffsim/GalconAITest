@@ -1,12 +1,8 @@
 using System.Text;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public partial class AITestScene
 {
-    Button aiDebugDumpButton;
-
     /// <summary>
     /// Extended AI diagnostic dump: action candidacy, skipped targets, hybrid top-K previews.
     /// Copies to clipboard like DumpSimulationState.
@@ -70,53 +66,4 @@ public partial class AITestScene
         return sb.ToString();
     }
 
-    void EnsureAIDebugDumpButton()
-    {
-        var dumpButton = GameObject.Find("DebugOutputButton");
-        if (dumpButton != null)
-            SetButtonLabel(dumpButton, "Dump State");
-
-        var existing = GameObject.Find("AIDebugDumpButton");
-        if (existing != null)
-        {
-            aiDebugDumpButton = existing.GetComponent<Button>();
-            SetButtonLabel(existing, "Dump AI");
-            if (aiDebugDumpButton != null)
-            {
-                aiDebugDumpButton.onClick.RemoveAllListeners();
-                aiDebugDumpButton.onClick.AddListener(OnDumpAIDebugClicked);
-            }
-            return;
-        }
-
-        if (aiDebugDumpButton != null || dumpButton == null) return;
-
-        var templateRect = dumpButton.GetComponent<RectTransform>();
-        var parent = templateRect.parent;
-
-        var go = Object.Instantiate(dumpButton, parent);
-        go.name = "AIDebugDumpButton";
-        var rect = go.GetComponent<RectTransform>();
-        rect.anchoredPosition = templateRect.anchoredPosition + new Vector2(-145f, 0f);
-        rect.sizeDelta = new Vector2(templateRect.sizeDelta.x, templateRect.sizeDelta.y);
-
-        SetButtonLabel(go, "Dump AI");
-
-        aiDebugDumpButton = go.GetComponent<Button>();
-        aiDebugDumpButton.onClick.RemoveAllListeners();
-        aiDebugDumpButton.onClick.AddListener(OnDumpAIDebugClicked);
-    }
-
-    static void SetButtonLabel(GameObject buttonGo, string text)
-    {
-        var tmp = buttonGo.GetComponentInChildren<TextMeshProUGUI>();
-        if (tmp != null)
-        {
-            tmp.text = text;
-            return;
-        }
-        var legacy = buttonGo.GetComponentInChildren<Text>();
-        if (legacy != null)
-            legacy.text = text;
-    }
 }

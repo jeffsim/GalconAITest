@@ -29,8 +29,8 @@ MonoBehaviour:
   EconomicExpansionWeight: 0.489
   DefenseWeight: 1.058
   AggressivenessWeight: 0.806
-  AttackOverkillMultiplier: 1.172
-  DecisionIntervalSeconds: 1
+  AttackOverkillMultiplier: 1.6
+  DecisionIntervalSeconds: 2.5
   DecisionVarianceSeconds: 0.5
   TargetWoodStockpile: 15
   TargetStoneStockpile: 15

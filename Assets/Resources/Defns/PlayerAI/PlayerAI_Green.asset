@@ -27,8 +27,11 @@ MonoBehaviour:
   Color: {r: 0, g: 1, b: 0, a: 1}
   TerritoryExpansionWeight: 1.63
   EconomicExpansionWeight: 0.85
-  DefenseWeight: 1.1
-  AggressivenessWeight: 0.67
+  DefenseWeight: 1.336
+  AggressivenessWeight: 0.767
   AttackOverkillMultiplier: 1.31
-  DecisionIntervalSeconds: 1
+  DecisionIntervalSeconds: 2.5
   DecisionVarianceSeconds: 0.5
+  TargetWoodStockpile: 15
+  TargetStoneStockpile: 15
+  ResourceStockpileWeight: 1
