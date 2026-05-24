@@ -29,11 +29,14 @@ public class CameraDragger : MonoBehaviour
         if (points.Count == 0)
             return;
 
-        var center = Vector3.zero;
+        var bounds = new Bounds(points[0], Vector3.zero);
         foreach (var p in points)
-            center += p;
-        center /= points.Count;
+            bounds.Encapsulate(p);
+        var center = bounds.center;
         center.y = 0f;
+
+        var fitPoints = new List<Vector3>(points);
+        AppendBoundsCorners(fitPoints, bounds);
 
         var forward = transform.forward;
         if (forward.y >= -0.01f)
@@ -45,7 +48,7 @@ public class CameraDragger : MonoBehaviour
         {
             float d = (dLo + dHi) * 0.5f;
             transform.position = center - forward * d;
-            if (AllPointsVisible(cam, points))
+            if (AllPointsVisible(cam, fitPoints))
                 dHi = d;
             else
                 dLo = d;
@@ -53,6 +56,17 @@ public class CameraDragger : MonoBehaviour
 
         transform.position = center - forward * dHi;
         ApplyScrollZoom(-ScrollWheelNotch);
+    }
+
+    static void AppendBoundsCorners(List<Vector3> fitPoints, Bounds bounds)
+    {
+        var c = bounds.center;
+        c.y = 0f;
+        var ex = bounds.extents;
+        fitPoints.Add(c + new Vector3(ex.x, 0f, ex.z));
+        fitPoints.Add(c + new Vector3(ex.x, 0f, -ex.z));
+        fitPoints.Add(c + new Vector3(-ex.x, 0f, ex.z));
+        fitPoints.Add(c + new Vector3(-ex.x, 0f, -ex.z));
     }
 
     void ApplyScrollZoom(float scrollDelta)
@@ -63,22 +77,67 @@ public class CameraDragger : MonoBehaviour
     static List<Vector3> CollectFramePoints(AITestScene scene)
     {
         var points = new List<Vector3>();
-        if (scene.TestTownDefn != null)
+        var town = scene.Town;
+        if (town == null || town.Nodes.Count == 0)
+            return points;
+
+        var nodeById = new Dictionary<int, NodeData>();
+        foreach (var node in town.Nodes)
+            nodeById[node.NodeId] = node;
+
+        var connectedIds = new HashSet<int>();
+        var defn = scene.TestTownDefn;
+        if (defn?.NodeConnections != null)
         {
-            foreach (var nodeDefn in scene.TestTownDefn.Nodes)
+            foreach (var conn in defn.NodeConnections)
             {
-                if (nodeDefn.Enabled)
-                    points.Add(nodeDefn.WorldLoc);
+                connectedIds.Add(conn.Nodes.x);
+                connectedIds.Add(conn.Nodes.y);
+            }
+        }
+
+        if (connectedIds.Count > 0)
+        {
+            foreach (var id in connectedIds)
+            {
+                if (nodeById.TryGetValue(id, out var node))
+                    points.Add(node.WorldLoc);
             }
         }
 
         if (points.Count == 0)
         {
-            foreach (var node in scene.Town.Nodes)
+            foreach (var node in town.Nodes)
                 points.Add(node.WorldLoc);
+            TrimOutliers(points);
         }
 
         return points;
+    }
+
+    static void TrimOutliers(List<Vector3> points)
+    {
+        if (points.Count < 3)
+            return;
+
+        var center = Vector3.zero;
+        foreach (var p in points)
+            center += p;
+        center /= points.Count;
+
+        var distances = new float[points.Count];
+        for (int i = 0; i < points.Count; i++)
+            distances[i] = Vector3.Distance(points[i], center);
+        System.Array.Sort(distances);
+
+        float median = distances[distances.Length / 2];
+        float maxDist = Mathf.Max(median * 3f, 50f);
+
+        for (int i = points.Count - 1; i >= 0; i--)
+        {
+            if (Vector3.Distance(points[i], center) > maxDist)
+                points.RemoveAt(i);
+        }
     }
 
     bool AllPointsVisible(Camera cam, List<Vector3> points)

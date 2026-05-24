@@ -24,6 +24,10 @@ public partial class AITestScene : MonoBehaviour
     [FoldoutGroup("Workers", false)] public GameObject WorkersFolder;
     [FoldoutGroup("Workers", false)] public WorkerDefn TestWorkerDefn;
 
+    [Header("Debug Overlay")]
+    [Tooltip("When true, draws yellow rings on structural chokepoint nodes.")]
+    public bool ShowChokepointOverlay = true;
+
     [Header("Realtime")]
     [Tooltip("When true, simulation advances continuously and AIs make decisions on their own cadence; when false, the legacy Step button drives the world forward.")]
     public bool Realtime = false;
@@ -191,7 +195,7 @@ public partial class AITestScene : MonoBehaviour
     // Drawing.Draw.ingame state is not persistent and the rest of the overlay redraws here.
     void DrawChokepointOverlay()
     {
-        if (Town == null) return;
+        if (!ShowChokepointOverlay || Town == null) return;
         var draw = Drawing.Draw.ingame;
         for (int i = 0; i < Town.Nodes.Count; i++)
         {
