@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public enum AIHeuristicActionType
@@ -224,6 +225,49 @@ public static class AI_ActionHeuristics
         if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return 0;
         if (node.NumWorkers < node.MaxWorkers * 3f / 4f) return 0;
         return node.NumWorkers / 2;
+    }
+
+    public static int GetTargetForceWithOverkill(int threat, float overkillMultiplier)
+    {
+        if (threat <= 0) return 1;
+        return Math.Max(1, (int)Math.Ceiling(threat * overkillMultiplier));
+    }
+
+    public static int GetAdjacentEnemyThreat(AI_NodeState node, PlayerData player)
+    {
+        int threat = 0;
+        var neighbors = node.NeighborNodes;
+        for (int n = 0; n < neighbors.Count; n++)
+        {
+            var neighbor = neighbors[n];
+            if (neighbor.OwnedBy != null && neighbor.OwnedBy != player)
+                threat += neighbor.NumWorkers;
+        }
+        return threat;
+    }
+
+    public static int GetNeutralCaptureThreat(AI_NodeState toNode, PlayerData player)
+    {
+        int threat = toNode.OwnedBy == null ? toNode.NumWorkers : 0;
+        return threat + GetAdjacentEnemyThreat(toNode, player);
+    }
+
+    // Size a neutral capture: 1 worker on safe frontiers; enough to clear unowned garrison on
+    // the target and hold against adjacent enemy garrisons on contested ones.
+    public static bool TryGetCaptureWorkersToSend(AI_NodeState fromNode, AI_NodeState toNode, PlayerData player, int minWorkersInNodeBeforeConsideringSendingAnyOut, float overkillMultiplier, out int numToSend)
+    {
+        numToSend = 0;
+        if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return false;
+
+        int willing = GetWorkersWillingToSend(fromNode, minWorkersInNodeBeforeConsideringSendingAnyOut);
+        if (willing <= 0) return false;
+
+        int threat = GetNeutralCaptureThreat(toNode, player);
+        int target = GetTargetForceWithOverkill(threat, overkillMultiplier);
+        if (willing < target) return false;
+
+        numToSend = target;
+        return true;
     }
 
     // Maximum raw bonus overcrowding alone can contribute. Sized so a node at 200% capacity

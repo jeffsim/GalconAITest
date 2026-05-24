@@ -100,7 +100,13 @@ public class AITask_ConstructBuilding : AITask
 
                 int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
 
-                aiTownState.SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, buildingDefn, curDepth, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount, .5f, out int numSent);
+                float overkill = player.AIDefn != null ? player.AIDefn.AttackOverkillMultiplier : 1f;
+                if (!AI_ActionHeuristics.TryGetCaptureWorkersToSend(fromNode, toNode, player, minWorkersInNodeBeforeConsideringSendingAnyOut, overkill, out int numToSend))
+                    continue;
+
+                aiTownState.SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, buildingDefn, curDepth, out GoodType res1Id, out int resource1Amount, out GoodType res2Id, out int resource2Amount, numToSend, out int numSent);
+                if (numSent <= 0)
+                    continue;
                 var debuggerEntry = aiDebuggerParentEntry?.AddEntry_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
                 var actionScore = GetActionScore(curDepth, debuggerEntry);
@@ -108,7 +114,7 @@ public class AITask_ConstructBuilding : AITask
                 if (actionScore > bestAction.Score)
                     bestAction.SetTo_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, actionScore, debuggerEntry);
 
-                aiTownState.Undo_SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, res1Id, resource1Amount, res2Id, resource2Amount, numSent);
+                aiTownState.Undo_SendWorkersToConstructBuildingInEmptyNode(fromNode, toNode, res1Id, resource1Amount, res2Id, resource2Amount, d1, d2);
                 Debug.Assert(d1 == fromNode.NumWorkers && d2 == toNode.NumWorkers);
             }
         }

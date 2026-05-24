@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 class AttackState
@@ -43,10 +44,10 @@ public class AITask_AttackToNode : AITask
         if (toNode.OwnedBy == player) return 0f;
 
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
-        if (!GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers, out int totalWillingToSend))
+        if (!TryPlanAttackAllocations(nDeepNeighbors, num, toNode.NumWorkers, GetAttackOverkillMultiplier(), attackPlanScratch, out int totalPlanned))
             return 0f;
 
-        float h = AI_ActionHeuristics.GetAttackHeuristic(aiTownState, toNode, totalWillingToSend);
+        float h = AI_ActionHeuristics.GetAttackHeuristic(aiTownState, toNode, totalPlanned);
         if (h <= 0f) return 0f;
 
         return h * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Attack);
@@ -62,28 +63,39 @@ public class AITask_AttackToNode : AITask
 
         int num = GetFriendlyNeighborsWithEnoughWorkers(toNode, nDeepNeighbors);
 
-        int totalWillingToSend = 0;
-        bool haveEnoughWorkersToAttack = GetNodesToAttackFrom(nDeepNeighbors, num, toNode.NumWorkers, out totalWillingToSend);
-        if (!haveEnoughWorkersToAttack) return false;
+        Dictionary<AI_NodeState, int> attackFromNodes = attackFromNodesPool.Count > 0 ? attackFromNodesPool.Pop() : new Dictionary<AI_NodeState, int>();
+        attackFromNodes.Clear();
+        if (!TryPlanAttackAllocations(nDeepNeighbors, num, toNode.NumWorkers, GetAttackOverkillMultiplier(), attackFromNodes, out int totalPlanned))
+        {
+            attackFromNodesPool.Push(attackFromNodes);
+            return false;
+        }
 
-        float heuristicBonus = AI_ActionHeuristics.GetAttackHeuristic(aiTownState, toNode, totalWillingToSend);
-        if (heuristicBonus <= 0f) return false;
+        float heuristicBonus = AI_ActionHeuristics.GetAttackHeuristic(aiTownState, toNode, totalPlanned);
+        if (heuristicBonus <= 0f)
+        {
+            attackFromNodesPool.Push(attackFromNodes);
+            return false;
+        }
 
         if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Attack, bestScoreAmongPeerActions))
+        {
+            attackFromNodesPool.Push(attackFromNodes);
             return false;
+        }
 
         bestAction = player.AI.GetAIAction();
 
         List<AttackState> attackStates = attackStatesPool.Count > 0 ? attackStatesPool.Pop() : new List<AttackState>();
         List<AttackResult> attackResults = attackResultsPool.Count > 0 ? attackResultsPool.Pop() : new List<AttackResult>();
-        Dictionary<AI_NodeState, int> attackFromNodes = attackFromNodesPool.Count > 0 ? attackFromNodesPool.Pop() : new Dictionary<AI_NodeState, int>();
 
         attackStates.Clear();
         attackResults.Clear();
-        attackFromNodes.Clear();
 
-        foreach (var fromNode in nodesToAttackFrom)
+        foreach (var kvp in attackFromNodes)
         {
+            var fromNode = kvp.Key;
+            int numToSend = kvp.Value;
             AttackState attackState = attackStatePool.Count > 0 ? attackStatePool.Pop() : new AttackState();
             attackState.Reset();
 
@@ -93,9 +105,8 @@ public class AITask_AttackToNode : AITask
             attackState.OrigNumInDestNode = toNode.NumWorkers;
             attackState.OrigToNodeOwner = toNode.OwnedBy;
 
-            aiTownState.AttackFromNode(fromNode, toNode, out AttackResult attackResult, out _, out _, out int numSent, out _);
+            aiTownState.AttackFromNode(fromNode, toNode, numToSend, out AttackResult attackResult, out _, out _, out int numSent, out _);
             attackResults.Add(attackResult);
-            attackFromNodes[fromNode] = numSent;
 
             attackState.NumSent = numSent;
             attackState.AttackResult = attackResult;
@@ -163,23 +174,40 @@ public class AITask_AttackToNode : AITask
         return index;
     }
 
-    List<AI_NodeState> nodesToAttackFrom = new List<AI_NodeState>(10);
+    Dictionary<AI_NodeState, int> attackPlanScratch = new Dictionary<AI_NodeState, int>(10);
 
-    bool GetNodesToAttackFrom(AI_NodeState[] nodes, int numNodes, int numEnemies, out int totalWillingToSend)
+    float GetAttackOverkillMultiplier()
     {
-        nodesToAttackFrom.Clear();
-        totalWillingToSend = 0;
+        return player.AIDefn != null ? player.AIDefn.AttackOverkillMultiplier : 1f;
+    }
+
+    bool TryPlanAttackAllocations(AI_NodeState[] nodes, int numNodes, int numDefenders, float overkillMultiplier, Dictionary<AI_NodeState, int> allocations, out int totalPlanned)
+    {
+        allocations.Clear();
+        totalPlanned = 0;
+
+        int targetAttackers = AI_ActionHeuristics.GetTargetForceWithOverkill(numDefenders, overkillMultiplier);
+        int totalWilling = 0;
         for (int i = 0; i < numNodes; i++)
+        {
+            int willing = AI_ActionHeuristics.GetWorkersWillingToSend(nodes[i], minWorkersInNodeBeforeConsideringSendingAnyOut);
+            totalWilling += willing;
+        }
+        if (totalWilling < targetAttackers)
+            return false;
+
+        int remaining = targetAttackers;
+        for (int i = 0; i < numNodes && remaining > 0; i++)
         {
             var node = nodes[i];
             int willing = AI_ActionHeuristics.GetWorkersWillingToSend(node, minWorkersInNodeBeforeConsideringSendingAnyOut);
             if (willing <= 0) continue;
 
-            nodesToAttackFrom.Add(node);
-            totalWillingToSend += willing;
-            if (totalWillingToSend >= numEnemies)
-                return true;
+            int send = Math.Min(willing, remaining);
+            allocations[node] = send;
+            totalPlanned += send;
+            remaining -= send;
         }
-        return false;
+        return remaining <= 0;
     }
 }

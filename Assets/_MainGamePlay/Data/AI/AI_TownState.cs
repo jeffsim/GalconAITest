@@ -103,11 +103,38 @@ public partial class AI_TownState
         destNode.NumWorkers -= numSent;
     }
 
-    internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, int turnNumber, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, float percentToSend, out int numSent)
+    internal void SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, BuildingDefn buildingDefn, int turnNumber, out GoodType resource1, out int resource1Amount, out GoodType resource2, out int resource2Amount, int numToSend, out int numSent)
     {
-        numSent = Math.Max(1, (int)(sendFromNode.NumWorkers * percentToSend));
+        numSent = Math.Min(Math.Max(0, numToSend), sendFromNode.NumWorkers);
+        if (numSent <= 0)
+        {
+            resource1 = GoodType.Unset;
+            resource1Amount = 0;
+            resource2 = GoodType.Unset;
+            resource2Amount = 0;
+            return;
+        }
         sendFromNode.NumWorkers -= numSent;
-        buildInNode.NumWorkers += numSent;
+
+        if (buildInNode.OwnedBy == null && buildInNode.NumWorkers > 0)
+        {
+            if (numSent <= buildInNode.NumWorkers)
+            {
+                buildInNode.NumWorkers -= numSent;
+                sendFromNode.NumWorkers += numSent;
+                numSent = 0;
+                resource1 = GoodType.Unset;
+                resource1Amount = 0;
+                resource2 = GoodType.Unset;
+                resource2Amount = 0;
+                return;
+            }
+            buildInNode.NumWorkers = numSent - buildInNode.NumWorkers;
+        }
+        else
+        {
+            buildInNode.NumWorkers += numSent;
+        }
         buildInNode.OwnedBy = player;
 
         // Debug.Assert(buildingDefn.CanBeBuiltByPlayer, "Error: building buildable building");
@@ -150,10 +177,10 @@ public partial class AI_TownState
         NodeOwnershipOrWorkersChanged = true;
     }
 
-    internal void Undo_SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, GoodType resource1, int resource1Amount, GoodType resource2, int resource2Amount, int numSent)
+    internal void Undo_SendWorkersToConstructBuildingInEmptyNode(AI_NodeState sendFromNode, AI_NodeState buildInNode, GoodType resource1, int resource1Amount, GoodType resource2, int resource2Amount, int origSendFromWorkers, int origBuildInWorkers)
     {
-        buildInNode.NumWorkers -= numSent;
-        sendFromNode.NumWorkers += numSent;
+        sendFromNode.NumWorkers = origSendFromWorkers;
+        buildInNode.NumWorkers = origBuildInWorkers;
         buildInNode.OwnedBy = null;
         buildInNode.ClearBuilding();
 
@@ -168,14 +195,19 @@ public partial class AI_TownState
         }
     }
 
-    internal void AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner)
+    internal void AttackFromNode(AI_NodeState fromNode, AI_NodeState toNode, int numToSend, out AttackResult attackResult, out int origNumInSourceNode, out int origNumInDestNode, out int numSent, out PlayerData origToNodeOwner)
     {
         origNumInSourceNode = fromNode.NumWorkers;
         origNumInDestNode = toNode.NumWorkers;
         origToNodeOwner = toNode.OwnedBy;
 
         // For now, assume 1:1 attack.  In the future support e.g. stronger attackers, defensive bonus, etc.
-        numSent = Math.Max(1, (int)(fromNode.NumWorkers * .5f));
+        numSent = Math.Min(Math.Max(0, numToSend), fromNode.NumWorkers);
+        if (numSent <= 0)
+        {
+            attackResult = AttackResult.Undefined;
+            return;
+        }
         fromNode.NumWorkers -= numSent;
         toNode.NumWorkers -= numSent;
 

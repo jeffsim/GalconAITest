@@ -57,7 +57,7 @@ public class GameDefns : SerializedMonoBehaviour
 
     void Awake()
     {
-        GameDefns[] objs = GameObject.FindObjectsByType<GameDefns>(FindObjectsSortMode.None);
+        GameDefns[] objs = GameObject.FindObjectsByType<GameDefns>();
         if (objs.Length > 1)
             Destroy(this.gameObject);
         DontDestroyOnLoad(this.gameObject);

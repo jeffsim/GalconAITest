@@ -14,6 +14,10 @@ public class PlayerAIDefn : BaseDefn
     [Range(0f, 2f)] public float DefenseWeight = 1f;
     [Range(0f, 2f)] public float AggressivenessWeight = 1f;
 
+    [Header("Combat")]
+    [Tooltip("Force sizing for attacks and contested neutral captures: ceil(threat * this). 1 = minimum to hold/win; 1.25 = ~25% extra.")]
+    [Range(1f, 3f)] public float AttackOverkillMultiplier = 1f;
+
     [Header("Realtime Decision")]
     [Tooltip("Average seconds between this AI's decisions in realtime mode.")]
     [Range(0.05f, 10f)] public float DecisionIntervalSeconds = 1.0f;

@@ -14,7 +14,7 @@ public class TownDefnEditor : OdinEditor
 
         if (GUILayout.Button("Save Nodes"))
         {
-            var nodeGOs = FindObjectsByType<NodeGO>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var nodeGOs = FindObjectsByType<NodeGO>(FindObjectsInactive.Exclude);
             foreach (var nodeGO in nodeGOs)
             {
                 var nodeDefn = getTownDefnNodeById(townDefn, nodeGO.Data.NodeId);

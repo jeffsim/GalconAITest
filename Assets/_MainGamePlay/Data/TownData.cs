@@ -251,11 +251,16 @@ public class TownData
             return;
         }
 
-        // Neutral / unowned destination: first arriving worker captures it. If the worker came
-        // with a CaptureAndConstruct intent AND this is the originally-targeted destination,
-        // place the building now.
+        // Neutral / unowned destination: fight any unowned garrison 1:1 before claiming. Once
+        // defenders are cleared, the next arrival captures (same trade rules as enemy nodes).
         if (dest.OwnedBy == null)
         {
+            if (dest.NumWorkers > 0)
+            {
+                dest.NumWorkers--;
+                return;
+            }
+
             dest.OwnedBy = arrivingPlayer;
             dest.NumWorkers = 1;
             if (reachedFinal
@@ -620,21 +625,37 @@ public class TownData
                     }
                     break;
                 case AIActionType.ConstructBuildingInEmptyNode:
+                    {
                     // First verify that the action is still valid; e.g. another player hasn't captured the target node, the source node still has workers and is owned by player, etc
 
                     // Can player still send enough workers from source node?
-                    if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) continue;
+                    if (fromNode.NumWorkers < moveToMake.Count || fromNode.OwnedBy != player) break;
 
                     // Is target node still capturable?
-                    if (toNode.OwnedBy != null) continue;
+                    if (toNode.OwnedBy != null) break;
 
                     // Does player still have the necessary resources to build the building?
                     // TODO: Assume so for now
 
                     // Construct the building, move workers, etc
-                    fromNode.NumWorkers -= moveToMake.Count;
+                    int constructSent = moveToMake.Count;
+                    fromNode.NumWorkers -= constructSent;
+
+                    if (toNode.NumWorkers > 0)
+                    {
+                        if (constructSent <= toNode.NumWorkers)
+                        {
+                            toNode.NumWorkers -= constructSent;
+                            break;
+                        }
+                        toNode.NumWorkers = constructSent - toNode.NumWorkers;
+                    }
+                    else
+                    {
+                        toNode.NumWorkers = constructSent;
+                    }
+
                     toNode.OwnedBy = player;
-                    toNode.NumWorkers = moveToMake.Count;
 
                     var building = new BuildingData(moveToMake.BuildingToConstruct);
                     toNode.ConstructBuilding(building);
@@ -660,6 +681,7 @@ public class TownData
                     }
 
                     break;
+                    }
 
                 case AIActionType.SendWorkersToOwnedNode:
 
