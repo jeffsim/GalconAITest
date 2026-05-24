@@ -459,8 +459,8 @@ public class TownData
                 break;
         }
 
-        // After dispatching, re-schedule this AI's next decision and zero out its planned
-        // action so the debugger panel doesn't keep drawing arrows for an already-dispatched move.
+        // After dispatching, keep LastActionToTake for the map arrow and zero the live plan.
+        player.AI.RememberLastAction(action);
         player.AI.BestNextActionToTake.SetToNothing();
     }
 
@@ -555,6 +555,8 @@ public class TownData
             if (player == null) continue;
             var moveToMake = player.AI.BestNextActionToTake;
             if (moveToMake == null || moveToMake.Type == AIActionType.DoNothing) continue; // wasn't updated
+
+            player.AI.RememberLastAction(moveToMake);
 
             // Convert from ai node data to real node data
             var fromNode = moveToMake.SourceNode?.RealNode;

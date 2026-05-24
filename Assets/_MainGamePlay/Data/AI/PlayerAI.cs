@@ -19,6 +19,8 @@ public partial class PlayerAI
     public AIDebuggerEntryData DebugRootEntry;
 
     public AIAction BestNextActionToTake = new();
+    // Last meaningful plan/execute; used for map arrows when BestNextActionToTake is cleared or DoNothing.
+    public AIAction LastActionToTake = new();
     AIAction[] actionPool;
     int actionPoolIndex;
 
@@ -118,6 +120,22 @@ public partial class PlayerAI
         aiTownState.InitializeStaticData(townData);
     }
 
+    public void RememberLastAction(AIAction action)
+    {
+        if (action == null || action.Type == AIActionType.DoNothing || action.Type == AIActionType.RootAction)
+            return;
+        LastActionToTake.CopyFrom(action);
+    }
+
+    public AIAction GetActionForArrowDisplay()
+    {
+        if (BestNextActionToTake != null && BestNextActionToTake.Type != AIActionType.DoNothing)
+            return BestNextActionToTake;
+        if (LastActionToTake != null && LastActionToTake.Type != AIActionType.DoNothing)
+            return LastActionToTake;
+        return null;
+    }
+
     public void ScheduleNextRealtimeDecision(float currentWorldTime)
     {
         var defn = player.AIDefn;
@@ -172,7 +190,9 @@ public partial class PlayerAI
                   && lastSearchedTrackDebugger == AITestScene.Instance.TrackSearchDebugger
                   && lastSearchedHybridEnabled == AITestScene.Instance.EnableHybridSearch;
 #endif
-        if (cacheValid)
+        // Realtime mutates between WorldRevision bumps (in-flight workers, production carry).
+        // Keep BestNextActionToTake in sync for the per-player "next move" arrow overlay.
+        if (cacheValid && (AITestScene.Instance == null || !AITestScene.Instance.Realtime))
             return;
 
         // Determine the best action to take, and then take it
@@ -214,7 +234,10 @@ public partial class PlayerAI
         if (bestAction == null)
             BestNextActionToTake.SetToNothing();
         else
+        {
             BestNextActionToTake.CopyFrom(bestAction);
+            RememberLastAction(bestAction);
+        }
         player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
         if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
             Debug.Log("Actions Tried: " + debugOutput_ActionsTried);

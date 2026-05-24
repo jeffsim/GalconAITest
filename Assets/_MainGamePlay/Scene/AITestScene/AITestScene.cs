@@ -196,32 +196,80 @@ public partial class AITestScene : MonoBehaviour
 
     private void DrawNextAISteps(PlayerData player)
     {
-        if (player == null || player.AI == null || player.AI.BestNextActionToTake == null || player.AI.BestNextActionToTake.Type == AIActionType.DoNothing) return;
-        var action = AIDebugger.rootEntry;
-        action = player.AI.BestNextActionToTake.AIDebuggerEntry;
+        if (player == null || player.AI == null) return;
+        var move = player.AI.GetActionForArrowDisplay();
+        if (move == null) return;
 
-        if (action == null) return;
         var color = player.Color;
 
-        if (!ShowFullActionPath)
-            drawActionArrow(0, action, player, color);
-        else
+        // Draw from BestNextActionToTake (always populated per player). Debugger entries are
+        // optional and only built for the inspected player when the panel is enabled.
+        if (Realtime || !ShowFullActionPath)
         {
-            int i = 1;
-            while (action != null)
+            drawActionArrow(0, move, player, color);
+            return;
+        }
+
+        var entry = move.AIDebuggerEntry;
+        if (entry == null)
+        {
+            drawActionArrow(0, move, player, color);
+            return;
+        }
+
+        int i = 1;
+        while (entry != null)
+        {
+            switch (i)
             {
-                switch (i)
-                {
-                    case 1: color = Color.green; break;
-                    case 2: color = Color.blue; break;
-                    case 3: color = Color.yellow; break;
-                    case 4: color = Color.red; break;
-                    case 5: color = Color.magenta; break;
-                }
-                drawActionArrow(i, action, player, color);
-                i++;
-                action = action.BestNextAction;
+                case 1: color = Color.green; break;
+                case 2: color = Color.blue; break;
+                case 3: color = Color.yellow; break;
+                case 4: color = Color.red; break;
+                case 5: color = Color.magenta; break;
             }
+            drawActionArrow(i, entry, player, color);
+            i++;
+            entry = entry.BestNextAction;
+        }
+    }
+
+    private void drawActionArrow(int actionIndex, AIAction action, PlayerData player, Color color)
+    {
+        switch (action.Type)
+        {
+            case AIActionType.DoNothing: break;
+            case AIActionType.RootAction: break;
+
+            case AIActionType.ConstructBuildingInEmptyNode:
+                if (action.SourceNode != null && action.DestNode != null)
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color,
+                        actionIndex + ". Send " + action.Count + ", build\n" + action.BuildingToConstruct.Id);
+                break;
+
+            case AIActionType.AttackToNode:
+                if (action.AttackFromNodes != null && action.DestNode != null)
+                {
+                    foreach (var kvp in action.AttackFromNodes)
+                        DrawArrow(kvp.Key.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color,
+                            actionIndex + ". Attack " + kvp.Value);
+                }
+                break;
+
+            case AIActionType.SendWorkersToOwnedNode:
+                if (action.SourceNode != null && action.DestNode != null)
+                    DrawArrow(action.SourceNode.RealNode.WorldLoc, action.DestNode.RealNode.WorldLoc, color,
+                        actionIndex + ". Support " + action.Count);
+                break;
+
+            case AIActionType.UpgradeBuilding:
+                if (action.SourceNode != null)
+                    DrawCircle(action.SourceNode.RealNode.WorldLoc, 1, color, actionIndex + ". Upgrade");
+                break;
+
+            default:
+                Debug.Log("Unknown action type: " + action.Type);
+                break;
         }
     }
 
@@ -268,8 +316,14 @@ public partial class AITestScene : MonoBehaviour
             // values scale dt; the engine cap sits inside RealtimeTick which only acts on
             // dt > 0.
             float dt = Time.deltaTime * GameSpeed;
-            Town.RealtimeTick(dt, GameSpeed);
-            SyncInFlightWorkerGOs();
+            if (dt > 0f)
+            {
+                Town.RealtimeTick(dt, GameSpeed);
+                SyncInFlightWorkerGOs();
+            }
+            // Refresh each AI's BestNextActionToTake every frame (same as step mode) so we can
+            // draw one "next move I'd make now" arrow per player between scheduled decisions.
+            Town.Update();
         }
         else
         {
