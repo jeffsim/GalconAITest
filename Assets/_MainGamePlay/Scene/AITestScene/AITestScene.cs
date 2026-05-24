@@ -123,6 +123,9 @@ public partial class AITestScene : MonoBehaviour
         lastShowDebuggerAI = ShowDebuggerAI;
 
         AIDebuggerPanel.InitializeForTown(Town);
+
+        var cameraDragger = FindAnyObjectByType<CameraDragger>();
+        cameraDragger?.FrameTown();
     }
 
     public void OnResetClicked()

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class CameraDragger : MonoBehaviour
@@ -10,14 +11,88 @@ public class CameraDragger : MonoBehaviour
     public float minZoomDistance = 5.0f;
     public float maxZoomDistance = 50.0f;
 
-    void Start()
+    const float FrameViewportMargin = 0.08f;
+    const float MaxFrameDistance = 5000f;
+    const float ScrollWheelNotch = 0.1f;
+
+    public void FrameTown()
     {
-        // Set the camera position from the active TownDefn instead of GameSettings
-        var townDefn = AITestScene.Instance != null ? AITestScene.Instance.TestTownDefn : null;
-        if (townDefn != null)
-            transform.position = townDefn.Debug_StartingCameraPosition;
-        
-        // The value is set using the CameraDraggerEditor class and stored in the TownDefn ScriptableObject
+        var scene = AITestScene.Instance;
+        if (scene?.Town == null || scene.Town.Nodes.Count == 0)
+            return;
+
+        var cam = GetComponent<Camera>();
+        if (cam == null)
+            return;
+
+        var points = CollectFramePoints(scene);
+        if (points.Count == 0)
+            return;
+
+        var center = Vector3.zero;
+        foreach (var p in points)
+            center += p;
+        center /= points.Count;
+        center.y = 0f;
+
+        var forward = transform.forward;
+        if (forward.y >= -0.01f)
+            return;
+
+        float dLo = minZoomDistance;
+        float dHi = MaxFrameDistance;
+        for (int i = 0; i < 24; i++)
+        {
+            float d = (dLo + dHi) * 0.5f;
+            transform.position = center - forward * d;
+            if (AllPointsVisible(cam, points))
+                dHi = d;
+            else
+                dLo = d;
+        }
+
+        transform.position = center - forward * dHi;
+        ApplyScrollZoom(-ScrollWheelNotch);
+    }
+
+    void ApplyScrollZoom(float scrollDelta)
+    {
+        transform.position += transform.forward * scrollDelta * zoomSensitivity;
+    }
+
+    static List<Vector3> CollectFramePoints(AITestScene scene)
+    {
+        var points = new List<Vector3>();
+        if (scene.TestTownDefn != null)
+        {
+            foreach (var nodeDefn in scene.TestTownDefn.Nodes)
+            {
+                if (nodeDefn.Enabled)
+                    points.Add(nodeDefn.WorldLoc);
+            }
+        }
+
+        if (points.Count == 0)
+        {
+            foreach (var node in scene.Town.Nodes)
+                points.Add(node.WorldLoc);
+        }
+
+        return points;
+    }
+
+    bool AllPointsVisible(Camera cam, List<Vector3> points)
+    {
+        float min = FrameViewportMargin;
+        float max = 1f - FrameViewportMargin;
+        foreach (var p in points)
+        {
+            var vp = cam.WorldToViewportPoint(p);
+            if (vp.z <= 0f || vp.x < min || vp.x > max || vp.y < min || vp.y > max)
+                return false;
+        }
+
+        return true;
     }
 
     void Update()
@@ -51,18 +126,6 @@ public class CameraDragger : MonoBehaviour
         // Zoom functionality
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0)
-        {
-            Vector3 direction = transform.forward;
-            float zoomAmount = scroll * zoomSensitivity;
-            Vector3 newPosition = transform.position + direction * zoomAmount;
-
-            // Optional: Clamp the zoom to prevent the camera from going too far or too close
-            float distance = Vector3.Distance(newPosition, transform.position);
-            // Debug.Log(distance);
-            //    if (distance >= minZoomDistance && distance <= maxZoomDistance)
-            {
-                transform.position = newPosition;
-            }
-        }
+            ApplyScrollZoom(scroll);
     }
 }

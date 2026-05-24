@@ -144,6 +144,13 @@ public class AITask_AttackToNode : AITask
     HashSet<AI_NodeState> visited = new HashSet<AI_NodeState>(10);
     const int MAX_DEPTH = 4;
 
+    // Max hop distance from target at which sources are considered "close enough" to form
+    // a coordinated wave. Sources within this range must collectively meet the target force
+    // requirement on their own. Sources beyond this range are bonus overkill only.
+    const int COORDINATED_WAVE_MAX_HOPS = 2;
+
+    int[] nDeepNeighborHops = new int[MAX_NEIGHBORS_TO_CHECK];
+
     int GetFriendlyNeighborsWithEnoughWorkers(AI_NodeState toNode, AI_NodeState[] nDeepNeighbors)
     {
         int index = 0;
@@ -163,12 +170,13 @@ public class AITask_AttackToNode : AITask
                 foreach (var neighbor in currentNode.NeighborNodes)
                     if (neighbor.OwnedBy == player && !visited.Contains(neighbor))
                     {
-                        // The outer while-loop's MAX_NEIGHBORS bound is checked once per level,
-                        // not per inner iteration -- a single dense level can blow past it and
-                        // OOB into nDeepNeighbors. Keep the inner write strictly bounded.
                         if (index < MAX_NEIGHBORS_TO_CHECK
                             && AI_ActionHeuristics.GetWorkersWillingToSend(neighbor, minWorkersInNodeBeforeConsideringSendingAnyOut) > 0)
-                            nDeepNeighbors[index++] = neighbor;
+                        {
+                            nDeepNeighbors[index] = neighbor;
+                            nDeepNeighborHops[index] = currentDepth + 1;
+                            index++;
+                        }
                         visited.Add(neighbor);
                         queue.Enqueue(neighbor);
                     }
@@ -191,13 +199,20 @@ public class AITask_AttackToNode : AITask
         totalPlanned = 0;
 
         int targetAttackers = AI_ActionHeuristics.GetTargetForceWithOverkill(numDefenders, overkillMultiplier);
+
+        // Sources within COORDINATED_WAVE_MAX_HOPS must be able to win on their own —
+        // they form the core wave that arrives together. Distant sources (hop 3+) are only
+        // included as bonus overkill, never relied upon to meet the target force.
+        int closeWilling = 0;
         int totalWilling = 0;
         for (int i = 0; i < numNodes; i++)
         {
             int willing = AI_ActionHeuristics.GetWorkersWillingToSend(nodes[i], minWorkersInNodeBeforeConsideringSendingAnyOut);
             totalWilling += willing;
+            if (nDeepNeighborHops[i] <= COORDINATED_WAVE_MAX_HOPS)
+                closeWilling += willing;
         }
-        if (totalWilling < targetAttackers)
+        if (closeWilling < targetAttackers)
             return false;
 
         int remaining = targetAttackers;
