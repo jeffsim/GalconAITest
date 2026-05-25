@@ -55,9 +55,19 @@ public class AITask_TryButtressOwnedNode : AITask
         bool emergency = AI_ActionHeuristics.GetEffectiveFrontierPressure(toNode) > destGarrison
                          || toNode.NumContestedNeutralWorkersNearby > destGarrison / 2
                          || toNode.AttackHeat >= AI_ActionHeuristics.AttackHeatEmergencyThreshold;
+        // Personality-aware overkill: the dest's desired garrison (scaled by DefenseWeight
+        // and ChokepointScore) exceeds what raw visible pressure alone would require.
+        // Mirrors GetWorkersWillingToSendForDefense's threshold relaxation -- compute here
+        // so the source-capacity gate below uses the same posture the willing check will.
+        bool destNeedsOverkill = AI_ActionHeuristics.DestNeedsPersonalityOverkill(toNode, player);
+        // Relax source-capacity gate when destination is emergency OR personality-driven
+        // overkill demand exists. Without the overkill branch, the new personality-scaled
+        // desired count produced a meaningful deficit but every source below 75% capacity
+        // was bounced here before GetWorkersWillingToSendForDefense ever ran.
+        float capacityFraction = (emergency || destNeedsOverkill) ? 0.5f : 0.75f;
         int minOnSource = emergency
             ? minWorkersInNodeBeforeConsideringSendingAnyOut
-            : (int)(fromNode.MaxWorkers * 3f / 4f);
+            : (int)(fromNode.MaxWorkers * capacityFraction);
         // Source check: physical NumWorkers only -- in-flight friendly workers on fromNode
         // are NOT available to dispatch; they're already in motion toward something else.
         if (fromNode.NumWorkers < minOnSource)
@@ -71,7 +81,7 @@ public class AITask_TryButtressOwnedNode : AITask
         // don't double-dispatch when a previous wave is already in transit -- that was the
         // root cause of the "Support 9 #22 -> #7" loop where #22 had only 1 physical worker
         // but a stack of perceived-incoming made the AI think it could keep dispatching.
-        int deficit = AI_ActionHeuristics.GetFrontierWorkerDeficit(toNode);
+        int deficit = AI_ActionHeuristics.GetFrontierWorkerDeficit(toNode, player);
         if (AI_ActionHeuristics.NeedsResourceStaffingButtress(aiTownState, toNode))
         {
             int desired = AI_ActionHeuristics.GetDesiredWorkersForResourceNode(aiTownState, toNode);
@@ -91,7 +101,7 @@ public class AITask_TryButtressOwnedNode : AITask
         if (deficit <= 0)
             return false;
 
-        int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(fromNode, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat);
+        int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(fromNode, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
         int numToSend = Math.Min(willing, deficit);
         if (numToSend <= 0)
             return false;

@@ -61,15 +61,25 @@ public static class AI_ActionHeuristics
     public const float ChokepointAttackScale = 1.5f;
     public const float ChokepointGoalScale = 1.5f;
 
-    // Returns 1 + score * scale, floor 1. Intended to multiply an already-personality-free
-    // heuristic so the chokepoint multiplier composes cleanly with personality multipliers
-    // applied later in ApplyHeuristicAndPersonality.
-    public static float GetChokepointMultiplier(AI_NodeState node, float scale)
+    // Returns 1 + score * scale * personalityWeight, floor 1. The personality weight makes
+    // chokepoint amplification reflect HOW MUCH the AI cares about the kind of move it's
+    // about to make. Defensive AIs amplify defensive choke moves (DefendFrontier, Buttress)
+    // by DefenseWeight; aggressive AIs amplify offensive choke moves (Capture/Attack/
+    // Construct-on-neutral) by AggressivenessWeight. Without this, a pacifist (agg=0)
+    // saw the same 2.5x pull toward a distant chokepoint as an aggressor (agg=2), and a
+    // defensive AI on a chokepoint frontier got the same defensive amp as a balanced one --
+    // the multiplier was structurally correct ("chokes matter more") but personality-blind.
+    //
+    // personalityWeight defaults to 1 for backward compatibility with callers that don't
+    // (or shouldn't) inject a personality term. Pass 0 to entirely suppress the choke
+    // amplification for an AI that has no interest in that mode of play.
+    public static float GetChokepointMultiplier(AI_NodeState node, float scale, float personalityWeight = 1f)
     {
         if (node == null) return 1f;
         float score = node.ChokepointScore;
         if (score <= 0f) return 1f;
-        return 1f + score * scale;
+        float weight = Mathf.Max(0f, personalityWeight);
+        return 1f + score * scale * weight;
     }
 
     public static float GetPersonalityMultiplier(PlayerData player, AIHeuristicActionType actionType)
@@ -377,8 +387,11 @@ public static class AI_ActionHeuristics
         // so a frontier node that currently looks calm but has a 100-worker wave inbound
         // refuses to ship half its garrison off to attack/capture somewhere else. Without
         // this, an at-cap edge node would happily commit to an offensive moments before
-        // being steamrolled by the telegraphed wave.
-        int reserveForDefense = GetDesiredFrontierWorkers(node);
+        // being steamrolled by the telegraphed wave. Pass owner so a defensive personality
+        // (DefenseWeight>1) reserves more than the visible-pressure baseline -- otherwise
+        // a def=2 source happily shipped half its garrison off to attack even when its own
+        // frontier desire (per the personality-aware sizing) exceeded its current count.
+        int reserveForDefense = GetDesiredFrontierWorkers(node, node.OwnedBy);
         int sendable = node.NumWorkers - reserveForDefense;
         if (sendable <= 0) return 0;
 
@@ -395,20 +408,63 @@ public static class AI_ActionHeuristics
     // the source-capacity threshold from 75% to 50% so a mid-staffed interior node can still
     // reinforce a hot frontier. Emergency cases (effective pressure exceeds the destination's
     // garrison) remain fully relaxed: source can give down to its minimum garrison.
-    public static int GetWorkersWillingToSendForDefense(AI_NodeState node, int minWorkersInNodeBeforeConsideringSendingAnyOut, bool emergency, float destAttackHeat = 0f)
+    //
+    // destNeedsOverkill: caller has determined the destination's personality-aware desired
+    // garrison exceeds what visible pressure alone would require (i.e., a defensive
+    // personality is pulling for an overstack). Treated like destAttackHeat for source
+    // threshold purposes -- a def=2 AI's interior nodes should be willing to ship below
+    // 75% to help a chokepoint that the personality says is undergarrisoned, even if the
+    // snapshot pressure currently looks "fine" 1:1.
+    public static int GetWorkersWillingToSendForDefense(
+        AI_NodeState node,
+        int minWorkersInNodeBeforeConsideringSendingAnyOut,
+        bool emergency,
+        float destAttackHeat = 0f,
+        bool destNeedsOverkill = false)
     {
         if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return 0;
         // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
         // Clamp at the end so neither emergency nor normal paths can over-promise.
         int maxSendable = NodeData.GetMaxSendableWorkers(node.NumWorkers);
         if (emergency)
-            return Math.Min(maxSendable, Math.Max(1, node.NumWorkers - minWorkersInNodeBeforeConsideringSendingAnyOut + 1));
+        {
+            // Reserve the source's OWN defensive need even in emergency. The earlier "drain
+            // to the floor" rule let a hot frontier source ship its garrison away to help
+            // another frontier just because the destination was tagged emergency -- e.g.
+            // #11 (6/10, edge, sharing the SAME 576-enemy neighbor as #0) sending 5 workers
+            // to #0 even though by every visible-pressure measure #11 needs every worker it
+            // has. Interior sources (pressure=0 -> desired=0) are unaffected and can still
+            // fully drain; frontier sources can only ship what they truly have to spare.
+            int reserveForDefense = Math.Max(
+                minWorkersInNodeBeforeConsideringSendingAnyOut,
+                GetDesiredFrontierWorkers(node, node.OwnedBy));
+            int sendable = node.NumWorkers - reserveForDefense;
+            if (sendable <= 0) return 0;
+            return Math.Min(maxSendable, sendable);
+        }
 
-        // Destination has chokepoint-level heat but isn't in emergency: relax source threshold
-        // to 50% so mid-staffed neighbors can pitch in without waiting to hit 75%.
-        float capacityThreshold = destAttackHeat >= AttackHeatChokepointThreshold ? 0.5f : 0.75f;
+        // Destination has chokepoint-level heat (or personality-driven overkill demand) but
+        // isn't in emergency: relax source threshold to 50% so mid-staffed neighbors can pitch
+        // in without waiting to hit 75%.
+        bool relax = destAttackHeat >= AttackHeatChokepointThreshold || destNeedsOverkill;
+        float capacityThreshold = relax ? 0.5f : 0.75f;
         if (node.NumWorkers < node.MaxWorkers * capacityThreshold) return 0;
         return Math.Min(maxSendable, node.NumWorkers / 2);
+    }
+
+    // True when the destination's personality-aware total defensive deficit materially
+    // exceeds what raw visible pressure alone would demand. Used by buttress tasks to signal
+    // sources to relax their capacity threshold (see GetWorkersWillingToSendForDefense).
+    // Uses GetTotalDefensiveDeficit so the upgrade-overload path (the user's "send workers
+    // here so I can upgrade" intent) also flips the source threshold -- without this, a
+    // cautious AI staring at an under-tier choke would compute a real overload deficit but
+    // mid-staffed sources would still be gated to 75% capacity and ship nothing.
+    public static bool DestNeedsPersonalityOverkill(AI_NodeState toNode, PlayerData player)
+    {
+        if (player == null || player.AIDefn == null) return false;
+        int baseline = Math.Max(0, GetEffectiveFrontierPressure(toNode) - toNode.EffectiveDefenseGarrison);
+        int personalityAware = GetTotalDefensiveDeficit(toNode, player);
+        return personalityAware > baseline + 1;
     }
 
     public static int GetTargetForceWithOverkill(int threat, float overkillMultiplier)
@@ -483,23 +539,80 @@ public static class AI_ActionHeuristics
     // Workers this owned node should hold given current frontier pressure. Uses effective
     // pressure (snapshot + heat) so chokepoints under sustained attack are sized for what
     // they've BEEN absorbing, not just what's visible at the current instant.
-    public static int GetDesiredFrontierWorkers(AI_NodeState node)
+    //
+    // The personality-aware scaling makes "desired" reflect not just visible enemy force
+    // but also the AI's stated defensive posture and the structural value of the node.
+    // Without this, a DefenseWeight=2 / Aggressiveness=0 AI considered a frontier "fully
+    // staffed" the moment the garrison matched visible pressure 1:1, and never overstacked
+    // chokepoints despite huge interior reserves. Symmetry with the goal-value formula in
+    // EnumerateDefendGoals which also scales by `defense * chokepointMult`: now the actual
+    // worker-movement layer agrees with the goal/demand layer about how much it cares.
+    //
+    // defenseOverkill = max(1, DefenseWeight): a pacifist (def=0) still wants to cover
+    // visible pressure 1:1; a defender (def=2) wants 2x; values <1 don't drop coverage
+    // because letting a frontier sit understaffed is never the intended consequence of
+    // "I don't prioritize defense" -- the trade-off is expressed via the buttress action's
+    // personality multiplier, not by intentionally under-defending.
+    public static int GetDesiredFrontierWorkers(AI_NodeState node, PlayerData player = null)
     {
         int pressure = GetEffectiveFrontierPressure(node);
         if (pressure <= 0) return 0;
-        return Math.Min(node.MaxWorkers, Math.Max(1, pressure));
+
+        float defWeight = player != null && player.AIDefn != null ? player.AIDefn.DefenseWeight : 1f;
+        float defenseOverkill = Math.Max(1f, defWeight);
+        // Pass DefenseWeight to the chokepoint mult so a pacifist (def=0) doesn't get an
+        // extra defensive choke amp on top of the baseline overkill of 1.0 -- their desired
+        // garrison stays at raw pressure regardless of how structurally important the choke
+        // looks. A defensive AI compounds the amp (defenseOverkill * defense-scaled-choke)
+        // for the same reason its goal value uses both factors.
+        float chokeMult = GetChokepointMultiplier(node, ChokepointDefenseScale, defWeight);
+        float scale = defenseOverkill * chokeMult;
+
+        int desired = (int)Math.Ceiling(pressure * scale);
+        return Math.Min(node.MaxWorkers, Math.Max(1, desired));
     }
 
     // Destination-side deficit: include my in-flight friendly reinforcements so we don't
     // dispatch ANOTHER wave when help is already on the way. EffectiveDefenseGarrison is
     // NumWorkers (physical) + IncomingFriendlyWorkers (pre-existing in-flight).
-    public static int GetFrontierWorkerDeficit(AI_NodeState node) =>
-        Math.Max(0, GetDesiredFrontierWorkers(node) - node.EffectiveDefenseGarrison);
+    public static int GetFrontierWorkerDeficit(AI_NodeState node, PlayerData player = null) =>
+        Math.Max(0, GetDesiredFrontierWorkers(node, player) - node.EffectiveDefenseGarrison);
 
-    public static bool NeedsFrontierButtress(AI_NodeState node)
+    public static bool NeedsFrontierButtress(AI_NodeState node, PlayerData player = null)
     {
         const int minDeficit = 2;
-        return GetFrontierWorkerDeficit(node) >= minDeficit;
+        return GetFrontierWorkerDeficit(node, player) >= minDeficit;
+    }
+
+    // Combined defensive worker need: max of frontier (visible pressure + personality scaling)
+    // and upgrade-overload (need pre-upgrade headroom so the post-upgrade halving survives
+    // pressure). This is the number the buttress tasks already merge by hand at dispatch
+    // time; exposing it as one function lets the GOAL value and the source-threshold relax
+    // signal agree with the action layer about how undersupplied a frontier really is.
+    //
+    // For a high-defense AI on a low-tier choke under heavy pressure, the frontier deficit
+    // alone is 0 (it clamps at MaxWorkers) while the upgrade-overload deficit can be huge --
+    // and the upgrade-overload number is what the AI actually needs to act on the user's
+    // strategic intent ("upgrade so it can hold more workers"). Without unifying these,
+    // EnumerateDefendGoals reports "deficit 0" on a node the buttress task is desperately
+    // trying to reinforce, and the goal value stays at the floor (~4) while CaptureNode
+    // goals dominate the urgency-weighted demand vector.
+    //
+    // Resource-staffing and IsUnderstaffedFrontier are intentionally excluded -- the former
+    // requires AI_TownState (not always available at call sites) and isn't a defensive
+    // signal in the personality sense, and the latter is fully subsumed by frontier scaling
+    // for nodes large enough to trip it.
+    public static int GetTotalDefensiveDeficit(AI_NodeState node, PlayerData player)
+    {
+        int deficit = GetFrontierWorkerDeficit(node, player);
+        float riskTolerance = GetUpgradeRiskTolerance(player);
+        if (NeedsUpgradeOverloadButtress(node, riskTolerance))
+        {
+            int overloadDesired = GetDesiredOverloadForUpgrade(node, riskTolerance);
+            int overloadDeficit = overloadDesired - node.EffectiveDefenseGarrison;
+            if (overloadDeficit > deficit) deficit = overloadDeficit;
+        }
+        return Math.Max(0, deficit);
     }
 
     // Destination-side capacity check: incoming friendly arrivals count toward "staffed".
@@ -562,11 +675,26 @@ public static class AI_ActionHeuristics
         // flight lands on the emptied node. Threshold scales with risk tolerance: cautious
         // (0.0) demands surviving the full predicted force 1:1, risky (1.0) accepts up to a
         // 2:1 disadvantage and trusts buttressing to backfill.
-        if (defensiveImperative)
+        //
+        // Exception ("defensively free upgrade"): when the node is BOTH over-cap AND already
+        // outmatched pre-upgrade, the veto is wrong-headed. Over-cap workers decay back to
+        // MaxWorkers anyway (one per worker-gen tick), so the long-run "real" garrison is
+        // MaxWorkers either way; and pre-upgrade we already can't hold against the predicted
+        // force, so halving doesn't transition us from "can hold" to "cannot hold" -- both
+        // states lose to a full assault. Refusing to upgrade in that situation just preserves
+        // a shrinking stockpile under a smaller cap, which is strictly worse long-term.
+        // The veto is reserved for the case it was designed for: a defensible pre-upgrade
+        // state that the halving would push into indefensible territory.
+        int postUpgradeWorkers = node.NumWorkers / 2;
+        float requiredRatio = 1f - 0.5f * Mathf.Clamp01(riskTolerance);
+        float requiredForce = effectivePressure * requiredRatio;
+        bool isOverCap = node.NumWorkers > node.MaxWorkers;
+        bool alreadyOutmatched = defensiveImperative && node.NumWorkers < requiredForce;
+        bool upgradeIsDefensivelyFree = isOverCap && alreadyOutmatched;
+
+        if (defensiveImperative && !upgradeIsDefensivelyFree)
         {
-            int postUpgradeWorkers = node.NumWorkers / 2;
-            float requiredRatio = 1f - 0.5f * Mathf.Clamp01(riskTolerance);
-            if (postUpgradeWorkers < effectivePressure * requiredRatio)
+            if (postUpgradeWorkers < requiredForce)
                 return 0f;
         }
 
@@ -595,8 +723,15 @@ public static class AI_ActionHeuristics
         // effectivePressure so an in-flight hostile wave (which empties the neighbor snapshot
         // the moment it launches) still penalizes the upgrade. Without this, the AI literally
         // could not see the army that was already on its way.
+        //
+        // Suppressed when the upgrade is "defensively free" (over-cap AND already outmatched):
+        // applying a huge quadratic outnumbered penalty there would re-veto the upgrade
+        // through the back door even though we already established the veto shouldn't fire.
+        // The overcrowding bonus above wants to push the heuristic high; this penalty would
+        // otherwise cancel it out and the AI would still refuse to upgrade a 295/10 node
+        // facing 641 enemy force.
         int outnumberedBy = effectivePressure - node.NumWorkers;
-        if (outnumberedBy > 0)
+        if (outnumberedBy > 0 && !upgradeIsDefensivelyFree)
         {
             float penaltyScale = defensiveImperative ? (1f - riskTolerance) : 1f;
             rawValue -= outnumberedBy * outnumberedBy * nearbyEnemiesScalingFactor * penaltyScale;
@@ -669,7 +804,7 @@ public static class AI_ActionHeuristics
         // dispatch redundant waves while help was already on the way.
         int destGarrison = toNode.EffectiveDefenseGarrison;
 
-        int frontierDeficit = GetFrontierWorkerDeficit(toNode);
+        int frontierDeficit = GetFrontierWorkerDeficit(toNode, town.player);
         bool understaffedFrontier = IsUnderstaffedFrontier(toNode);
         bool needsUpgradeOverload = NeedsUpgradeOverloadButtress(toNode, riskTolerance);
 
@@ -717,10 +852,14 @@ public static class AI_ActionHeuristics
         float clampedRawValue = Mathf.Clamp(rawValue, buttressNodeMinScore, buttressNodeMaxScore);
         float normalizedValue = (clampedRawValue - buttressNodeMinScore) / (buttressNodeMaxScore - buttressNodeMinScore);
         // Chokepoint amplifier: defending a structural chokepoint matters more than defending
-        // an ordinary frontier of equivalent pressure. Applied after normalization so the
-        // multiplier composes linearly with peer-action priorities rather than getting clipped
-        // by the buttressNodeMaxScore ceiling.
-        return normalizedValue * HeuristicScoreScale * GetChokepointMultiplier(toNode, ChokepointDefenseScale);
+        // an ordinary frontier of equivalent pressure. Scaled by DefenseWeight so a pacifist
+        // doesn't get a stronger pull toward holding chokes than a defender; aggressive AIs
+        // see chokes as just-another-frontier here (they prefer attacking through them, not
+        // garrisoning them). Applied after normalization so the multiplier composes linearly
+        // with peer-action priorities rather than getting clipped by the buttressNodeMaxScore
+        // ceiling.
+        float defWeight = town.player != null && town.player.AIDefn != null ? town.player.AIDefn.DefenseWeight : 1f;
+        return normalizedValue * HeuristicScoreScale * GetChokepointMultiplier(toNode, ChokepointDefenseScale, defWeight);
     }
 
     // A frontier node at capacity with an upgradeable building under pressure needs workers
@@ -729,6 +868,18 @@ public static class AI_ActionHeuristics
     //
     // riskTolerance (0-1): a cautious AI (0) demands full overload so post-upgrade garrison
     // matches the pressure. A risky AI (1) is fine upgrading at capacity — no overload needed.
+    //
+    // The desired count is sized to exactly satisfy GetUpgradeHeuristic's veto:
+    //   postUpgrade (== preUpgrade/2) >= pressure * requiredRatio
+    // where requiredRatio = 1 - 0.5 * riskTolerance (must match the veto formula). Without
+    // this lockstep, a cautious AI under heavy pressure would overload to a count too small
+    // for the upgrade to ever fire -- e.g. a L1 Outpost (MaxWorkers=10) under pressure 32
+    // would desire only ~20 pre-upgrade (the old MaxWorkers*2 cap), upgrade to NumWorkers=10
+    // which then fails the veto (10 < 32), and the AI would sit forever drip-feeding tiny
+    // support waves that bleed off via the over-cap decay tick. Pre-upgrade desired is NOT
+    // capped: over-cap stacking is the entire strategic point, and the game permits it
+    // (over-cap workers decay one per worker-generation tick but persist long enough for
+    // the upgrade to fire on the same or next AI decision tick).
     public static int GetDesiredOverloadForUpgrade(AI_NodeState node, float riskTolerance)
     {
         if (node.NumWorkers < node.MaxWorkers) return 0;
@@ -740,14 +891,11 @@ public static class AI_ActionHeuristics
         // A fully risky AI doesn't need any overload — it upgrades at capacity immediately.
         if (riskTolerance >= 1f) return 0;
 
-        // After upgrade: maxWorkers doubles, workers halve. We want post-upgrade workers to
-        // be at least enough to survive the pressure. Target: have enough pre-upgrade so that
-        // (preUpgradeWorkers / 2) >= min(pressure, newMax/2). Effectively: overload to at
-        // least 2 * min(pressure, MaxWorkers) capped at 2x current max (the post-upgrade cap).
-        int postUpgradeMax = node.MaxWorkers * 2;
-        int desiredPostUpgrade = Math.Min(pressure, postUpgradeMax / 2);
+        // Match GetUpgradeHeuristic's veto threshold: post-upgrade workers must be at least
+        // pressure * requiredRatio for the upgrade to fire.
+        float requiredRatio = 1f - 0.5f * Mathf.Clamp01(riskTolerance);
+        int desiredPostUpgrade = (int)Math.Ceiling(pressure * requiredRatio);
         int fullDesiredPreUpgrade = Math.Max(node.MaxWorkers + 1, desiredPostUpgrade * 2);
-        fullDesiredPreUpgrade = Math.Min(fullDesiredPreUpgrade, postUpgradeMax);
 
         // Interpolate between "just at capacity" (risky) and full overload (cautious).
         // Ensure at least MaxWorkers+2 for partial-risk AIs so post-upgrade has > 1 worker.
@@ -823,9 +971,14 @@ public static class AI_ActionHeuristics
             result += neutralTargetBuildBonus;
 
         // Chokepoint amplifier on neutral construct sites: building on an empty chokepoint
-        // is worth more than building on an off-route empty node. Matched to the capture
-        // scale so Construct on a chokepoint and AttackToNode on a chokepoint move together.
-        result *= GetChokepointMultiplier(toNode, ChokepointCaptureScale);
+        // is worth more than building on an off-route empty node. Scaled by AggressivenessWeight
+        // because grabbing a strategic chokepoint via construct-then-build is a force-projection
+        // move -- a pacifist (agg=0) shouldn't be drawn to the far-off peak chokepoint over
+        // the equally-reachable resource node next door. Matched to the capture scale so
+        // Construct on a chokepoint and AttackToNode on a chokepoint move together for AIs
+        // that DO care about chokes.
+        float agg = town.player != null && town.player.AIDefn != null ? town.player.AIDefn.AggressivenessWeight : 1f;
+        result *= GetChokepointMultiplier(toNode, ChokepointCaptureScale, agg);
 
         return result;
     }
@@ -877,9 +1030,16 @@ public static class AI_ActionHeuristics
         float clampedRawValue = Mathf.Clamp(rawValue, attackNodeMinScore, attackNodeMaxScore);
         float normalizedValue = (clampedRawValue - attackNodeMinScore) / (attackNodeMaxScore - attackNodeMinScore);
         // Chokepoint amplifier: capturing / attacking a structural chokepoint is worth more
-        // than an equivalent off-route node. Applies to both AttackToNode (enemy chokepoints)
-        // and the capture variants below (neutral/resource chokepoints) since both call here.
-        return normalizedValue * HeuristicScoreScale * GetChokepointMultiplier(targetNode, ChokepointAttackScale);
+        // than an equivalent off-route node. Scaled by AggressivenessWeight because this
+        // function is shared by all offensive moves -- AttackToNode, capture-neutral, and
+        // capture-resource all call here, and all of them are about projecting force at a
+        // strategically valuable position. A pacifist (agg=0) collapses the amp to 1.0 so a
+        // distant peak-choke neutral looks no more attractive than an equally-reachable
+        // ordinary neutral; the AI captures whatever's convenient instead of marching across
+        // the map for the choke. Symmetric with GetButtressHeuristic which scales the
+        // DefensiveScale by DefenseWeight for the same personality-faithfulness reason.
+        float agg = town.player != null && town.player.AIDefn != null ? town.player.AIDefn.AggressivenessWeight : 1f;
+        return normalizedValue * HeuristicScoreScale * GetChokepointMultiplier(targetNode, ChokepointAttackScale, agg);
     }
 
     public static AI_NodeState GetButtressSourceNode(AI_NodeState toNode, PlayerData player, int minWorkersInNodeBeforeConsideringSendingAnyOut)
@@ -893,6 +1053,12 @@ public static class AI_ActionHeuristics
         bool emergency = GetEffectiveFrontierPressure(toNode) > destGarrison
                          || toNode.NumContestedNeutralWorkersNearby > destGarrison / 2
                          || toNode.AttackHeat >= AttackHeatEmergencyThreshold;
+        // Mirror the buttress tasks: a personality-driven overkill demand at the destination
+        // relaxes source threshold even outside of true emergency. Without this, the
+        // single-source preview/dispatch would refuse mid-staffed sources that
+        // GetWorkersWillingToSendForDefense (in the tasks) would actually accept once the
+        // dest's personality-aware deficit is in play.
+        bool destNeedsOverkill = DestNeedsPersonalityOverkill(toNode, player);
 
         AI_NodeState best = null;
         int bestWilling = 0;
@@ -915,13 +1081,26 @@ public static class AI_ActionHeuristics
                 // recent attacks than the destination is itself the more urgent defender.
                 bool sourceHotterThanDest = node.AttackHeat >= AttackHeatChokepointThreshold
                                             && node.AttackHeat > toNode.AttackHeat;
-                if (!sourceHotterThanDest)
+                // Also refuse sources that are themselves an undergarrisoned frontier by
+                // visible (snapshot + heat + incoming) pressure, even when AttackHeat
+                // hasn't risen yet. AttackHeat is post-hoc -- a chokepoint can have a
+                // massive enemy stack one hop away with zero heat because no attacker has
+                // resolved yet. The old AttackHeat-only guard let exactly that case happen:
+                // #11 (6/10, edge, sharing the SAME 576-enemy neighbor as #0) qualified as
+                // a source for #0 just because nothing had hit it yet. The guard only
+                // triggers when the SOURCE's own pressure is at least as high as the
+                // destination's -- otherwise a lightly-pressured frontier still can't help
+                // a more-pressured one.
+                bool sourceIsHotFrontier =
+                    GetDesiredFrontierWorkers(node, player) > node.NumWorkers
+                    && GetEffectiveFrontierPressure(node) >= GetEffectiveFrontierPressure(toNode);
+                if (!sourceHotterThanDest && !sourceIsHotFrontier)
                 {
-                    int keepAtSource = Math.Max(minWorkersInNodeBeforeConsideringSendingAnyOut, GetDesiredFrontierWorkers(node));
+                    int keepAtSource = Math.Max(minWorkersInNodeBeforeConsideringSendingAnyOut, GetDesiredFrontierWorkers(node, player));
                     int excess = node.NumWorkers - keepAtSource;
                     if (excess > 0)
                     {
-                        int willing = GetWorkersWillingToSendForDefense(node, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat);
+                        int willing = GetWorkersWillingToSendForDefense(node, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
                         willing = Math.Min(willing, excess);
                         if (willing > bestWilling)
                         {

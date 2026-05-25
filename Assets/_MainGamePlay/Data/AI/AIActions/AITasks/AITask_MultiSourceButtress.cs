@@ -91,6 +91,7 @@ public class AITask_MultiSourceButtress : AITask
         if (deficit <= 0) return false;
 
         bool emergency = IsEmergency(toNode);
+        bool destNeedsOverkill = AI_ActionHeuristics.DestNeedsPersonalityOverkill(toNode, player);
 
         // Multi-source's unique value is when NO single neighbor can cover the deficit on
         // its own (the single-source task would fire and be less disruptive in that case).
@@ -102,7 +103,7 @@ public class AITask_MultiSourceButtress : AITask
         for (int i = 0; i < numFound; i++)
         {
             int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(
-                friendlyNeighborBuffer[i], minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat);
+                friendlyNeighborBuffer[i], minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
             if (willing <= 0) continue;
             totalWilling += willing;
             if (willing > bestSingleWilling) bestSingleWilling = willing;
@@ -120,7 +121,7 @@ public class AITask_MultiSourceButtress : AITask
         // single-source buttress wave in transit must count toward "already covered" or
         // multi-source will stack ANOTHER wave on top of it.
         int destGarrison = toNode.EffectiveDefenseGarrison;
-        int deficit = AI_ActionHeuristics.GetFrontierWorkerDeficit(toNode);
+        int deficit = AI_ActionHeuristics.GetFrontierWorkerDeficit(toNode, player);
 
         if (AI_ActionHeuristics.NeedsResourceStaffingButtress(aiTownState, toNode))
         {
@@ -154,6 +155,7 @@ public class AITask_MultiSourceButtress : AITask
     // nodes guarantees every collected source has a fully owned path back to the dest.
     int FindFriendlyNeighbors(AI_NodeState toNode, AI_NodeState[] buffer, bool emergency)
     {
+        bool destNeedsOverkill = AI_ActionHeuristics.DestNeedsPersonalityOverkill(toNode, player);
         bfsVisited.Clear();
         bfsVisited.Add(toNode);
         bfsQueue.Clear();
@@ -184,8 +186,18 @@ public class AITask_MultiSourceButtress : AITask
                         && neighbor.AttackHeat > toNode.AttackHeat)
                         continue;
 
+                    // Also refuse undergarrisoned frontier sources by visible pressure (mirrors
+                    // GetButtressSourceNode). AttackHeat is post-hoc -- a frontier sharing the
+                    // same massive-enemy neighbor as the dest registers low heat right up until
+                    // it's first hit, so a heat-only guard would happily drain it. Guard only
+                    // fires when the source's own visible pressure is at least as bad as the
+                    // destination's; a lightly-pressured frontier can still help a worse one.
+                    if (AI_ActionHeuristics.GetDesiredFrontierWorkers(neighbor, player) > neighbor.NumWorkers
+                        && AI_ActionHeuristics.GetEffectiveFrontierPressure(neighbor) >= AI_ActionHeuristics.GetEffectiveFrontierPressure(toNode))
+                        continue;
+
                     int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(
-                        neighbor, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat);
+                        neighbor, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
                     if (willing <= 0) continue;
 
                     buffer[index++] = neighbor;
@@ -200,6 +212,7 @@ public class AITask_MultiSourceButtress : AITask
     // sources contribute first), until the deficit is met or sources run out.
     bool TryPlanAllocations(AI_NodeState[] nodes, int numNodes, AI_NodeState toNode, int deficit, bool emergency, Dictionary<AI_NodeState, int> allocations, out int totalPlanned)
     {
+        bool destNeedsOverkill = AI_ActionHeuristics.DestNeedsPersonalityOverkill(toNode, player);
         allocations.Clear();
         totalPlanned = 0;
 
@@ -208,7 +221,7 @@ public class AITask_MultiSourceButtress : AITask
         {
             var node = nodes[i];
             int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(
-                node, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat);
+                node, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
             if (willing <= 0) continue;
             int send = Math.Min(willing, remaining);
             allocations[node] = send;

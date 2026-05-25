@@ -213,7 +213,10 @@ public partial class AITestScene
             if (node.OwnedBy != null)
             {
                 sb.Append($" | edge={(onEdge ? "Y" : "N")} enemyN={enemyWorkersNearby}");
-                float buttressH = ComputeButtressHeuristicPreview(node.NumWorkers, GetMaxWorkers(node), enemyWorkersNearby, onEdge);
+                float defWeight = node.OwnedBy.AIDefn != null ? node.OwnedBy.AIDefn.DefenseWeight : 1f;
+                float aggWeight = node.OwnedBy.AIDefn != null ? node.OwnedBy.AIDefn.AggressivenessWeight : 1f;
+                bool canUpgrade = node.Building != null && node.Building.Defn != null && node.Building.Defn.CanBeUpgraded;
+                float buttressH = ComputeButtressHeuristicPreview(node.NumWorkers, GetMaxWorkers(node), enemyWorkersNearby, onEdge, node.ChokepointScore, defWeight, aggWeight, canUpgrade);
                 if (buttressH > 0f)
                     sb.Append($" buttressH={buttressH:F2}");
             }
@@ -391,24 +394,55 @@ public partial class AITestScene
         return false;
     }
 
-    static float ComputeButtressHeuristicPreview(int numWorkers, int maxWorkers, int numEnemiesInNeighborNodes, bool isOnTerritoryEdge)
+    static float ComputeButtressHeuristicPreview(int numWorkers, int maxWorkers, int numEnemiesInNeighborNodes, bool isOnTerritoryEdge, float chokepointScore, float defenseWeight, float aggressivenessWeight, bool canUpgrade)
     {
-        // Mirrors AI_ActionHeuristics.GetButtressHeuristic. Only credits the enemy-pressure
-        // term when we are actually outnumbered; squaring a signed delta would over-credit
-        // over-defended nodes and the dump would disagree with the real heuristic.
+        // Mirrors AI_ActionHeuristics.GetButtressHeuristic for display. Now that the real
+        // heuristic includes an upgrade-overload term, the preview must include it too --
+        // otherwise the dump shows no buttress demand on exactly the low-tier-choke-under-
+        // heavy-pressure case the buttress task is actually most active on.
+        float defenseOverkill = Mathf.Max(1f, defenseWeight);
+        // Mirrors the real heuristic: defensive choke amp is now scaled by DefenseWeight so
+        // a pacifist's preview shows no choke pull and a defender's shows compounded pull.
+        float chokeMult = 1f + chokepointScore * AI_ActionHeuristics.ChokepointDefenseScale * Mathf.Max(0f, defenseWeight);
+        int desired = 0;
+        if (numEnemiesInNeighborNodes > 0)
+            desired = Mathf.Min(maxWorkers, Mathf.Max(1, Mathf.CeilToInt(numEnemiesInNeighborNodes * defenseOverkill * chokeMult)));
+        int frontierDeficit = Mathf.Max(0, desired - numWorkers);
+
+        // Upgrade-overload preview: mirrors GetDesiredOverloadForUpgrade. Risky AIs (agg
+        // dominates) skip overload; cautious AIs (def dominates) demand 2*pressure pre-upgrade
+        // so post-upgrade can survive the visible enemy stack.
+        int overloadDeficit = 0;
+        if (canUpgrade && isOnTerritoryEdge && numWorkers >= maxWorkers && numEnemiesInNeighborNodes > 0)
+        {
+            float sum = aggressivenessWeight + defenseWeight;
+            float riskTolerance = sum > 0f ? Mathf.Clamp01(aggressivenessWeight / sum) : 0.5f;
+            if (riskTolerance < 1f)
+            {
+                float requiredRatio = 1f - 0.5f * riskTolerance;
+                int desiredPostUpgrade = Mathf.CeilToInt(numEnemiesInNeighborNodes * requiredRatio);
+                int desiredPreUpgrade = Mathf.Max(maxWorkers + 2, desiredPostUpgrade * 2);
+                overloadDeficit = Mathf.Max(0, desiredPreUpgrade - numWorkers);
+            }
+        }
+
         float rawValue = 0f;
-        int outnumberedBy = numEnemiesInNeighborNodes - numWorkers;
-        if (outnumberedBy > 0)
-            rawValue += outnumberedBy * outnumberedBy;
-        if (isOnTerritoryEdge) rawValue += 10f;
-        if (maxWorkers > 0 && numWorkers < maxWorkers / 2
+        if (frontierDeficit > 0)
+            rawValue += frontierDeficit * frontierDeficit;
+        if (isOnTerritoryEdge && frontierDeficit > 0) rawValue += 10f;
+        if (overloadDeficit > 0)
+        {
+            rawValue += overloadDeficit * 10f;
+            rawValue += 10f;
+        }
+        if (maxWorkers > 0 && numWorkers < maxWorkers / 4
             && (isOnTerritoryEdge || numEnemiesInNeighborNodes > 0))
         {
             float workersDeficit = maxWorkers - numWorkers;
-            rawValue += workersDeficit * workersDeficit * 10f;
+            rawValue += workersDeficit * 10f;
         }
         if (rawValue < 20f) return 0f;
         float clamped = Mathf.Clamp(rawValue, 20f, 40f);
-        return (clamped - 20f) / 20f * 3f;
+        return (clamped - 20f) / 20f * 3f * chokeMult;
     }
 }

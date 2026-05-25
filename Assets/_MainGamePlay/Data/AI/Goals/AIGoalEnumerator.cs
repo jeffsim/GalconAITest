@@ -115,10 +115,15 @@ public static class AIGoalEnumerator
                 : territoryExpansion;
 
             // Chokepoint amplifier: a CaptureNode goal targeting a structural chokepoint is
-            // worth significantly more than capturing a leaf node. Surfaces in the goal-list
-            // dump as an inflated `val=` so the user can tell at a glance which captures the
-            // AI considers strategically important vs. opportunistic.
-            float chokepointMult = AI_ActionHeuristics.GetChokepointMultiplier(node, AI_ActionHeuristics.ChokepointGoalScale);
+            // worth significantly more than capturing a leaf node. Scaled by aggressiveness
+            // because grabbing a chokepoint is an offensive/force-projection move -- a
+            // pacifist (agg=0) shouldn't be drawn to a distant chokepoint any more than to
+            // any other neutral; an aggressor (agg=2) should be drawn double. Without this,
+            // a def=2 / agg=0 AI at game start would rush its entire starting force across
+            // multiple hops to grab the peak chokepoint, which is the opposite of defensive
+            // behavior. Surfaces in the goal-list dump as an inflated `val=` so the user
+            // can tell at a glance which captures the AI considers strategically important.
+            float chokepointMult = AI_ActionHeuristics.GetChokepointMultiplier(node, AI_ActionHeuristics.ChokepointGoalScale, aggression);
             float value = (captureBaseValue + typeBonus) * personalityMix * chokepointMult;
             if (value < MinGoalValue) continue;
 
@@ -153,17 +158,22 @@ public static class AIGoalEnumerator
             int enemyForce = AI_ActionHeuristics.GetFrontierPressure(node);
             if (enemyForce <= 0) continue;
 
-            // Value scales with deficit (enemy force vs ours). At parity or surplus the goal
-            // still has weight, just not much; the recursive search will then naturally
-            // direct attention elsewhere. Compare against EffectiveDefenseGarrison so a
-            // node with friendly workers in-flight isn't double-counted as "deficient" --
-            // the inbound wave already addresses some of the pressure.
-            float deficit = enemyForce - node.EffectiveDefenseGarrison;
-            if (deficit < 0f) deficit = 0f;
+            // Value scales with the TOTAL defensive deficit (frontier + upgrade-overload).
+            // Routing through GetTotalDefensiveDeficit means a low-tier choke under heavy
+            // pressure -- where the strategic move is upgrade-after-overload, not raw
+            // overstack -- gets a goal value proportional to how many workers the AI needs
+            // to assemble for that upgrade. Previously the goal used only frontier deficit
+            // (which clamps at MaxWorkers), reporting "deficit 0 vs enemy force 32" on a
+            // node a defensive AI was desperately trying to reinforce, and the goal value
+            // stayed at the floor (~4) while CaptureNode goals dominated demand.
+            int deficit = AI_ActionHeuristics.GetTotalDefensiveDeficit(node, player);
             // Chokepoint amplifier on defense: losing a chokepoint is structurally worse than
             // losing a leaf, so the same enemy pressure on a chokepoint produces a much
-            // higher-value DefendFrontier goal.
-            float chokepointMult = AI_ActionHeuristics.GetChokepointMultiplier(node, AI_ActionHeuristics.ChokepointDefenseScale);
+            // higher-value DefendFrontier goal. Scaled by defense (symmetric with the
+            // offensive choke amp on CaptureNode being scaled by aggression): a defensive AI
+            // cares disproportionately about keeping its own chokes; an aggressive AI sees
+            // them as just-another-frontier and would rather be attacking.
+            float chokepointMult = AI_ActionHeuristics.GetChokepointMultiplier(node, AI_ActionHeuristics.ChokepointDefenseScale, defense);
             float value = (1f + deficit) * defendValuePerWorker * defense * chokepointMult;
             if (value < MinGoalValue) continue;
 
@@ -173,7 +183,7 @@ public static class AIGoalEnumerator
             goal.TargetNode = node;
             goal.Value = value;
             goal.HorizonTurns = 1; // defense is always immediate
-            string reason = "deficit " + ((int)deficit) + " vs enemy force " + enemyForce;
+            string reason = "deficit " + deficit + " vs enemy force " + enemyForce;
             if (node.ChokepointScore > 0.05f)
                 reason += $" (choke={node.ChokepointScore:F2})";
             goal.DebugReason = reason;
