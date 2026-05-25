@@ -369,9 +369,24 @@ public static class AI_ActionHeuristics
         // Green's chokepoint #3 kept losing workers to offensive sends despite being under
         // sustained attack itself.
         if (node.AttackHeat >= AttackHeatChokepointThreshold) return 0;
+
+        // Predicted-threat reserve: don't drain workers off a node whose own defense will
+        // need them. AttackHeat above is post-hoc (only fires after the first attacker
+        // resolves); this branch is predictive -- it uses GetEffectiveFrontierPressure,
+        // which folds in snapshot enemy garrisons + AttackHeat + IncomingHostileWorkers,
+        // so a frontier node that currently looks calm but has a 100-worker wave inbound
+        // refuses to ship half its garrison off to attack/capture somewhere else. Without
+        // this, an at-cap edge node would happily commit to an offensive moments before
+        // being steamrolled by the telegraphed wave.
+        int reserveForDefense = GetDesiredFrontierWorkers(node);
+        int sendable = node.NumWorkers - reserveForDefense;
+        if (sendable <= 0) return 0;
+
         // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers);
         // keep heuristic consistent with what simulation / real-game executors will actually do.
-        return Math.Min(node.NumWorkers / 2, NodeData.GetMaxSendableWorkers(node.NumWorkers));
+        int half = node.NumWorkers / 2;
+        int cap = Math.Min(half, NodeData.GetMaxSendableWorkers(node.NumWorkers));
+        return Math.Min(cap, sendable);
     }
 
     // When a frontier node is under real pressure, allow sources below 75% capacity to pitch in.
@@ -475,8 +490,11 @@ public static class AI_ActionHeuristics
         return Math.Min(node.MaxWorkers, Math.Max(1, pressure));
     }
 
+    // Destination-side deficit: include my in-flight friendly reinforcements so we don't
+    // dispatch ANOTHER wave when help is already on the way. EffectiveDefenseGarrison is
+    // NumWorkers (physical) + IncomingFriendlyWorkers (pre-existing in-flight).
     public static int GetFrontierWorkerDeficit(AI_NodeState node) =>
-        Math.Max(0, GetDesiredFrontierWorkers(node) - node.NumWorkers);
+        Math.Max(0, GetDesiredFrontierWorkers(node) - node.EffectiveDefenseGarrison);
 
     public static bool NeedsFrontierButtress(AI_NodeState node)
     {
@@ -484,10 +502,11 @@ public static class AI_ActionHeuristics
         return GetFrontierWorkerDeficit(node) >= minDeficit;
     }
 
+    // Destination-side capacity check: incoming friendly arrivals count toward "staffed".
     public static bool IsUnderstaffedFrontier(AI_NodeState node) =>
         node.IsOnTerritoryEdge
         && node.MaxWorkers > 0
-        && node.NumWorkers < node.MaxWorkers * understaffedFrontierThreshold;
+        && node.EffectiveDefenseGarrison < node.MaxWorkers * understaffedFrontierThreshold;
 
     // Size a neutral capture: 1 worker on safe frontiers; enough to clear unowned garrison on
     // the target and hold against adjacent enemy garrisons on contested ones.
@@ -528,6 +547,29 @@ public static class AI_ActionHeuristics
     {
         if (node.NumWorkers < node.MaxWorkers) return 0f;
 
+        // Effective pressure folds in snapshot enemy garrisons + AttackHeat + IncomingHostileWorkers
+        // so a telegraphed wave that has already left its origin shows up here. The old code
+        // (which only consulted node.NumEnemiesInNeighborNodes) went blind exactly when it
+        // mattered most -- the moment the enemy launches, the snapshot drops to 0 and the
+        // upgrade looked safe seconds before the wave landed on a halved garrison.
+        int effectivePressure = GetEffectiveFrontierPressure(node);
+        bool defensiveImperative = node.IsOnTerritoryEdge && effectivePressure > 0;
+
+        // Hard veto: upgrading halves NumWorkers. If post-upgrade workers can't survive the
+        // predicted hostile force, the upgrade is suicidal regardless of how overcrowded or
+        // structurally valuable the node is. This is the predictive guardrail the recursive
+        // search needs to refuse the upgrade BEFORE it commits and a wave that's already in
+        // flight lands on the emptied node. Threshold scales with risk tolerance: cautious
+        // (0.0) demands surviving the full predicted force 1:1, risky (1.0) accepts up to a
+        // 2:1 disadvantage and trusts buttressing to backfill.
+        if (defensiveImperative)
+        {
+            int postUpgradeWorkers = node.NumWorkers / 2;
+            float requiredRatio = 1f - 0.5f * Mathf.Clamp01(riskTolerance);
+            if (postUpgradeWorkers < effectivePressure * requiredRatio)
+                return 0f;
+        }
+
         float rawValue = upgradeNodeMinScore * 1.1f;
 
         // Overcrowding signal: quadratic in PERCENTAGE excess (not absolute count) so the
@@ -543,19 +585,17 @@ public static class AI_ActionHeuristics
             rawValue += Mathf.Pow(percentExcessive, 2) * overcrowdingMaxRawBonus;
         }
 
-        // Defensive imperative: a frontier node at/above capacity under hostile pressure NEEDS
-        // a capacity bump. Uses effective pressure so chokepoints under sustained attack still
-        // fire even when the current snapshot looks light. No upper-cap on worker count — an
-        // overloaded node preparing for upgrade should still benefit from this signal.
-        bool defensiveImperative = node.IsOnTerritoryEdge
-            && GetEffectiveFrontierPressure(node) > 0;
-
         // Outnumbered penalty scaled by personality: a cautious AI (riskTolerance~0) gets the
         // full penalty when NOT under defensive imperative and a reduced penalty even when IS
         // under imperative (it wants to wait for overload). A risky AI (riskTolerance~1) gets
         // no penalty under imperative and reduced penalty otherwise — it's willing to upgrade
         // immediately and accept the halved garrison.
-        int outnumberedBy = node.NumEnemiesInNeighborNodes - node.NumWorkers;
+        //
+        // Penalty input switched from the raw NumEnemiesInNeighborNodes snapshot to
+        // effectivePressure so an in-flight hostile wave (which empties the neighbor snapshot
+        // the moment it launches) still penalizes the upgrade. Without this, the AI literally
+        // could not see the army that was already on its way.
+        int outnumberedBy = effectivePressure - node.NumWorkers;
         if (outnumberedBy > 0)
         {
             float penaltyScale = defensiveImperative ? (1f - riskTolerance) : 1f;
@@ -624,10 +664,13 @@ public static class AI_ActionHeuristics
         float rawValue = 0f;
         float riskTolerance = GetUpgradeRiskTolerance(town.player);
 
+        // Destination-side: garrison the dest WILL have once pre-existing in-flight friendly
+        // workers arrive. Lying about this (using physical NumWorkers only) caused the AI to
+        // dispatch redundant waves while help was already on the way.
+        int destGarrison = toNode.EffectiveDefenseGarrison;
+
         int frontierDeficit = GetFrontierWorkerDeficit(toNode);
-        bool understaffedFrontier = toNode.IsOnTerritoryEdge
-            && toNode.MaxWorkers > 0
-            && toNode.NumWorkers < toNode.MaxWorkers * understaffedFrontierThreshold;
+        bool understaffedFrontier = IsUnderstaffedFrontier(toNode);
         bool needsUpgradeOverload = NeedsUpgradeOverloadButtress(toNode, riskTolerance);
 
         if (frontierDeficit <= 0 && !understaffedFrontier && !NeedsResourceStaffingButtress(town, toNode) && !needsUpgradeOverload)
@@ -641,7 +684,7 @@ public static class AI_ActionHeuristics
 
         if (understaffedFrontier)
         {
-            float capacityDeficit = toNode.MaxWorkers - toNode.NumWorkers;
+            float capacityDeficit = toNode.MaxWorkers - destGarrison;
             rawValue += capacityDeficit * insufficientWorkersScalingFactor;
         }
 
@@ -651,7 +694,7 @@ public static class AI_ActionHeuristics
         if (needsUpgradeOverload)
         {
             int desiredOverload = GetDesiredOverloadForUpgrade(toNode, riskTolerance);
-            int overloadDeficit = desiredOverload - toNode.NumWorkers;
+            int overloadDeficit = desiredOverload - destGarrison;
             rawValue += overloadDeficit * insufficientWorkersScalingFactor;
             rawValue += territoryEdgeScalingFactor;
         }
@@ -660,7 +703,7 @@ public static class AI_ActionHeuristics
         if (NeedsResourceStaffingButtress(town, toNode))
         {
             int desired = GetDesiredWorkersForResourceNode(town, toNode);
-            float workerDeficit = desired - toNode.NumWorkers;
+            float workerDeficit = desired - destGarrison;
             GoodType resource = toNode.CanBeGatheredFrom
                 ? toNode.ResourceGatheredFromThisNode
                 : toNode.ResourceThisNodeCanGoGather;
@@ -713,17 +756,23 @@ public static class AI_ActionHeuristics
         return Math.Max(minPreUpgrade, desiredPreUpgrade);
     }
 
+    // Destination-side: a node whose physical garrison is below desired-overload but whose
+    // EffectiveDefenseGarrison (physical + in-flight friendly) already covers it doesn't need
+    // ANOTHER wave dispatched its way.
     public static bool NeedsUpgradeOverloadButtress(AI_NodeState node, float riskTolerance)
     {
         int desired = GetDesiredOverloadForUpgrade(node, riskTolerance);
-        return desired > 0 && node.NumWorkers < desired;
+        return desired > 0 && node.EffectiveDefenseGarrison < desired;
     }
 
+    // Destination-side: incoming friendly workers heading to this resource node count toward
+    // "already staffed", so we don't queue redundant buttress waves while the previous one
+    // is still in transit.
     public static bool NeedsResourceStaffingButtress(AI_TownState town, AI_NodeState toNode)
     {
         if (!toNode.CanBeGatheredFrom && !toNode.CanGoGatherResources) return false;
         int desired = GetDesiredWorkersForResourceNode(town, toNode);
-        if (toNode.NumWorkers >= desired) return false;
+        if (toNode.EffectiveDefenseGarrison >= desired) return false;
         GoodType resource = toNode.CanBeGatheredFrom
             ? toNode.ResourceGatheredFromThisNode
             : toNode.ResourceThisNodeCanGoGather;
@@ -837,9 +886,12 @@ public static class AI_ActionHeuristics
     {
         // Use effective pressure for the emergency check so a chokepoint with high AttackHeat
         // (recently hammered, but currently quiet) is treated as an emergency and pulls workers
-        // from sources below the normal 75% capacity threshold.
-        bool emergency = GetEffectiveFrontierPressure(toNode) > toNode.NumWorkers
-                         || toNode.NumContestedNeutralWorkersNearby > toNode.NumWorkers / 2
+        // from sources below the normal 75% capacity threshold. Destination "garrison" here is
+        // physical + in-flight friendly -- if help is already on the way we shouldn't escalate
+        // to emergency just because the physical count looks thin.
+        int destGarrison = toNode.EffectiveDefenseGarrison;
+        bool emergency = GetEffectiveFrontierPressure(toNode) > destGarrison
+                         || toNode.NumContestedNeutralWorkersNearby > destGarrison / 2
                          || toNode.AttackHeat >= AttackHeatEmergencyThreshold;
 
         AI_NodeState best = null;

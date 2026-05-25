@@ -155,8 +155,10 @@ public static class AIGoalEnumerator
 
             // Value scales with deficit (enemy force vs ours). At parity or surplus the goal
             // still has weight, just not much; the recursive search will then naturally
-            // direct attention elsewhere.
-            float deficit = enemyForce - node.NumWorkers;
+            // direct attention elsewhere. Compare against EffectiveDefenseGarrison so a
+            // node with friendly workers in-flight isn't double-counted as "deficient" --
+            // the inbound wave already addresses some of the pressure.
+            float deficit = enemyForce - node.EffectiveDefenseGarrison;
             if (deficit < 0f) deficit = 0f;
             // Chokepoint amplifier on defense: losing a chokepoint is structurally worse than
             // losing a leaf, so the same enemy pressure on a chokepoint produces a much

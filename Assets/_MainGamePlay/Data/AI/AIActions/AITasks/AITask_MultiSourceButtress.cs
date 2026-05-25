@@ -116,31 +116,38 @@ public class AITask_MultiSourceButtress : AITask
 
     int ComputeDeficit(AI_NodeState toNode)
     {
+        // Destination-side garrison includes in-flight friendly reinforcements -- a previous
+        // single-source buttress wave in transit must count toward "already covered" or
+        // multi-source will stack ANOTHER wave on top of it.
+        int destGarrison = toNode.EffectiveDefenseGarrison;
         int deficit = AI_ActionHeuristics.GetFrontierWorkerDeficit(toNode);
 
         if (AI_ActionHeuristics.NeedsResourceStaffingButtress(aiTownState, toNode))
         {
             int desired = AI_ActionHeuristics.GetDesiredWorkersForResourceNode(aiTownState, toNode);
-            deficit = Math.Max(deficit, desired - toNode.NumWorkers);
+            deficit = Math.Max(deficit, desired - destGarrison);
         }
         if (AI_ActionHeuristics.IsUnderstaffedFrontier(toNode))
         {
-            int capacityDeficit = toNode.MaxWorkers - toNode.NumWorkers;
+            int capacityDeficit = toNode.MaxWorkers - destGarrison;
             deficit = Math.Max(deficit, capacityDeficit);
         }
         float riskTolerance = AI_ActionHeuristics.GetUpgradeRiskTolerance(player);
         if (AI_ActionHeuristics.NeedsUpgradeOverloadButtress(toNode, riskTolerance))
         {
             int overloadDesired = AI_ActionHeuristics.GetDesiredOverloadForUpgrade(toNode, riskTolerance);
-            deficit = Math.Max(deficit, overloadDesired - toNode.NumWorkers);
+            deficit = Math.Max(deficit, overloadDesired - destGarrison);
         }
         return deficit;
     }
 
-    static bool IsEmergency(AI_NodeState toNode) =>
-        AI_ActionHeuristics.GetEffectiveFrontierPressure(toNode) > toNode.NumWorkers
-        || toNode.NumContestedNeutralWorkersNearby > toNode.NumWorkers / 2
-        || toNode.AttackHeat >= AI_ActionHeuristics.AttackHeatEmergencyThreshold;
+    static bool IsEmergency(AI_NodeState toNode)
+    {
+        int destGarrison = toNode.EffectiveDefenseGarrison;
+        return AI_ActionHeuristics.GetEffectiveFrontierPressure(toNode) > destGarrison
+            || toNode.NumContestedNeutralWorkersNearby > destGarrison / 2
+            || toNode.AttackHeat >= AI_ActionHeuristics.AttackHeatEmergencyThreshold;
+    }
 
     // BFS through player-owned territory only. Workers crossing hostile/neutral ground get
     // intercepted by ResolveWorkerArrival in realtime, so restricting expansion to friendly

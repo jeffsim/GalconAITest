@@ -15,6 +15,27 @@ public class AI_NodeState
 
     public int WorkersAdded;
 
+    // Snapshot of my own in-flight friendly reinforcements heading TO this node, captured
+    // at the start of each real-game Update. Read by EffectiveDefenseGarrison so destination-
+    // side buttress checks ("does this node already have enough help arriving?") account
+    // for the wave-in-flight without over-counting it as "available to send" — the previous
+    // design folded incoming into NumWorkers and that lie let GetButtressSourceNode pick a
+    // node with 1 physical worker and 17 incoming as a 9-worker source, producing the
+    // impossible "Support 9 #22 -> #7" plan that the realtime executor then clamped to 0.
+    //
+    // Snapshot only — the recursive search MUST NOT mutate this during simulation. Workers
+    // we hypothetically dispatch in-search are modeled by mutating NumWorkers directly
+    // (instant-arrival approximation); IncomingFriendlyWorkers always represents the real-
+    // game in-flight count that existed when this Update began.
+    public int IncomingFriendlyWorkers;
+
+    // Projected garrison after pre-existing in-flight friendly reinforcements arrive. Use
+    // this anywhere the question is "is this node about to be sufficiently defended/staffed?"
+    // (buttress destination checks, frontier deficit, overload-for-upgrade demand, etc.).
+    // Do NOT use this for "how many workers can leave this node?" — those callers must read
+    // NumWorkers directly, which is the physical count actually available to dispatch.
+    public int EffectiveDefenseGarrison => NumWorkers + IncomingFriendlyWorkers;
+
     public int NumEnemiesInNeighborNodes;
     // Neutral neighbors that also touch an enemy — e.g. #11 between Red #12 and Blue #27.
     public int NumContestedNeutralWorkersNearby;
@@ -188,6 +209,7 @@ public class AI_NodeState
         AttackHeat = RealNode.AttackHeat;
         // Default to 0/false; the per-player branches below populate these when viewerPlayer is set.
         IncomingHostileWorkers = 0;
+        IncomingFriendlyWorkers = 0;
         AttackAlreadySufficient = false;
 
         if (viewerPlayer != null)
@@ -198,6 +220,12 @@ public class AI_NodeState
             if (OwnedBy == null && RealNode.PendingCaptureBy != null)
             {
                 OwnedBy = RealNode.PendingCaptureBy;
+                // Pending-capture targets have no physical workers of our own yet — the
+                // incoming wave IS the only "garrison" they have, so it doubles as
+                // NumWorkers AND IncomingFriendlyWorkers's job here (the destination-side
+                // helper just adds them together; double-counting them would be wrong).
+                // Treat the wave as physical so EffectiveDefenseGarrison still reports the
+                // right total via the standard NumWorkers + IncomingFriendlyWorkers sum.
                 NumWorkers = RealNode.GetIncomingFor(RealNode.PendingCaptureBy);
                 if (RealNode.PendingCaptureBy == viewerPlayer && RealNode.PendingConstructBuilding != null)
                 {
@@ -217,9 +245,15 @@ public class AI_NodeState
             }
             else if (OwnedBy == viewerPlayer)
             {
-                // Friendly node: my own incoming reinforcements add to perceived strength so I
-                // don't reinforce harder than necessary while help is already on the way.
-                NumWorkers += RealNode.GetIncomingFor(viewerPlayer);
+                // Friendly node: track my own incoming reinforcements SEPARATELY from
+                // NumWorkers so destination-side checks (buttress, frontier deficit,
+                // upgrade overload) can include them via EffectiveDefenseGarrison without
+                // making the same workers look "available to dispatch" from this node as
+                // a source. The previous design (NumWorkers += incoming) caused #22 with
+                // 1 physical + 17 in-flight to be picked as a 9-worker buttress source,
+                // producing impossible Support plans the realtime executor then clamped
+                // to zero workers.
+                IncomingFriendlyWorkers = RealNode.GetIncomingFor(viewerPlayer);
 
                 // Predictive hostile-wave awareness: sum every non-viewer player's incoming
                 // workers targeting this node. Used by GetEffectiveFrontierPressure so a

@@ -49,35 +49,44 @@ public class AITask_TryButtressOwnedNode : AITask
 
         // Use effective pressure (snapshot + heat) so chokepoints under sustained attack still
         // trip emergency and can pull from sources below the normal 75% capacity threshold,
-        // even when the current frame's enemy-neighbor count looks low.
-        bool emergency = AI_ActionHeuristics.GetEffectiveFrontierPressure(toNode) > toNode.NumWorkers
-                         || toNode.NumContestedNeutralWorkersNearby > toNode.NumWorkers / 2
+        // even when the current frame's enemy-neighbor count looks low. Destination garrison
+        // is physical + in-flight friendly so help already on the way counts toward "calm".
+        int destGarrison = toNode.EffectiveDefenseGarrison;
+        bool emergency = AI_ActionHeuristics.GetEffectiveFrontierPressure(toNode) > destGarrison
+                         || toNode.NumContestedNeutralWorkersNearby > destGarrison / 2
                          || toNode.AttackHeat >= AI_ActionHeuristics.AttackHeatEmergencyThreshold;
         int minOnSource = emergency
             ? minWorkersInNodeBeforeConsideringSendingAnyOut
             : (int)(fromNode.MaxWorkers * 3f / 4f);
+        // Source check: physical NumWorkers only -- in-flight friendly workers on fromNode
+        // are NOT available to dispatch; they're already in motion toward something else.
         if (fromNode.NumWorkers < minOnSource)
             return false;
 
         if (fromNode.IsVisited)
             return false;
 
+        // All deficit terms below are destination-side ("how many more workers does toNode
+        // need?"). Subtract the projected garrison (physical + in-flight friendly) so we
+        // don't double-dispatch when a previous wave is already in transit -- that was the
+        // root cause of the "Support 9 #22 -> #7" loop where #22 had only 1 physical worker
+        // but a stack of perceived-incoming made the AI think it could keep dispatching.
         int deficit = AI_ActionHeuristics.GetFrontierWorkerDeficit(toNode);
         if (AI_ActionHeuristics.NeedsResourceStaffingButtress(aiTownState, toNode))
         {
             int desired = AI_ActionHeuristics.GetDesiredWorkersForResourceNode(aiTownState, toNode);
-            deficit = Math.Max(deficit, desired - toNode.NumWorkers);
+            deficit = Math.Max(deficit, desired - destGarrison);
         }
         if (AI_ActionHeuristics.IsUnderstaffedFrontier(toNode))
         {
-            int capacityDeficit = toNode.MaxWorkers - toNode.NumWorkers;
+            int capacityDeficit = toNode.MaxWorkers - destGarrison;
             deficit = Math.Max(deficit, capacityDeficit);
         }
         float riskTolerance = AI_ActionHeuristics.GetUpgradeRiskTolerance(player);
         if (AI_ActionHeuristics.NeedsUpgradeOverloadButtress(toNode, riskTolerance))
         {
             int overloadDesired = AI_ActionHeuristics.GetDesiredOverloadForUpgrade(toNode, riskTolerance);
-            deficit = Math.Max(deficit, overloadDesired - toNode.NumWorkers);
+            deficit = Math.Max(deficit, overloadDesired - destGarrison);
         }
         if (deficit <= 0)
             return false;

@@ -30,7 +30,7 @@ MonoBehaviour:
   DefenseWeight: 1.336
   AggressivenessWeight: 0.767
   AttackOverkillMultiplier: 1.31
-  DecisionIntervalSeconds: 2.5
+  DecisionIntervalSeconds: 0.59
   DecisionVarianceSeconds: 0.5
   TargetWoodStockpile: 15
   TargetStoneStockpile: 15

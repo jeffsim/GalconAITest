@@ -87,6 +87,12 @@ public class TownData
 
     public void Update()
     {
+        // Normalize any owned-but-no-building nodes before AI search sees them. Same rationale
+        // as the RealtimeTick path: the dump diagnostics and the per-player AI search both
+        // read RealNode.Building; an inconsistent node skews heuristics (zero MaxWorkers,
+        // garbage frontier pressure) and surfaces in the simulation dump as "(no building)".
+        EnforceOwnedNodesHaveBuilding();
+
         if (TestOnePlayerId == 0)
         {
             //hack: process current player last so that it RootEntry is valid for debuggerpanel
@@ -120,6 +126,12 @@ public class TownData
         if (deltaSeconds <= 0f) return;
 
         WorldTime += deltaSeconds;
+
+        // Belt-and-suspenders: if any node ended last tick in the forbidden "owned but no
+        // building" state, normalize it back to neutral BEFORE any AI search or production
+        // can read that bogus state. ResolveWorkerArrival prevents new occurrences; this
+        // catches legacy state and any future regressions.
+        EnforceOwnedNodesHaveBuilding();
 
         TickBuildingProduction(deltaSeconds);
         TickAttackHeatDecay(deltaSeconds);
@@ -239,6 +251,17 @@ public class TownData
     // destination (reachedFinal=true) or a hostile intermediate node along the path
     // (reachedFinal=false). Building intents only fire at the final destination so an
     // intercepted construct group attacks the intermediate without dropping a building there.
+    //
+    // INVARIANT: an owned node must always have a Building. We never flip ownership to an
+    // arriving player unless the resulting node will satisfy that invariant -- either the
+    // node already has a building we inherit on capture, or this worker carries a
+    // CaptureAndConstruct intent and is resolving at its final destination (so we can drop
+    // its planned building right now). All other "would-be captures" cause the worker to
+    // die on impact with no ownership change. The pre-fix bug allowed Attack/Reinforce
+    // workers (or CaptureAndConstruct workers intercepted at an intermediate empty neutral)
+    // to flip an empty neutral to themselves with no building, leaving a node owned by P
+    // with Building=null and a few workers -- a state the rest of the game treats as nonsense
+    // (max workers = 0, no production, no upgrade target).
     void ResolveWorkerArrival(WorkerData worker, NodeData dest, bool reachedFinal)
     {
         var arrivingPlayer = worker.OwnedBy;
@@ -252,6 +275,12 @@ public class TownData
             return;
         }
 
+        bool canConstructOnCapture = reachedFinal
+            && worker.Intent == WorkerIntent.CaptureAndConstruct
+            && worker.ConstructBuildingIntent != null
+            && dest.Building == null;
+        bool captureWouldLeaveBuilding = dest.Building != null || canConstructOnCapture;
+
         // Neutral / unowned destination: fight any unowned garrison 1:1 before claiming. Once
         // defenders are cleared, the next arrival captures (same trade rules as enemy nodes).
         if (dest.OwnedBy == null)
@@ -262,12 +291,18 @@ public class TownData
                 return;
             }
 
+            if (!captureWouldLeaveBuilding)
+            {
+                // Worker cannot legally claim this empty neutral (no building to inherit and
+                // no construct intent to drop one). Treat as a wasted arrival: worker dies,
+                // node stays neutral and empty so a future CaptureAndConstruct can still
+                // arrive here without inheriting a forbidden mid-capture state.
+                return;
+            }
+
             dest.OwnedBy = arrivingPlayer;
             dest.NumWorkers = 1;
-            if (reachedFinal
-                && worker.Intent == WorkerIntent.CaptureAndConstruct
-                && worker.ConstructBuildingIntent != null
-                && dest.Building == null)
+            if (canConstructOnCapture)
             {
                 var building = new BuildingData(worker.ConstructBuildingIntent);
                 dest.ConstructBuilding(building);
@@ -286,8 +321,40 @@ public class TownData
             return;
         }
 
+        // Capturing an empty enemy node: under the invariant the enemy always had a building,
+        // which we inherit. Defensive guard: if the node somehow has no building (e.g. legacy
+        // bad state being resolved before EnforceOwnedNodesHaveBuilding cleans it up), refuse
+        // to capture so we don't propagate the forbidden state to a new owner.
+        if (!captureWouldLeaveBuilding)
+            return;
+
         dest.OwnedBy = arrivingPlayer;
         dest.NumWorkers = 1;
+    }
+
+    // Repair any node that has slipped into the forbidden "owned but no building" state
+    // (legacy data from before ResolveWorkerArrival enforced the invariant, or any future
+    // regression). Reverts the node back to neutral with 0 workers so the next capture
+    // attempt goes through the proper neutral path (which now requires a building).
+    void EnforceOwnedNodesHaveBuilding()
+    {
+        for (int i = 0; i < Nodes.Count; i++)
+        {
+            var node = Nodes[i];
+            if (node.OwnedBy == null) continue;
+            if (node.Building != null) continue;
+
+            Debug.LogWarning(
+                $"Node #{node.NodeId} was owned by {node.OwnedBy.Name} with no building -- " +
+                "reverting to neutral. This is a game-invariant repair; please report if the " +
+                "underlying cause repeats.");
+            node.OwnedBy = null;
+            node.NumWorkers = 0;
+            node.AttackHeat = 0f;
+            node.PendingCaptureBy = null;
+            node.PendingConstructBuilding = null;
+            WorldRevision++;
+        }
     }
 
     // Per-arrival heat added to a defender's AttackHeat. Tuned so a sustained stream of attacks
