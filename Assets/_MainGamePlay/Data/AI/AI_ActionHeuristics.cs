@@ -373,25 +373,27 @@ public static class AI_ActionHeuristics
     public static int GetWorkersWillingToSend(AI_NodeState node, int minWorkersInNodeBeforeConsideringSendingAnyOut)
     {
         if (node.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return 0;
-        if (node.NumWorkers < node.MaxWorkers * 3f / 4f) return 0;
-        // Chokepoint drain guard: a node that's been getting attacked is a chokepoint -- don't
-        // drain it to launch attacks/captures elsewhere. Solves the observed pathology where
-        // Green's chokepoint #3 kept losing workers to offensive sends despite being under
-        // sustained attack itself.
-        if (node.AttackHeat >= AttackHeatChokepointThreshold) return 0;
 
         // Predicted-threat reserve: don't drain workers off a node whose own defense will
-        // need them. AttackHeat above is post-hoc (only fires after the first attacker
-        // resolves); this branch is predictive -- it uses GetEffectiveFrontierPressure,
-        // which folds in snapshot enemy garrisons + AttackHeat + IncomingHostileWorkers,
-        // so a frontier node that currently looks calm but has a 100-worker wave inbound
-        // refuses to ship half its garrison off to attack/capture somewhere else. Without
-        // this, an at-cap edge node would happily commit to an offensive moments before
-        // being steamrolled by the telegraphed wave. Pass owner so a defensive personality
-        // (DefenseWeight>1) reserves more than the visible-pressure baseline -- otherwise
-        // a def=2 source happily shipped half its garrison off to attack even when its own
-        // frontier desire (per the personality-aware sizing) exceeded its current count.
-        int reserveForDefense = GetDesiredFrontierWorkers(node, node.OwnedBy);
+        // need them. Uses immediate-enemy pressure (snapshot enemies + heat + IncomingHostile)
+        // 1:1, EXCLUDING contested-neutral inflation -- the latter represents potential
+        // threats whose right answer is "go capture them" rather than "reserve workers
+        // against them and end up doing nothing". This reserve also subsumes the old
+        // AttackHeat chokepoint-drain guard: a hot chokepoint already has heat folded
+        // into immediate pressure, so its reservation grows automatically and a hot node
+        // with no surplus over pressure naturally returns 0 here.
+        int reserveForDefense = GetReservedForImmediateDefense(node, node.OwnedBy);
+
+        // 75% cap-fill check: "don't drain a node that's still building up its reserves".
+        // Only meaningful for nodes that actually have something defensive to reserve FOR.
+        // For interior nodes with zero immediate enemy pressure, their workers ARE the
+        // reserves -- there's no future garrison to build toward -- and gating on cap-fill
+        // just leaves them sitting idle. Bug seen: Blue's interior #0 at 16/160 with zero
+        // immediate pressure had 10 spare workers but the 75% check blocked it from
+        // contributing to any offensive plan, locking Blue out of attacks even when its
+        // frontier sources alone were just short of the target force.
+        if (reserveForDefense > 0 && node.NumWorkers < node.MaxWorkers * 3f / 4f) return 0;
+
         int sendable = node.NumWorkers - reserveForDefense;
         if (sendable <= 0) return 0;
 
@@ -428,16 +430,17 @@ public static class AI_ActionHeuristics
         int maxSendable = NodeData.GetMaxSendableWorkers(node.NumWorkers);
         if (emergency)
         {
-            // Reserve the source's OWN defensive need even in emergency. The earlier "drain
-            // to the floor" rule let a hot frontier source ship its garrison away to help
-            // another frontier just because the destination was tagged emergency -- e.g.
-            // #11 (6/10, edge, sharing the SAME 576-enemy neighbor as #0) sending 5 workers
-            // to #0 even though by every visible-pressure measure #11 needs every worker it
-            // has. Interior sources (pressure=0 -> desired=0) are unaffected and can still
-            // fully drain; frontier sources can only ship what they truly have to spare.
+            // Reserve the source's OWN immediate-enemy defensive need even in emergency.
+            // The earlier "drain to the floor" rule let a hot frontier source ship its
+            // garrison away to help another frontier just because the destination was
+            // tagged emergency. The reservation uses GetReservedForImmediateDefense
+            // (real enemies + heat + incoming hostile -- no contested-neutral inflation),
+            // so an at-cap edge node next to a contested neutral can still ship workers to
+            // a true emergency or to capture the contested neutral itself, instead of
+            // hoarding 100% of its cap against a worker count on a node nobody owns.
             int reserveForDefense = Math.Max(
                 minWorkersInNodeBeforeConsideringSendingAnyOut,
-                GetDesiredFrontierWorkers(node, node.OwnedBy));
+                GetReservedForImmediateDefense(node, node.OwnedBy));
             int sendable = node.NumWorkers - reserveForDefense;
             if (sendable <= 0) return 0;
             return Math.Min(maxSendable, sendable);
@@ -445,11 +448,29 @@ public static class AI_ActionHeuristics
 
         // Destination has chokepoint-level heat (or personality-driven overkill demand) but
         // isn't in emergency: relax source threshold to 50% so mid-staffed neighbors can pitch
-        // in without waiting to hit 75%.
+        // in without waiting to hit 75%. Source-side cap-fill check only applies to nodes
+        // that actually have a defensive baseline to build toward; interior nodes with zero
+        // immediate enemy pressure have no defensive reservation, so any cap-fill threshold
+        // would just leave them sitting idle while their workers could be reinforcing a
+        // hot frontier (same logic as GetWorkersWillingToSend).
         bool relax = destAttackHeat >= AttackHeatChokepointThreshold || destNeedsOverkill;
         float capacityThreshold = relax ? 0.5f : 0.75f;
-        if (node.NumWorkers < node.MaxWorkers * capacityThreshold) return 0;
-        return Math.Min(maxSendable, node.NumWorkers / 2);
+        bool sourceHasImmediatePressure = GetImmediateEnemyPressure(node) > 0;
+        if (sourceHasImmediatePressure && node.NumWorkers < node.MaxWorkers * capacityThreshold) return 0;
+
+        // Also reserve the source's own immediate-enemy defensive need in non-emergency.
+        // The old non-emergency path applied ONLY the cap-fill check and then sent half the
+        // garrison, which drained hot sources past their own pressure. With the cap-fill
+        // gate at 75% / 50%, a pressured #27 at 590/640 vs 299 visible pressure would pass
+        // the gate (590 >= 320) and ship 295 -- leaving 295 vs 299 pressure, i.e., the
+        // source is now itself outmatched. Apply the same 1:1 raw-pressure reservation
+        // used by GetWorkersWillingToSend so non-emergency drains stop at the source's
+        // own visible defensive floor; emergency mode (above) explicitly bypasses this
+        // when the destination is in true distress.
+        int nonEmergencyReserve = GetReservedForImmediateDefense(node, node.OwnedBy);
+        int nonEmergencySendable = node.NumWorkers - nonEmergencyReserve;
+        if (nonEmergencySendable <= 0) return 0;
+        return Math.Min(maxSendable, Math.Min(node.NumWorkers / 2, nonEmergencySendable));
     }
 
     // True when the destination's personality-aware total defensive deficit materially
@@ -477,6 +498,16 @@ public static class AI_ActionHeuristics
     // AI decision tick on safe neutrals; capped by willing so a single source still sends
     // the largest batch it can (e.g. 5) rather than failing until multi-source can muster 10.
     public const int MinCaptureWaveSize = 10;
+
+    // Minimum batch size for a buttress dispatch from a NON-OVERFLOWING source. Worker
+    // generation on an interior camp ticks NumWorkers from N to N+1 every gen tick; without
+    // this guard the AI would immediately ship that 1 spare worker every tick, producing a
+    // visible "drip" of 1-worker support waves that never let the source accumulate to send
+    // anything substantive. Sources that are actually OVER cap are exempt -- their excess
+    // would decay one per tick anyway, so dispatching even 1 to a real deficit is "free".
+    // Sized small enough that mid-sized interior camps (cap 20-40) can still contribute at
+    // moderate fill, large enough that 1-2 worker drips are firmly blocked.
+    public const int MinButtressWaveSize = 5;
 
     // Realtime: a neutral already has an in-flight capture wave from this player.
     public static bool IsCaptureAlreadyCommitted(AI_NodeState toNode, PlayerData player) =>
@@ -578,6 +609,45 @@ public static class AI_ActionHeuristics
     public static int GetFrontierWorkerDeficit(AI_NodeState node, PlayerData player = null) =>
         Math.Max(0, GetDesiredFrontierWorkers(node, player) - node.EffectiveDefenseGarrison);
 
+    // Pressure that a source node must reserve workers AGAINST when deciding how many it
+    // can spare for offense or buttress. Distinct from GetEffectiveFrontierPressure --
+    // which includes NumContestedNeutralWorkersNearby -- because a contested neutral
+    // represents a POTENTIAL threat whose resolution is "capture the neutral" or "ship
+    // workers to a more pressing emergency", not "stay home and reserve workers
+    // indefinitely against an attack that hasn't materialized". Counting contested
+    // neutrals in source reservation locks up at-cap edge nodes that should be free to
+    // act (#10 at 80/80 next to contested #0 with 64 workers ended up with desired=80,
+    // reservable=80, sendable=0 -- it could neither help buttress its own #27 nor
+    // capture #0, even though either move would address the situation).
+    public static int GetImmediateEnemyPressure(AI_NodeState node)
+    {
+        int heatBonus = node.AttackHeat > 0f
+            ? (int)Math.Ceiling(node.AttackHeat * attackHeatToPressureMultiplier)
+            : 0;
+        return node.NumEnemiesInNeighborNodes + heatBonus + node.IncomingHostileWorkers;
+    }
+
+    // Source-side reservation sizing: how many workers a node must keep on hand against
+    // its OWN immediate enemy pressure before any can be sent elsewhere. Uses raw 1:1
+    // visible pressure (immediate enemies + heat + incoming hostile) -- NO personality,
+    // overkill, or chokepoint scaling. Those scalings live in GetDesiredFrontierWorkers
+    // and express how many workers the AI *wants* on this node (for goal value, deficit
+    // sizing, and buttress demand). Applying them to source RESERVATION as well locks up
+    // high-def AIs entirely: a def=2 chokepoint with cap 320 ends up reserving min(320,
+    // pressure*8) == 320 against any pressure >= 40, and never sends anything anywhere
+    // even when its garrison massively exceeds the visible threat. Bug seen: Blue at #27
+    // had 590/640 vs pressure 299 -- 291 spare workers -- but reservation was 640 and the
+    // node sent nothing, leaving Blue paralyzed with 1199 total workers and zero attacks.
+    // Reservation here is the bare-minimum "don't leave the node weaker than the current
+    // attackers"; the "I want more" preference is expressed via goal/deficit, not by
+    // hoarding source workers indefinitely.
+    public static int GetReservedForImmediateDefense(AI_NodeState node, PlayerData player)
+    {
+        int pressure = GetImmediateEnemyPressure(node);
+        if (pressure <= 0) return 0;
+        return Math.Min(node.MaxWorkers, pressure);
+    }
+
     public static bool NeedsFrontierButtress(AI_NodeState node, PlayerData player = null)
     {
         const int minDeficit = 2;
@@ -676,21 +746,31 @@ public static class AI_ActionHeuristics
         // (0.0) demands surviving the full predicted force 1:1, risky (1.0) accepts up to a
         // 2:1 disadvantage and trusts buttressing to backfill.
         //
-        // Exception ("defensively free upgrade"): when the node is BOTH over-cap AND already
-        // outmatched pre-upgrade, the veto is wrong-headed. Over-cap workers decay back to
-        // MaxWorkers anyway (one per worker-gen tick), so the long-run "real" garrison is
-        // MaxWorkers either way; and pre-upgrade we already can't hold against the predicted
-        // force, so halving doesn't transition us from "can hold" to "cannot hold" -- both
-        // states lose to a full assault. Refusing to upgrade in that situation just preserves
-        // a shrinking stockpile under a smaller cap, which is strictly worse long-term.
-        // The veto is reserved for the case it was designed for: a defensible pre-upgrade
-        // state that the halving would push into indefensible territory.
+        // The veto is suppressed when the upgrade is "defensively free" -- the halving
+        // doesn't materially worsen our defensive picture. Two cases qualify:
+        //   (a) post-upgrade workers still meet or exceed MaxWorkers: the over-cap stockpile
+        //       absorbed the entire halving cost; our long-run "real" garrison is unchanged.
+        //       (#0 sitting at 295/10 is the canonical example -- halving to 147 still way
+        //       above MaxWorkers=10, and the 148 lost workers would have decayed at one per
+        //       gen-tick regardless.)
+        //   (b) we're already outmatched pre-upgrade AND the marginal additional shortfall
+        //       from halving is no worse than the existing shortfall. If we couldn't have
+        //       held the node either way at full force, the upgrade's halving doesn't
+        //       transition us from "can hold" to "cannot hold". (#10 at 40/40 facing 94
+        //       pressure qualifies: pre-shortfall 54, post-shortfall 74, marginal 20 < 54.)
+        //       The "no worse than" gate is what filters out the genuinely-suicidal case
+        //       of a small node BARELY outmatched (10/10 vs pressure 13: marginal 5 >
+        //       pre 3, halving would more than double our exposure).
         int postUpgradeWorkers = node.NumWorkers / 2;
         float requiredRatio = 1f - 0.5f * Mathf.Clamp01(riskTolerance);
         float requiredForce = effectivePressure * requiredRatio;
-        bool isOverCap = node.NumWorkers > node.MaxWorkers;
+        int preShortfall = Math.Max(0, effectivePressure - node.NumWorkers);
+        int postShortfall = Math.Max(0, effectivePressure - postUpgradeWorkers);
+        int marginalShortfall = postShortfall - preShortfall;
+        bool postUpgradeStillAtCap = postUpgradeWorkers >= node.MaxWorkers;
         bool alreadyOutmatched = defensiveImperative && node.NumWorkers < requiredForce;
-        bool upgradeIsDefensivelyFree = isOverCap && alreadyOutmatched;
+        bool marginalShortfallTolerable = alreadyOutmatched && marginalShortfall <= preShortfall;
+        bool upgradeIsDefensivelyFree = postUpgradeStillAtCap || marginalShortfallTolerable;
 
         if (defensiveImperative && !upgradeIsDefensivelyFree)
         {
@@ -724,12 +804,12 @@ public static class AI_ActionHeuristics
         // the moment it launches) still penalizes the upgrade. Without this, the AI literally
         // could not see the army that was already on its way.
         //
-        // Suppressed when the upgrade is "defensively free" (over-cap AND already outmatched):
-        // applying a huge quadratic outnumbered penalty there would re-veto the upgrade
-        // through the back door even though we already established the veto shouldn't fire.
-        // The overcrowding bonus above wants to push the heuristic high; this penalty would
-        // otherwise cancel it out and the AI would still refuse to upgrade a 295/10 node
-        // facing 641 enemy force.
+        // Suppressed when the upgrade is "defensively free" (see veto comment): applying
+        // a huge quadratic outnumbered penalty there would re-veto the upgrade through the
+        // back door even though we already established the veto shouldn't fire. The
+        // overcrowding/defensive-imperative bonuses above want to push the heuristic high;
+        // this penalty would otherwise cancel them out and the AI would still refuse to
+        // upgrade a 295/10 node facing 641 enemy force, or a 40/40 chokepoint facing 94.
         int outnumberedBy = effectivePressure - node.NumWorkers;
         if (outnumberedBy > 0 && !upgradeIsDefensivelyFree)
         {
@@ -1082,21 +1162,23 @@ public static class AI_ActionHeuristics
                 bool sourceHotterThanDest = node.AttackHeat >= AttackHeatChokepointThreshold
                                             && node.AttackHeat > toNode.AttackHeat;
                 // Also refuse sources that are themselves an undergarrisoned frontier by
-                // visible (snapshot + heat + incoming) pressure, even when AttackHeat
-                // hasn't risen yet. AttackHeat is post-hoc -- a chokepoint can have a
-                // massive enemy stack one hop away with zero heat because no attacker has
-                // resolved yet. The old AttackHeat-only guard let exactly that case happen:
-                // #11 (6/10, edge, sharing the SAME 576-enemy neighbor as #0) qualified as
-                // a source for #0 just because nothing had hit it yet. The guard only
-                // triggers when the SOURCE's own pressure is at least as high as the
-                // destination's -- otherwise a lightly-pressured frontier still can't help
-                // a more-pressured one.
+                // IMMEDIATE enemy pressure (real enemy neighbors + heat + incoming hostile),
+                // even when AttackHeat hasn't risen yet. AttackHeat is post-hoc -- a
+                // chokepoint can have a massive enemy stack one hop away with zero heat
+                // because no attacker has resolved yet. Uses immediate-enemy pressure
+                // rather than effective pressure so a node merely adjacent to a contested
+                // neutral isn't falsely flagged as hot (otherwise #10 at 80/80 facing a
+                // contested neutral #0 with 64 workers would be excluded as a buttress
+                // source for #27 even though #10 has no actual enemy neighbors). The guard
+                // only triggers when the SOURCE's own real pressure is at least as high as
+                // the destination's -- a lightly-pressured frontier can still help a
+                // more-pressured one.
                 bool sourceIsHotFrontier =
-                    GetDesiredFrontierWorkers(node, player) > node.NumWorkers
-                    && GetEffectiveFrontierPressure(node) >= GetEffectiveFrontierPressure(toNode);
+                    GetReservedForImmediateDefense(node, player) > node.NumWorkers
+                    && GetImmediateEnemyPressure(node) >= GetImmediateEnemyPressure(toNode);
                 if (!sourceHotterThanDest && !sourceIsHotFrontier)
                 {
-                    int keepAtSource = Math.Max(minWorkersInNodeBeforeConsideringSendingAnyOut, GetDesiredFrontierWorkers(node, player));
+                    int keepAtSource = Math.Max(minWorkersInNodeBeforeConsideringSendingAnyOut, GetReservedForImmediateDefense(node, player));
                     int excess = node.NumWorkers - keepAtSource;
                     if (excess > 0)
                     {

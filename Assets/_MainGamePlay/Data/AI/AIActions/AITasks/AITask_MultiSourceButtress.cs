@@ -102,9 +102,18 @@ public class AITask_MultiSourceButtress : AITask
         int totalWilling = 0;
         for (int i = 0; i < numFound; i++)
         {
+            var source = friendlyNeighborBuffer[i];
             int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(
-                friendlyNeighborBuffer[i], minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
+                source, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
             if (willing <= 0) continue;
+            // Mirror TryPlanAllocations' drip filter so the prefer-multi-source decision
+            // sees only the sources that would actually contribute. Otherwise a node with
+            // four 2-willing neighbors and one 7-willing neighbor would count totalWilling=15
+            // and prefer multi-source, when in reality the planner would skip the four
+            // drip-sized contributions and only have one source to fall back on.
+            // Overflow exception requires MEANINGFUL overflow (see TryButtressOwnedNode).
+            bool sourceMeaningfullyOverflowing = source.NumWorkers > source.MaxWorkers + AI_ActionHeuristics.MinButtressWaveSize;
+            if (willing < AI_ActionHeuristics.MinButtressWaveSize && !sourceMeaningfullyOverflowing) continue;
             totalWilling += willing;
             if (willing > bestSingleWilling) bestSingleWilling = willing;
         }
@@ -186,14 +195,15 @@ public class AITask_MultiSourceButtress : AITask
                         && neighbor.AttackHeat > toNode.AttackHeat)
                         continue;
 
-                    // Also refuse undergarrisoned frontier sources by visible pressure (mirrors
-                    // GetButtressSourceNode). AttackHeat is post-hoc -- a frontier sharing the
-                    // same massive-enemy neighbor as the dest registers low heat right up until
-                    // it's first hit, so a heat-only guard would happily drain it. Guard only
-                    // fires when the source's own visible pressure is at least as bad as the
-                    // destination's; a lightly-pressured frontier can still help a worse one.
-                    if (AI_ActionHeuristics.GetDesiredFrontierWorkers(neighbor, player) > neighbor.NumWorkers
-                        && AI_ActionHeuristics.GetEffectiveFrontierPressure(neighbor) >= AI_ActionHeuristics.GetEffectiveFrontierPressure(toNode))
+                    // Also refuse undergarrisoned frontier sources by IMMEDIATE enemy pressure
+                    // (mirrors GetButtressSourceNode). Uses immediate-enemy pressure rather
+                    // than effective so a node next to a contested neutral isn't falsely
+                    // flagged as hot when its only "pressure" is workers on an unowned node.
+                    // Guard only fires when the source's own real pressure is at least as
+                    // bad as the destination's; a lightly-pressured frontier can still help
+                    // a worse one.
+                    if (AI_ActionHeuristics.GetReservedForImmediateDefense(neighbor, player) > neighbor.NumWorkers
+                        && AI_ActionHeuristics.GetImmediateEnemyPressure(neighbor) >= AI_ActionHeuristics.GetImmediateEnemyPressure(toNode))
                         continue;
 
                     int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(
@@ -223,6 +233,15 @@ public class AITask_MultiSourceButtress : AITask
             int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(
                 node, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
             if (willing <= 0) continue;
+            // Drip-prevention mirror of AITask_TryButtressOwnedNode: skip per-source
+            // contributions below MinButtressWaveSize from non-meaningfully-overflowing
+            // sources, so a multi-source plan can't end-run the single-source guard by
+            // stacking 4-5 separate 1-worker waves on the same destination. Overflow
+            // exception requires MEANINGFUL overflow so 82/80 pingpong-overflow doesn't
+            // bypass the gate.
+            bool sourceMeaningfullyOverflowing = node.NumWorkers > node.MaxWorkers + AI_ActionHeuristics.MinButtressWaveSize;
+            if (willing < AI_ActionHeuristics.MinButtressWaveSize && !sourceMeaningfullyOverflowing)
+                continue;
             int send = Math.Min(willing, remaining);
             allocations[node] = send;
             totalPlanned += send;

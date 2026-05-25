@@ -106,6 +106,20 @@ public class AITask_TryButtressOwnedNode : AITask
         if (numToSend <= 0)
             return false;
 
+        // Drip-prevention: skip 1-2 worker dispatches from non-overflowing sources. Worker
+        // generation on an interior camp constantly ticks NumWorkers one above the source's
+        // reservation floor, and without this gate the AI would dispatch that single spare
+        // worker on every AI tick, producing a steady visible drip of tiny support waves
+        // (#12 6/40 -> #11 sending 1 worker per tick). The overflow exception requires a
+        // MEANINGFUL overflow (more than MinButtressWaveSize past MaxWorkers); a 1-2-worker
+        // overflow doesn't bypass the gate, because that's exactly the pingpong case
+        // (#1 82/80 and #9 80/80 shipping 2-worker overflows back and forth every tick via
+        // the in-between Outpost). True over-cap stockpiles (#0 at 295/10) still bypass the
+        // gate so the decaying surplus drains into useful work instead of just rotting.
+        bool sourceMeaningfullyOverflowing = fromNode.NumWorkers > fromNode.MaxWorkers + AI_ActionHeuristics.MinButtressWaveSize;
+        if (numToSend < AI_ActionHeuristics.MinButtressWaveSize && !sourceMeaningfullyOverflowing)
+            return false;
+
         bestAction = player.AI.GetAIAction();
 
         int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
