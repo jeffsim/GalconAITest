@@ -206,6 +206,21 @@ public class AITask_MultiSourceButtress : AITask
                         && AI_ActionHeuristics.GetImmediateEnemyPressure(neighbor) >= AI_ActionHeuristics.GetImmediateEnemyPressure(toNode))
                         continue;
 
+                    // Anti-shuffle-within-neutral-zone: skip sources whose contested-neutral
+                    // exposure is at least as bad as the destination's, but only when the
+                    // destination's defensive demand is PURELY contested-neutral driven (no
+                    // real immediate enemy threat). When dest has a real enemy threat, the
+                    // source can still help with that fight even if both incidentally touch
+                    // the same neutral. Without the gate, Green's #1 ↔ #9 ping-pong workers
+                    // via #2 because both are adjacent to neutral #0 with 64 workers and
+                    // each tick the other one looks "less covered". Mirrors the guard in
+                    // GetButtressSourceNode so single-source and multi-source agree on
+                    // which neighbors are legitimately "interior" relative to this dest.
+                    if (toNode.NumContestedNeutralWorkersNearby > 0
+                        && AI_ActionHeuristics.GetImmediateEnemyPressure(toNode) == 0
+                        && neighbor.NumContestedNeutralWorkersNearby >= toNode.NumContestedNeutralWorkersNearby)
+                        continue;
+
                     int willing = AI_ActionHeuristics.GetWorkersWillingToSendForDefense(
                         neighbor, minWorkersInNodeBeforeConsideringSendingAnyOut, emergency, toNode.AttackHeat, destNeedsOverkill);
                     if (willing <= 0) continue;

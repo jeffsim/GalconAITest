@@ -15,6 +15,10 @@ public class AITask_CaptureNeutralResourceNode : AITask
         if (fromNode.OwnedBy != player) return 0f;
         if (fromNode.NumWorkers < minWorkersInNodeBeforeConsideringSendingAnyOut) return 0f;
 
+        // Per-toNode danger-blended personality: a resource node deep in contested ground
+        // still costs aggression to grab, even though its base value is the resource bonus.
+        // Compare candidates by post-personality score so a safe but lower-base resource can
+        // beat a juicier but exposed one for a defensive AI.
         float best = 0f;
         foreach (var toNode in fromNode.NeighborNodes)
         {
@@ -26,11 +30,12 @@ public class AITask_CaptureNeutralResourceNode : AITask
                 continue;
 
             float h = AI_ActionHeuristics.GetCaptureResourceNodeHeuristic(aiTownState, toNode, numToSend);
-            if (h > best) best = h;
+            if (h <= 0f) continue;
+            float capturePersonality = AI_ActionHeuristics.GetCapturePersonalityMultiplier(player, toNode);
+            float scored = h * capturePersonality;
+            if (scored > best) best = scored;
         }
-        if (best <= 0f) return 0f;
-
-        return best * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Capture);
+        return best;
     }
 
     public override bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
@@ -56,7 +61,7 @@ public class AITask_CaptureNeutralResourceNode : AITask
 
             float runningPeerBest = bestAction.Score;
             if (bestScoreAmongPeerActions > runningPeerBest) runningPeerBest = bestScoreAmongPeerActions;
-            if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Capture, runningPeerBest))
+            if (ShouldPruneByHeuristic_Capture(heuristicBonus, toNode, runningPeerBest))
                 break;
 
             int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
@@ -66,7 +71,7 @@ public class AITask_CaptureNeutralResourceNode : AITask
             var debuggerEntry = aiDebuggerParentEntry?.AddEntry_CaptureNeutralResourceNode(fromNode, toNode, numSent, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
             var actionScore = GetActionScore(curDepth, debuggerEntry);
-            actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Capture);
+            actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality_Capture(actionScore, heuristicBonus, player, toNode);
             if (actionScore > bestAction.Score)
                 bestAction.SetTo_CaptureNeutralResourceNode(fromNode, toNode, numSent, actionScore, debuggerEntry);
 

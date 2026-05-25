@@ -21,6 +21,16 @@ public partial class PlayerAI
     public AIAction BestNextActionToTake = new();
     // Last meaningful plan/execute; used for map arrows when BestNextActionToTake is cleared or DoNothing.
     public AIAction LastActionToTake = new();
+
+    // Rolling history of the most-recently-EXECUTED actions for this player, formatted at
+    // record time so the entries survive AIAction pool recycling. Capped to keep memory
+    // bounded; consumed by AITestScene_SimulationDump to make ping-pong / oscillation
+    // patterns visible in a state snapshot ("you can see what they've done"). Recorded only
+    // by the executor call sites in TownData, not the planner-side RememberLastAction call
+    // in Update(), so the history contains actions that actually fired, not just ones the
+    // AI was considering.
+    public const int MaxRecentExecutedActions = 100;
+    public List<string> RecentExecutedActions = new();
     AIAction[] actionPool;
     int actionPoolIndex;
 
@@ -125,6 +135,60 @@ public partial class PlayerAI
         if (action == null || action.Type == AIActionType.DoNothing || action.Type == AIActionType.RootAction)
             return;
         LastActionToTake.CopyFrom(action);
+    }
+
+    // Called by the executor (TownData) right when an action actually fires, so the history
+    // reflects what really happened on the board. Format here at record time -- AIAction
+    // instances are pooled and recycled, so storing references would let later searches
+    // overwrite the stored entries. worldTime stamps each entry so consecutive ping-pong
+    // back-and-forth dispatches are visually obvious in the dump.
+    public void RecordExecutedAction(AIAction action, float worldTime)
+    {
+        if (action == null || action.Type == AIActionType.DoNothing || action.Type == AIActionType.RootAction)
+            return;
+        RecentExecutedActions.Add($"t={worldTime:F2} {FormatActionForHistory(action)}");
+        // Trim from the front in batches so we don't pay O(n) per add once we cross the cap.
+        if (RecentExecutedActions.Count > MaxRecentExecutedActions)
+            RecentExecutedActions.RemoveRange(0, RecentExecutedActions.Count - MaxRecentExecutedActions);
+    }
+
+    static string FormatActionForHistory(AIAction action)
+    {
+        switch (action.Type)
+        {
+            case AIActionType.SendWorkersToOwnedNode:
+                return $"Support {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId}";
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                return $"Multi-source support #{action.DestNode?.NodeId} {FormatAttackFromSources(action)}";
+            case AIActionType.ConstructBuildingInEmptyNode:
+                return $"Build {action.BuildingToConstruct?.Id} send {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId}";
+            case AIActionType.CaptureNeutralResourceNode:
+                return $"Capture resource #{action.DestNode?.NodeId} send {action.Count} from #{action.SourceNode?.NodeId}";
+            case AIActionType.CaptureNeutralNode:
+                return $"Build {action.BuildingToConstruct?.Id} on #{action.DestNode?.NodeId} {FormatAttackFromSources(action)}";
+            case AIActionType.UpgradeBuilding:
+                return $"Upgrade #{action.SourceNode?.NodeId}";
+            case AIActionType.AttackToNode:
+                return $"Attack #{action.DestNode?.NodeId} {FormatAttackFromSources(action)}";
+            default:
+                return action.Type.ToString();
+        }
+    }
+
+    static string FormatAttackFromSources(AIAction action)
+    {
+        if (action.AttackFromNodes == null || action.AttackFromNodes.Count == 0)
+            return "from ?";
+        var sb = new System.Text.StringBuilder();
+        sb.Append("from ");
+        bool first = true;
+        foreach (var kvp in action.AttackFromNodes)
+        {
+            if (!first) sb.Append(", ");
+            sb.Append($"#{kvp.Key.NodeId}({kvp.Value})");
+            first = false;
+        }
+        return sb.ToString();
     }
 
     public AIAction GetActionForArrowDisplay()

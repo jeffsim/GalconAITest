@@ -76,4 +76,17 @@ public abstract class AITask
         float optimistic = (player.AI.currentDepthBaselineScore + heuristicBonus) * personality;
         return optimistic <= bestScoreAmongPeerActions * PruningMargin;
     }
+
+    // Capture-specific pruning: the optimistic bound must match the actual scoring formula
+    // (ApplyHeuristicAndPersonality_Capture, which uses the danger-blended terr/agg mix
+    // for the specific toNode). Using the plain GetPersonalityMultiplier(Capture) here
+    // would over-estimate the bound for a contested neutral (multiply by terr instead of
+    // ~agg) and let pruning admit candidates that would never beat their peers post-scoring.
+    protected bool ShouldPruneByHeuristic_Capture(float heuristicBonus, AI_NodeState toNode, float bestScoreAmongPeerActions)
+    {
+        if (bestScoreAmongPeerActions <= 0f) return false;
+        float personality = AI_ActionHeuristics.GetCapturePersonalityMultiplier(player, toNode);
+        float optimistic = (player.AI.currentDepthBaselineScore + heuristicBonus) * personality;
+        return optimistic <= bestScoreAmongPeerActions * PruningMargin;
+    }
 }

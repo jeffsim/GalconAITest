@@ -35,6 +35,12 @@ public class AITask_ConstructBuilding : AITask
 
         // Best heuristic across (neighbor, building) pairs reachable from this fromNode.
         // Reuses the same selector the simulation loop uses so Phase 1 and Phase 2 agree.
+        // Multiply each candidate's heuristic by ITS OWN danger-blended capture personality
+        // before comparing -- a contested toNode (e.g. peak chokepoint surrounded by
+        // contested-neutral workers) gets agg-weighted, a safe interior neutral gets terr-
+        // weighted. Without the per-toNode multiplier, a single high-raw-heuristic candidate
+        // at a dangerous site would win the per-fromNode preview and crowd out the safer
+        // neighbor whose post-personality score would actually be higher.
         float bestSiteScore = 0f;
         foreach (var toNode in fromNode.NeighborNodes)
         {
@@ -42,15 +48,14 @@ public class AITask_ConstructBuilding : AITask
             if (toNode.HasBuilding) continue;
 
             int topCount = SelectTopBuildingsForSite(toNode);
-            if (topCount > 0 && topHeuristics[0] > bestSiteScore)
-                bestSiteScore = topHeuristics[0];
-        }
-        if (bestSiteScore <= 0f) return 0f;
+            if (topCount <= 0) continue;
 
-        // All Construct sites are empty neutrals (territory expansion), so use the Capture
-        // personality. This is what distinguishes "send workers to grab a neutral" from
-        // "upgrade an existing building" -- they should react to different personality knobs.
-        return bestSiteScore * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Capture);
+            float capturePersonality = AI_ActionHeuristics.GetCapturePersonalityMultiplier(player, toNode);
+            float scored = topHeuristics[0] * capturePersonality;
+            if (scored > bestSiteScore)
+                bestSiteScore = scored;
+        }
+        return bestSiteScore;
     }
 
     override public bool TryTask(AI_NodeState fromNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
@@ -94,9 +99,11 @@ public class AITask_ConstructBuilding : AITask
                 // Branch-and-bound: skip simulate+recurse when the heuristic-only optimistic
                 // score for this candidate cannot beat what a peer action has already produced.
                 // After top-K sort, scores are descending, so once one is pruned the rest are
-                // weakly dominated.
+                // weakly dominated. Use the capture-aware bound so the optimistic estimate
+                // matches the post-personality scoring (terr/agg blend for this specific
+                // toNode) -- a plain Capture-bound would over-estimate on contested neutrals.
                 float runningPeerBest = Mathf.Max(bestScoreAmongPeerActions, bestAction.Score);
-                if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Capture, runningPeerBest))
+                if (ShouldPruneByHeuristic_Capture(heuristicBonus, toNode, runningPeerBest))
                     break;
 
                 int d1 = fromNode.NumWorkers, d2 = toNode.NumWorkers;
@@ -111,7 +118,7 @@ public class AITask_ConstructBuilding : AITask
                 var debuggerEntry = aiDebuggerParentEntry?.AddEntry_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
                 var actionScore = GetActionScore(curDepth, debuggerEntry);
-                actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Capture);
+                actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality_Capture(actionScore, heuristicBonus, player, toNode);
                 if (actionScore > bestAction.Score)
                     bestAction.SetTo_ConstructBuildingInEmptyNode(fromNode, toNode, numSent, buildingDefn, actionScore, debuggerEntry);
 

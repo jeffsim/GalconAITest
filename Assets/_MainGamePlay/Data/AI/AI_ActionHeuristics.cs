@@ -98,6 +98,80 @@ public static class AI_ActionHeuristics
         };
     }
 
+    // Threshold (in enemy/contested-neutral workers adjacent to the capture target) at which
+    // a neutral-capture is treated as a fully-aggressive frontier extension rather than a
+    // safe territorial expansion. Sub-threshold exposure scales linearly between the two.
+    // Tuned so that a single ~10-worker enemy neighbor already counts as "half aggressive" --
+    // a defensive AI (agg=0) then refuses contested captures while still happily grabbing
+    // safe interior neutrals.
+    public const float CaptureDangerExposureThreshold = 20f;
+
+    // Sum of enemy + enemy-adjacent-neutral worker counts around a NEUTRAL capture target.
+    // Mirrors UpdateTerritoryDetails's contested-neutral accounting but evaluated for an
+    // unowned target node (where UpdateTerritoryDetails leaves NumEnemies/Contested at 0).
+    // Returns "how much hostile pressure would land on this node if we captured it RIGHT
+    // NOW". Used by GetCapturePersonalityMultiplier to classify the capture as safe-
+    // expansion vs aggressive-frontier-push.
+    public static int GetNeutralCaptureExposure(AI_NodeState toNode, PlayerData player)
+    {
+        if (toNode == null) return 0;
+        int exposure = 0;
+        var neighbors = toNode.NeighborNodes;
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            var nn = neighbors[i];
+            if (nn.OwnedBy == player) continue;
+            if (nn.OwnedBy != null)
+            {
+                exposure += nn.NumWorkers;
+            }
+            else if (NeutralNeighborTouchesEnemy(nn, player))
+            {
+                exposure += nn.NumWorkers;
+            }
+        }
+        return exposure;
+    }
+
+    // Personality multiplier for capturing a NEUTRAL target. Blends TerritoryExpansionWeight
+    // (safe interior expansion) with AggressivenessWeight (frontier push into contested
+    // ground) based on how exposed the target is. Without this blend a high-def / zero-agg
+    // AI with terr=1.2 still ran capture at full terr strength regardless of how
+    // contested the target was, so it would happily march through #5 -> #7 -> #27 grabbing
+    // the peak chokepoint surrounded by 76 contested-neutral workers -- the opposite of
+    // "defensive". With the blend, contested captures collapse to agg-weight (0 for a
+    // pacifist) and the AI refuses them, while safe-interior captures remain terr-weighted.
+    //
+    // For an OWNED target (re-capture from enemy) the call falls back to the legacy
+    // pure-territory multiplier; aggression already gates the Attack action that delivers
+    // the workers, so double-gating here would zero out enemy captures for any peaceful AI
+    // that nevertheless has terr > 0.
+    public static float GetCapturePersonalityMultiplier(PlayerData player, AI_NodeState toNode)
+    {
+        var aiDefn = player.AIDefn;
+        if (aiDefn == null) return 1f;
+        if (toNode == null || toNode.OwnedBy != null)
+            return aiDefn.TerritoryExpansionWeight;
+
+        float terr = aiDefn.TerritoryExpansionWeight;
+        float agg = aiDefn.AggressivenessWeight;
+        int exposure = GetNeutralCaptureExposure(toNode, player);
+        float dangerFraction = Mathf.Clamp01(exposure / CaptureDangerExposureThreshold);
+        return terr * (1f - dangerFraction) + agg * dangerFraction;
+    }
+
+    // Mirror of ApplyHeuristicAndPersonality for capture actions, except the personality is
+    // the danger-blended capture multiplier so contested-neutral grabs get the aggression
+    // weight while safe interior grabs get the territory weight. Recursive search call sites
+    // (TryTask) must use this instead of ApplyHeuristicAndPersonality(..., Capture) so the
+    // final action score matches the Phase-1 PreviewHeuristic ranking and the
+    // ShouldPruneByHeuristic bound.
+    public static float ApplyHeuristicAndPersonality_Capture(float simulationScore, float heuristicBonus, PlayerData player, AI_NodeState toNode)
+    {
+        float personality = GetCapturePersonalityMultiplier(player, toNode);
+        return (simulationScore + heuristicBonus) * personality;
+    }
+
     // How willing this AI is to upgrade a threatened node without first overloading it.
     // 1.0 = aggressive (upgrades immediately, accepts halved garrison under fire)
     // 0.0 = cautious (demands full overload buffer before upgrading under threat)
@@ -1176,7 +1250,30 @@ public static class AI_ActionHeuristics
                 bool sourceIsHotFrontier =
                     GetReservedForImmediateDefense(node, player) > node.NumWorkers
                     && GetImmediateEnemyPressure(node) >= GetImmediateEnemyPressure(toNode);
-                if (!sourceHotterThanDest && !sourceIsHotFrontier)
+                // Anti-shuffle-within-neutral-zone: when the destination's defensive
+                // demand is driven PURELY by a contested neutral (no real immediate
+                // enemy threat), a source whose contested-neutral exposure is at
+                // least the destination's contributes ZERO net defense -- both nodes
+                // face the same neutral threat, and shipping from one to the other
+                // just relocates the same workers inside the threat zone. Without
+                // this guard, two frontier nodes adjacent to the same contested
+                // neutral (Green's #1 at 36/40 and #9 at 8/40 next to neutral #0
+                // with 64 workers) take turns being each other's source/destination
+                // -- each tick whichever currently has more workers ships some to
+                // the other, then the other side now looks "less covered" and ships
+                // back. The dispatched workers never change the total workers in the
+                // threat zone. Interior sources with strictly less contested exposure
+                // (e.g. Green's #2 at 0 contested) ADD new workers and are still
+                // accepted; and if the destination has a REAL immediate threat
+                // (Blue's #10 facing Red's #11), the source can legitimately help
+                // with THAT fight even if both incidentally touch the same neutral.
+                bool destPureContestedThreat =
+                    toNode.NumContestedNeutralWorkersNearby > 0
+                    && GetImmediateEnemyPressure(toNode) == 0;
+                bool shuffleWithinSameNeutralZone =
+                    destPureContestedThreat
+                    && node.NumContestedNeutralWorkersNearby >= toNode.NumContestedNeutralWorkersNearby;
+                if (!sourceHotterThanDest && !sourceIsHotFrontier && !shuffleWithinSameNeutralZone)
                 {
                     int keepAtSource = Math.Max(minWorkersInNodeBeforeConsideringSendingAnyOut, GetReservedForImmediateDefense(node, player));
                     int excess = node.NumWorkers - keepAtSource;

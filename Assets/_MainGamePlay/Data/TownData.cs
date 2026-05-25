@@ -638,6 +638,7 @@ public class TownData
 
         // After dispatching, keep LastActionToTake for the map arrow and zero the live plan.
         player.AI.RememberLastAction(action);
+        player.AI.RecordExecutedAction(action, WorldTime);
         player.AI.BestNextActionToTake.SetToNothing();
     }
 
@@ -770,6 +771,7 @@ public class TownData
             if (moveToMake == null || moveToMake.Type == AIActionType.DoNothing) continue; // wasn't updated
 
             player.AI.RememberLastAction(moveToMake);
+            player.AI.RecordExecutedAction(moveToMake, WorldTime);
 
             // Convert from ai node data to real node data
             var fromNode = moveToMake.SourceNode?.RealNode;

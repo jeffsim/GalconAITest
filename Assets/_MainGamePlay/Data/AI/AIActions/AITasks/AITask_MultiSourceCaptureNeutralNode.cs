@@ -39,7 +39,7 @@ public class AITask_MultiSourceCaptureNeutralNode : AITask
         float h = AI_ActionHeuristics.GetBuildHeuristic(aiTownState, topBuildings[0], toNode);
         if (h <= 0f) return 0f;
 
-        return h * AI_ActionHeuristics.GetPersonalityMultiplier(player, AIHeuristicActionType.Capture);
+        return h * AI_ActionHeuristics.GetCapturePersonalityMultiplier(player, toNode);
     }
 
     public override bool TryTask(AI_NodeState toNode, int curDepth, int actionNumberOnEntry, AIDebuggerEntryData aiDebuggerParentEntry, float bestScoreAmongPeerActions, out AIAction bestAction)
@@ -76,7 +76,7 @@ public class AITask_MultiSourceCaptureNeutralNode : AITask
             if (buildingDefn == null) continue;
 
             float runningPeerBest = Mathf.Max(bestScoreAmongPeerActions, bestAction.Score);
-            if (ShouldPruneByHeuristic(heuristicBonus, AIHeuristicActionType.Capture, runningPeerBest))
+            if (ShouldPruneByHeuristic_Capture(heuristicBonus, toNode, runningPeerBest))
                 break;
 
             int d2 = toNode.NumWorkers;
@@ -88,7 +88,7 @@ public class AITask_MultiSourceCaptureNeutralNode : AITask
             var debuggerEntry = aiDebuggerParentEntry?.AddEntry_CaptureNeutralNode(captureFromNodes, toNode, buildingDefn, 0, player.AI.debugOutput_ActionsTried++, curDepth);
 
             var actionScore = GetActionScore(curDepth, debuggerEntry);
-            actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality(actionScore, heuristicBonus, player, AIHeuristicActionType.Capture);
+            actionScore = AI_ActionHeuristics.ApplyHeuristicAndPersonality_Capture(actionScore, heuristicBonus, player, toNode);
             if (actionScore > bestAction.Score)
                 bestAction.SetTo_CaptureNeutralNode(captureFromNodes, toNode, buildingDefn, actionScore, debuggerEntry);
 

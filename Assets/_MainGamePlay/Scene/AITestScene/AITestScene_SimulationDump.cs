@@ -116,8 +116,24 @@ public partial class AITestScene
             AppendPlannedActionPath(sb, player);
             AppendGoals(sb, player);
             AppendResourceDemand(sb, player);
+            AppendRecentActions(sb, player);
             sb.AppendLine();
         }
+    }
+
+    void AppendRecentActions(StringBuilder sb, PlayerData player)
+    {
+        var history = player.AI?.RecentExecutedActions;
+        if (history == null || history.Count == 0)
+        {
+            sb.AppendLine("    recentActions: (none)");
+            return;
+        }
+        sb.AppendLine($"    recentActions (last {history.Count}, oldest first):");
+        // Most-recent-last matches how a player reads a log -- scroll to the bottom for "now".
+        // Cap on PlayerAI.MaxRecentExecutedActions guarantees this stays bounded.
+        for (int i = 0; i < history.Count; i++)
+            sb.AppendLine($"      {history[i]}");
     }
 
     void AppendGoals(StringBuilder sb, PlayerData player)

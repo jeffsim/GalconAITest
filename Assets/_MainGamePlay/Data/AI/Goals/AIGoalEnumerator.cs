@@ -107,12 +107,17 @@ public static class AIGoalEnumerator
                 reason = "enemy " + reason;
             }
 
-            // Half the personality mix comes from aggression (taking from a known enemy) and
-            // half from territory expansion (gaining new ground). For neutral nodes, only
-            // territory expansion applies -- aggression has no enemy to act on.
+            // Personality mix:
+            //   Enemy-owned target -> 50/50 aggression+territory (taking from a known enemy
+            //     and gaining new ground both apply).
+            //   Neutral target     -> danger-blended terr/agg via GetCapturePersonalityMultiplier.
+            //     Safe interior neutral: pure territory weight. Contested neutral surrounded by
+            //     enemies / contested-neutrals (e.g. a peak chokepoint in no-man's-land):
+            //     collapses to aggression weight, so a pacifist AI's CaptureNode goal for a
+            //     far chokepoint drops below MinGoalValue and stops driving resource demand.
             float personalityMix = node.OwnedBy != null
                 ? (aggression * 0.5f + territoryExpansion * 0.5f)
-                : territoryExpansion;
+                : AI_ActionHeuristics.GetCapturePersonalityMultiplier(player, node);
 
             // Chokepoint amplifier: a CaptureNode goal targeting a structural chokepoint is
             // worth significantly more than capturing a leaf node. Scaled by aggressiveness
@@ -135,6 +140,14 @@ public static class AIGoalEnumerator
             goal.TargetNode = node;
             goal.Value = value;
             goal.HorizonTurns = horizon;
+            if (node.OwnedBy == null)
+            {
+                // Surface the danger-blend in the dump so it's obvious WHY a peaceful AI
+                // declines a contested neutral (mix collapses toward AggressivenessWeight)
+                // while still pursuing safe ones (mix stays near TerritoryExpansionWeight).
+                int exposure = AI_ActionHeuristics.GetNeutralCaptureExposure(node, player);
+                reason += $" mix={personalityMix:F2} exposure={exposure}";
+            }
             if (node.ChokepointScore > 0.05f)
                 reason += $" (choke={node.ChokepointScore:F2})";
             goal.DebugReason = reason;
@@ -153,7 +166,15 @@ public static class AIGoalEnumerator
         for (int i = 0; i < numNodes; i++)
         {
             var node = nodes[i];
-            if (node.OwnedBy != player) continue;
+            // Use REAL game ownership, not the mirror's PendingCaptureBy lie. The lie is
+            // there to dedupe offensive sends (Capture/Construct/Attack) onto a target
+            // we're already capturing; it should NOT promote that in-flight capture target
+            // to "owned territory needing defense" -- otherwise an AI that already
+            // committed workers to a contested neutral keeps generating high-value
+            // DefendFrontier goals for the not-yet-owned node and may pile on additional
+            // buttress sends, compounding a commitment the danger-blended capture
+            // multiplier is specifically trying to discourage.
+            if (node.RealNode == null || node.RealNode.OwnedBy != player) continue;
 
             int enemyForce = AI_ActionHeuristics.GetFrontierPressure(node);
             if (enemyForce <= 0) continue;
