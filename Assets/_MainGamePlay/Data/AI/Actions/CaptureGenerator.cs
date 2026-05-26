@@ -72,9 +72,16 @@ public class CaptureGenerator : IActionGenerator
         }
         if (bestSource == null || bestSafe < StrategicAnalysis.MinCaptureWave) return;
 
+        // Capture-flip rule (TownData.ResolveWorkerArrival neutral branch): each attacker
+        // trades 1:1 with the neutral garrison, then the NEXT arrival captures. So we need
+        // (defenders + 1) attackers to LAND, scaled by AttackOverkill. Neutrals don't
+        // generate workers, so no travel regen term is needed here.
         int defenderGarrison = target.NumWorkers;
-        int required = Mathf.CeilToInt(Mathf.Max(1, defenderGarrison) * p.AttackOverkill);
+        int required = Mathf.CeilToInt((defenderGarrison + 1) * p.AttackOverkill);
         int send = Mathf.Clamp(required, StrategicAnalysis.MinCaptureWave, bestSafe);
+        // Refuse to dribble: if even the largest single source can't muster the full
+        // capture-flip wave, skip rather than send a doomed partial attack.
+        if (send < required) return;
 
         var c = ai.AcquireCandidate();
         c.Type = AIActionType.CaptureNeutralResourceNode;
@@ -104,8 +111,11 @@ public class CaptureGenerator : IActionGenerator
         if (sources.Count == 0) return;
         sources.Sort((a, b) => analysis.SafeToSendFrom[b.Index].CompareTo(analysis.SafeToSendFrom[a.Index]));
 
-        int defenderGarrison = target.NumWorkers; // usually 0 for an empty neutral, but neutrals can have wild garrisons.
-        int required = Mathf.CeilToInt(Mathf.Max(1, defenderGarrison) * p.AttackOverkill);
+        // Capture-flip: (defenders + 1) attackers landed, scaled by overkill. Empty
+        // neutrals usually have 0 defenders, but un-built neutrals occasionally carry a
+        // wild garrison.
+        int defenderGarrison = target.NumWorkers;
+        int required = Mathf.CeilToInt((defenderGarrison + 1) * p.AttackOverkill);
         if (required < StrategicAnalysis.MinCaptureWave) required = StrategicAnalysis.MinCaptureWave;
 
         // Reusable allocation: prefer single-source when possible; otherwise multi.

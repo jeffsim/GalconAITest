@@ -76,8 +76,11 @@ public class BuildGenerator : IActionGenerator
         if (affordable.Count == 0) return;
         affordable.Sort((a, b) => b.quickScore.CompareTo(a.quickScore));
 
+        // Capture-flip: need (defenders + 1) attackers to LAND alive at the neutral so
+        // the post-trade arrival flips ownership and constructs the building. Empty
+        // neutrals are usually 0 defenders, but a wild garrison occasionally exists.
         int defenderGarrison = target.NumWorkers;
-        int required = Mathf.CeilToInt(Mathf.Max(1, defenderGarrison) * p.AttackOverkill);
+        int required = Mathf.CeilToInt((defenderGarrison + 1) * p.AttackOverkill);
         int send = Mathf.Clamp(required, StrategicAnalysis.MinCaptureWave, safeToSend);
 
         int emitted = 0;

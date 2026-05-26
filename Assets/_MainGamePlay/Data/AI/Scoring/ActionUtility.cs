@@ -67,22 +67,67 @@ public static class ActionUtility
         float baseValue = AttackBase + ValueOfEnemyNode(target);
         float chokeMult = 1f + target.ChokepointScore * ChokepointAttackAmp * p.Aggression;
 
-        // Force margin: do we have meaningfully MORE than required? Below 1.0 = drip-feed,
-        // veto. At 1.0 = bare minimum win. Above 1.5 = comfortable. We don't reward
-        // huge overkill (the wasted workers belong elsewhere).
-        int requiredForce = Mathf.CeilToInt(target.NumWorkers * p.AttackOverkill);
-        if (sent < requiredForce || sent <= 0)
+        // Force margin: do we have meaningfully MORE than required to actually CAPTURE
+        // (not just reduce defenders to 0)? AttackSizing is the single source of truth
+        // shared with AttackGenerator; using it here means the scorer and generator
+        // never disagree about what "enough force" means. The freshly-dispatched wave
+        // (sent) plus already-in-flight attackers must clear `requiredTotal` together.
+        int sourceHops = MinSourceHops(target, c, view);
+        int requiredTotal = AttackSizing.RequiredAttackersToCapture(target, p, sourceHops);
+        int committed = sent + target.IncomingMyAttackers;
+        if (committed < requiredTotal || sent <= 0)
         {
             c.Score = 0f;
-            c.Reason = $"attack #{target.NodeId} viability: sent {sent} < req {requiredForce}";
+            c.Reason = $"attack #{target.NodeId} viability: sent {sent}+inflight {target.IncomingMyAttackers}={committed} < req {requiredTotal} (defenders={target.EnemyEffectiveDefense}, hops={sourceHops})";
             return;
         }
-        float marginBonus = Mathf.Min(2f, sent / (float)Mathf.Max(1, requiredForce)) - 1f;
+        float marginBonus = Mathf.Min(2f, committed / (float)Mathf.Max(1, requiredTotal)) - 1f;
 
         float risk = ComputeRiskFromSources(c, analysis, p);
 
         c.Score = (baseValue + marginBonus * 4f) * p.Aggression * chokeMult - risk;
-        c.Reason = $"attack #{target.NodeId} base={baseValue:F1} choke={chokeMult:F2} agg={p.Aggression:F2} risk={risk:F1}";
+        c.Reason = $"attack #{target.NodeId} base={baseValue:F1} choke={chokeMult:F2} agg={p.Aggression:F2} risk={risk:F1} req={requiredTotal} sent={sent} inflight={target.IncomingMyAttackers}";
+    }
+
+    /// Estimates the BFS depth of the closest source actually contributing to this
+    /// candidate. The generator already picks sources by SafeToSendFrom-descending so
+    /// "closest contributing" is a reasonable proxy; for scoring purposes we just need
+    /// a hop count to feed into the regen estimate, and an over-estimate is harmless
+    /// (it slightly increases required, which the generator already ensured is met).
+    static int MinSourceHops(AI_NodeState target, AICandidate c, AIWorldView view)
+    {
+        int min = int.MaxValue;
+        if (c.Sources.Count > 0)
+        {
+            foreach (var kv in c.Sources)
+            {
+                int hops = HopsBetween(target, kv.Key);
+                if (hops > 0 && hops < min) min = hops;
+            }
+        }
+        else if (c.SourceNode != null)
+        {
+            int hops = HopsBetween(target, c.SourceNode);
+            if (hops > 0) min = hops;
+        }
+        return min == int.MaxValue ? 1 : min;
+    }
+
+    /// Cheap 1- or 2-hop test: source adjacent to target -> 1; otherwise check whether
+    /// any 1-hop neighbor of source is adjacent to target -> 2; otherwise default to 2
+    /// (the generator's MaxHops). Avoids a full BFS in the scorer.
+    static int HopsBetween(AI_NodeState target, AI_NodeState source)
+    {
+        if (target == null || source == null) return 1;
+        for (int i = 0; i < target.NumNeighbors; i++)
+            if (target.NeighborNodes[i] == source) return 1;
+        for (int i = 0; i < source.NumNeighbors; i++)
+        {
+            var mid = source.NeighborNodes[i];
+            for (int j = 0; j < mid.NumNeighbors; j++)
+                if (mid.NeighborNodes[j] == target) return 2;
+        }
+        return 2;
     }
 
     static float ValueOfEnemyNode(AI_NodeState target)

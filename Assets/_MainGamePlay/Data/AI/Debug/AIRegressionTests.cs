@@ -53,6 +53,14 @@ public static class AIRegressionTests
         Run(results, "no gatherer build without adjacent resource", Test_GathererNeedsAdjacentResource);
         Run(results, "no reinforce on neutral with capture in flight", Test_NoReinforceOnPendingCapture);
 
+        // Attack sizing (the drip-feed fix). These exercise the rules that the previous
+        // version of AttackGenerator was violating: capture-flip (+1), travel-time regen,
+        // and anti-dribble (no partial waves at a regenerating defender).
+        Run(results, "attack must exceed defenders to capture", Test_AttackSizesForCaptureFlip);
+        Run(results, "attack accounts for defender regen during travel", Test_AttackAccountsForRegen);
+        Run(results, "no dribble against a regenerating defender", Test_NoDribbleAttackOnBarracks);
+        Run(results, "attack credits already-in-flight wave", Test_AttackCreditsInFlight);
+
         sw.Stop();
         bool allPassed = true;
         foreach (var r in results) if (!r.Passed) { allPassed = false; break; }
@@ -220,15 +228,17 @@ public static class AIRegressionTests
     // 6) Multi-source attack: when no single source can muster enough force alone, the AI
     //    should accumulate workers from multiple sources via BFS. We use a 4-node layout
     //    with two interior sources (#1, #2) feeding through a frontier relay (#3) into the
-    //    enemy (#4) -- this way the interior sources aren't drained by their own defensive
-    //    reserve and have spare workers to allocate to the wave.
+    //    enemy (#4). The relay (#3) is drained by its own defensive reserve so it cannot
+    //    contribute, forcing the wave to be assembled from the depth-2 interior nodes.
+    //    Capture-flip + travel-regen-sized attack requires ~14 workers landed; each
+    //    interior source individually has only 9 safe to send, so multi-source is forced.
     static void Test_MultiSourceAttack()
     {
         var w = new TestWorld();
-        w.AddNode(1, owner: 1, workers: 8, hasGenerator: true); // interior source
-        w.AddNode(2, owner: 1, workers: 8, hasGenerator: true); // interior source
-        w.AddNode(3, owner: 1, workers: 5, hasGenerator: true); // frontier relay
-        w.AddNode(4, owner: 2, workers: 6, hasGenerator: true); // enemy (single src can't muster ceil(6*1.25)=8 alone after MinReserve)
+        w.AddNode(1, owner: 1, workers: 12, hasGenerator: true); // interior source (safe ~9)
+        w.AddNode(2, owner: 1, workers: 12, hasGenerator: true); // interior source (safe ~9)
+        w.AddNode(3, owner: 1, workers: 5, hasGenerator: true); // frontier relay (no safe spare)
+        w.AddNode(4, owner: 2, workers: 6, hasGenerator: true); // enemy (capture-flip+regen sized > single source can muster)
         w.Connect(1, 3);
         w.Connect(2, 3);
         w.Connect(3, 4);
@@ -440,12 +450,15 @@ public static class AIRegressionTests
 
     static float RunAttackScore(float aggression)
     {
-        // Source workers must be <= MaxWorkers so the over-cap surplus bonus does not pull
-        // UpgradeBuilding into competition with the attack we want to isolate. workers=9
-        // means safe = 9-MinReserve(2)-pressure(2) = 5 = exactly enough for a 5-worker attack
-        // (required = ceil(2 * 1.25) = 3, but we send at least 3).
+        // Source needs enough workers to mount the new capture-flip + travel-regen sized
+        // attack. With Caution=1 (AttackOverkill=1.25), enemy at 2/10 with 1-hop travel,
+        // regen ~= floor(1*8/2) capped at headroom 8 -> 4 expected regen during travel.
+        // Required = ceil((2+4+1)*1.25) = 9 attackers. Source MinReserve(Caution=1) = 3
+        // and frontier pressure from 2 enemy workers = ceil(2*1.25) = 3, so source needs
+        // workers >= 9 + 3 + 3 = 15 to actually be able to dispatch the wave. Use 18 for
+        // headroom (the Aggression-scaling assertion is independent of exact margin).
         var w = new TestWorld();
-        w.AddNode(1, owner: 1, workers: 9, hasGenerator: true);
+        w.AddNode(1, owner: 1, workers: 18, hasGenerator: true);
         w.AddNode(2, owner: 2, workers: 2, hasGenerator: true);
         w.Connect(1, 2);
         w.Build();
@@ -661,6 +674,155 @@ public static class AIRegressionTests
             && act.DestNode != null && act.DestNode.NodeId == 2;
         AssertTrue(!reCapturing,
             "should not double-dispatch capture while one is already in flight");
+    }
+
+    // ============================================================================
+    // Attack sizing (drip-feed regression) coverage
+    // ============================================================================
+
+    // 22) Capture-flip rule: an enemy node with N defenders requires STRICTLY more than N
+    //     attackers landed alive (last attacker flips ownership; the previous N each kill
+    //     one defender and die). The previous bug sized attacks at exactly N and so could
+    //     never actually capture even when math otherwise checked out.
+    static void Test_AttackSizesForCaptureFlip()
+    {
+        var w = new TestWorld();
+        // Source workers sized so safe-to-send is just enough for the attack but does NOT
+        // sit far over MaxWorkers (large surplus would let UpgradeBuilding outscore the
+        // attack via the over-cap bonus, hiding the property under test).
+        // Caution=0 -> AttackOverkill=1.0 (bare minimum); MinReserve=1; pressure from
+        // 5 enemy workers = ceil(5*1.0)=5; required to capture = ceil((5+0+1)*1.0)=6.
+        // workers=12 -> safe=12-1-5=6 (exactly enough).
+        w.AddNode(1, owner: 1, workers: 12, hasGenerator: true);
+        w.AddNode(2, owner: 2, workers: 5, hasGenerator: false); // no generator -> regen=0
+        w.Connect(1, 2);
+        w.Build();
+
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Caution = 0f;       // overkill = 1.0 (bare minimum)
+        defn.Aggression = 1.5f;  // make sure attack outscores other choices
+        defn.Tempo = 0f;         // suppress UpgradeBuilding so it doesn't shadow the attack
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertEq(AIActionType.AttackToNode, act.Type, $"expected attack, got {act.Type}");
+        int sent = SumValues(act.AttackFromNodes);
+        AssertGreater(sent, 5,
+            $"attack must send STRICTLY more than 5 defenders (sent {sent} would only reduce to 0, not capture)");
+    }
+
+    // 23) Travel-regen rule: an enemy node with a worker generator regenerates defenders
+    //     while the wave travels. The wave size must include an expected-regen term so a
+    //     2-hop attack against a Barracks isn't dead on arrival.
+    static void Test_AttackAccountsForRegen()
+    {
+        // Two layouts, identical except enemy generator presence. The wave size against
+        // the regenerating enemy must be strictly larger than against a non-regenerating
+        // enemy with the same defender count.
+        int sentWithRegen = MeasureAttackSize(enemyGenerates: true);
+        int sentWithoutRegen = MeasureAttackSize(enemyGenerates: false);
+        AssertGreater(sentWithRegen, sentWithoutRegen,
+            $"attack vs regenerating defender ({sentWithRegen}) should be larger than vs static defender ({sentWithoutRegen})");
+    }
+
+    static int MeasureAttackSize(bool enemyGenerates)
+    {
+        var w = new TestWorld();
+        // Sized so safe-to-send covers the regenerating-defender wave (~11) but the
+        // source isn't far over MaxWorkers (avoids UpgradeBuilding's surplus bonus
+        // outscoring the attack we want to measure).
+        w.AddNode(1, owner: 1, workers: 18, hasGenerator: true);
+        w.AddNode(2, owner: 2, workers: 6, hasGenerator: enemyGenerates);
+        w.Connect(1, 2);
+        w.Build();
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Caution = 0f; // isolate regen contribution from overkill
+        defn.Aggression = 1.5f;
+        defn.Tempo = 0f;   // suppress UpgradeBuilding
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+        if (act.Type != AIActionType.AttackToNode)
+            throw new Exception($"expected AttackToNode (regen={enemyGenerates}), got {act.Type}");
+        return SumValues(act.AttackFromNodes);
+    }
+
+    // 24) Anti-dribble: the original drip-feed bug was the AI sending 2 attackers every
+    //     few seconds at an 8-defender Barracks regenerating 2 workers per 4 seconds. Net
+    //     defender progress: zero. Now if the available source(s) cannot muster the full
+    //     capture-flip+regen wave, NO attack is emitted -- DoNothing or a different action
+    //     is preferred over a doomed partial wave.
+    static void Test_NoDribbleAttackOnBarracks()
+    {
+        var w = new TestWorld();
+        // Source with only enough spare workers to send a TINY wave (~2 workers) -- nowhere
+        // near the new sizing for an 8-defender regenerating Barracks.
+        w.AddNode(1, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(2, owner: 2, workers: 8, hasGenerator: true); // Barracks-like (regens)
+        w.Connect(1, 2);
+        w.Build();
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Caution = 0.6f;     // matches the live-play repro
+        defn.Aggression = 1.5f;
+        defn.Tempo = 0.7f;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertTrue(act.Type != AIActionType.AttackToNode,
+            $"should not emit a dribble attack against a regenerating defender (got {act.Type} sent={SumValues(act.AttackFromNodes)})");
+    }
+
+    // 25) In-flight credit: when a previous wave is already in flight at the target, the
+    //     fresh wave should be sized to FILL THE GAP, not to ignore the in-flight workers
+    //     (which would over-send) and not to re-target a remaining-defender count
+    //     (which was the old bug). Concretely: 8 defenders + 5 already in flight should
+    //     emit a fresh wave large enough that fresh + 5 >= captureFloor, and AttackAlready-
+    //     Sufficient must STILL be false (5 in flight < 8+1 capture floor).
+    static void Test_AttackCreditsInFlight()
+    {
+        var w = new TestWorld();
+        // Source workers sized to mount the FRESH portion of the wave (4) without
+        // sitting far over MaxWorkers -- otherwise UpgradeBuilding's surplus bonus
+        // shadows the attack we're testing. workers=12 -> safe=12-1-3=8 (pressure
+        // sees post-deducted enemy NumWorkers max(1, 8-5)=3).
+        w.AddNode(1, owner: 1, workers: 12, hasGenerator: true);
+        w.AddNode(2, owner: 2, workers: 8, hasGenerator: false);
+        w.Connect(1, 2);
+        w.Build();
+
+        // Pre-load 5 attackers in flight from P1 to enemy #2.
+        var enemy = w.NodesById[2];
+        enemy.IncomingByPlayer[w.GetPlayer(1)] = 5;
+        w.Town.WorldRevision++;
+
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Caution = 0f;
+        defn.Aggression = 1.5f;
+        defn.Tempo = 0f; // suppress UpgradeBuilding so it doesn't outscore the attack
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertEq(AIActionType.AttackToNode, act.Type,
+            $"5 in flight + 8 defender + 1 flip = need 4+ more, source has plenty; expected attack, got {act.Type}");
+        int fresh = SumValues(act.AttackFromNodes);
+        AssertTrue(fresh + 5 > 8,
+            $"committed force ({fresh} fresh + 5 in flight) must exceed defenders (8) for capture-flip");
+        // And NOT over-send: with no regen, the math says fresh = (8+1)-5 = 4. We allow a
+        // small margin for any overkill rounding, but reject e.g. an 8-worker fresh wave
+        // that ignores the in-flight credit.
+        AssertTrue(fresh <= 8,
+            $"fresh wave ({fresh}) should not double-count vs the 5 already in flight");
     }
 
     // ============================================================================

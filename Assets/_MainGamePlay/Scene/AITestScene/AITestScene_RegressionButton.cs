@@ -14,16 +14,20 @@ public partial class AITestScene
     {
         var results = AIRegressionTests.RunAll();
 
-        var sb = new StringBuilder(2048);
-        sb.AppendLine("=== AI REGRESSION TESTS ===");
+        // Tally first so we can put the count in the banner. The runner returns a final
+        // synthetic "=== completed in Xms ===" record; skip those when counting.
         int passed = 0, failed = 0;
         for (int i = 0; i < results.Count; i++)
         {
             var r = results[i];
-            sb.AppendLine(r.ToString());
             if (r.Name.StartsWith("==")) continue;
             if (r.Passed) passed++; else failed++;
         }
+
+        var sb = new StringBuilder(2048);
+        sb.AppendLine($"=== AI REGRESSION TESTS ({passed} passed, {failed} failed) ===");
+        for (int i = 0; i < results.Count; i++)
+            sb.AppendLine(results[i].ToString());
         sb.AppendLine();
         sb.AppendLine($"Summary: {passed} passed, {failed} failed.");
 

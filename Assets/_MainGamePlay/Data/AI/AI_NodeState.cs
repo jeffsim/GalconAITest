@@ -66,10 +66,23 @@ public class AI_NodeState
     /// in TownData.ResolveWorkerArrival and Debug_WorldTurn; decayed each realtime tick.
     public float AttackHeat;
 
-    /// True when an enemy node already has enough of our in-flight attackers to beat its
-    /// effective defense (garrison + defender reinforcements). The attack generator should
-    /// not commit additional waves when this is set.
+    /// True when an enemy node already has enough of our in-flight attackers to CAPTURE
+    /// it (i.e. strictly more than effective defense + expected travel-time regen). The
+    /// attack generator skips additional waves while this holds.
     public bool AttackAlreadySufficient;
+
+    /// For an enemy-owned node: raw effective defense before we credit any of our own
+    /// in-flight attackers against it. This is `RealNode.NumWorkers + defender's
+    /// in-flight reinforcements`, NOT reduced by our own attack waves. Sizing a NEW
+    /// attack wave must use this + travel regen + 1 (capture flip), then credit our
+    /// in-flight attackers against the result. The legacy `NumWorkers` field on the
+    /// mirror is post-deducted (so frontier-pressure heuristics still see "this enemy
+    /// is being eaten") and MUST NOT be used to size attacks.
+    public int EnemyEffectiveDefense;
+
+    /// Our own attackers currently in flight to this node (read directly from
+    /// RealNode.IncomingByPlayer[viewerPlayer] when the node is enemy-owned).
+    public int IncomingMyAttackers;
 
     /// True for a NEUTRAL node that currently has a capture wave from `viewerPlayer` in flight
     /// (RealNode.PendingCaptureBy == viewerPlayer). The node is NOT yet owned -- OwnedBy
@@ -183,6 +196,8 @@ public class AI_NodeState
         IncomingHostileWorkers = 0;
         AttackAlreadySufficient = false;
         PendingMyCapture = false;
+        EnemyEffectiveDefense = 0;
+        IncomingMyAttackers = 0;
 
         if (viewerPlayer == null)
             return;
@@ -219,12 +234,23 @@ public class AI_NodeState
             // Enemy node: include the defender's reinforcements in perceived garrison.
             int defenderReinforcements = RealNode.GetIncomingFor(OwnedBy);
             int effectiveDefense = NumWorkers + defenderReinforcements;
-
             int incomingAttackers = RealNode.GetIncomingFor(viewerPlayer);
-            AttackAlreadySufficient = incomingAttackers >= effectiveDefense;
+
+            EnemyEffectiveDefense = effectiveDefense;
+            IncomingMyAttackers = incomingAttackers;
+
+            // Capture rule (TownData.ResolveWorkerArrival): each attacker trades 1:1 with a
+            // defender (both die); after defenders reach 0, the NEXT attacker captures. So
+            // capturing requires strictly MORE attackers than defenders -- not equal. The
+            // generator additionally accounts for travel-time regen, but at the very least
+            // we should not flag "sufficient" until incoming exceeds raw defense.
+            AttackAlreadySufficient = incomingAttackers > effectiveDefense;
 
             // Floor at 1 while the enemy still owns the node so frontier pressure on
-            // adjacent friendly nodes never fully vanishes mid-attack.
+            // adjacent friendly nodes never fully vanishes mid-attack. NOTE: this
+            // post-deducted NumWorkers is used by StrategicAnalysis to compute
+            // FrontierPressure; do NOT use it to size attacks. Use EnemyEffectiveDefense
+            // and IncomingMyAttackers above instead.
             NumWorkers = Math.Max(1, effectiveDefense - incomingAttackers);
         }
     }
