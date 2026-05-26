@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 
 /// Concrete move payload produced by the AI per tick. Read by TownData.ExecuteRealtimeAction
-/// and TownData.Debug_WorldTurn to actually carry out the move on the real world.
+/// to actually carry out the move on the real world.
 ///
 /// Slimmer than the previous version: dropped the recursive-search debug bloat
 /// (DebugOutput_*, AIDebuggerEntry, AttackResult/AttackResults), the per-search pool

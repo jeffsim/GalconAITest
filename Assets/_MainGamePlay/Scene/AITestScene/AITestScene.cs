@@ -29,9 +29,6 @@ public partial class AITestScene : MonoBehaviour
     public bool ShowChokepointOverlay = true;
 
     [Header("Realtime")]
-    [Tooltip("When true, simulation advances continuously and AIs make decisions on their own cadence; when false, the legacy Step button drives the world forward.")]
-    public bool Realtime = false;
-
     [Range(0f, 8f)]
     [Tooltip("Multiplier on real time. 0 pauses the simulation, 8 runs it 8x faster than real time.")]
     public float GameSpeed = 1f;
@@ -50,7 +47,6 @@ public partial class AITestScene : MonoBehaviour
 
     // Refs to the runtime-built realtime control panel; persisted across ResetTown so we
     // don't rebuild the UI every reset.
-    Toggle realtimeToggle;
     Slider gameSpeedSlider;
     Text gameSpeedLabel;
     Text statusLabel;
@@ -60,9 +56,26 @@ public partial class AITestScene : MonoBehaviour
     {
         Instance = this;
         EnsureRealtimeControlPanel();
+        EnsureHumanPlayerInput();
         ResetTown();
 
         // Application.targetFrameRate = 60;
+    }
+
+    HumanPlayerInput humanInput;
+
+    void EnsureHumanPlayerInput()
+    {
+        if (humanInput != null) return;
+
+        // Hosted on a dedicated child GO so its runtime-built canvas and drag line don't
+        // clutter the AITestScene transform. ContextMenuDialog lives on the same GO so
+        // HumanPlayerInput.Awake can wire to it via GetComponentInChildren.
+        var go = new GameObject("HumanPlayerInput");
+        go.transform.SetParent(transform, false);
+        var menu = go.AddComponent<ContextMenuDialog>();
+        humanInput = go.AddComponent<HumanPlayerInput>();
+        humanInput.Menu = menu;
     }
 
     void ResetTown()
@@ -76,8 +89,8 @@ public partial class AITestScene : MonoBehaviour
         workerGoByData.Clear();
 
         // Initialize each AI's first realtime decision time to "now" so the simulation kicks
-        // off immediately when Realtime is toggled on, instead of sitting idle for one
-        // DecisionInterval before the very first move.
+        // off immediately instead of sitting idle for one DecisionInterval before the very
+        // first move. Human players have no AI and are skipped by the null-conditional.
         foreach (var p in Town.Players)
             p?.AI?.ScheduleNextRealtimeDecision(Town.WorldTime);
 
@@ -93,7 +106,10 @@ public partial class AITestScene : MonoBehaviour
             foreach (var conn in nodeData.NodeConnections)
                 addLineRenderer(conn.Start, conn.End);
 
-        DebugPlayerToViewDetailsOn = Town.Players[1];
+        // Default the AI debug view to the first AI player (humans have no decision record).
+        DebugPlayerToViewDetailsOn = null;
+        foreach (var p in Town.Players)
+            if (p != null && p.AI != null) { DebugPlayerToViewDetailsOn = p; break; }
 
         var cameraDragger = FindAnyObjectByType<CameraDragger>();
         cameraDragger?.FrameTown();
@@ -102,13 +118,6 @@ public partial class AITestScene : MonoBehaviour
     public void OnResetClicked()
     {
         ResetTown();
-    }
-
-    public void OnStepClicked()
-    {
-        // move the world forward one turn
-        Town.Debug_WorldTurn();
-        Town.Update(); // force an update to get latest AI
     }
 
     public class PathStep
@@ -304,30 +313,15 @@ public partial class AITestScene : MonoBehaviour
 
     void Update()
     {
-        if (Realtime)
+        // GameSpeed=0 pauses time entirely (still allow UI/debugger panel updates). Other
+        // values scale dt; the engine cap sits inside RealtimeTick which only acts on dt > 0.
+        // AI searches run inside RealtimeTick -> DriveRealtimeAI on each player's own
+        // decision timer; the arrow overlay just reads whatever was last computed.
+        float dt = Time.deltaTime * GameSpeed;
+        if (dt > 0f)
         {
-            // GameSpeed=0 pauses time entirely (still allow UI/debugger panel updates). Other
-            // values scale dt; the engine cap sits inside RealtimeTick which only acts on
-            // dt > 0.
-            float dt = Time.deltaTime * GameSpeed;
-            if (dt > 0f)
-            {
-                Town.RealtimeTick(dt, GameSpeed);
-                SyncInFlightWorkerGOs();
-            }
-            // In realtime mode, AI searches only run when each player's own decision timer
-            // fires (inside RealtimeTick -> DriveRealtimeAI). The arrow overlay uses whatever
-            // action was last computed; no per-frame search needed.
-        }
-        else
-        {
-            // Step mode keeps the legacy "AI runs every frame, world only advances when user
-            // hits Step" behavior so the debugger panel reflects the latest plan.
-            Town.Update();
-            // Realtime can be toggled off mid-flight; clean any leftover Worker GOs so they
-            // don't sit visible on the map indefinitely.
-            if (workerGoByData.Count > 0)
-                ClearAllInFlightWorkerGOs();
+            Town.RealtimeTick(dt, GameSpeed);
+            SyncInFlightWorkerGOs();
         }
 
         HandleRealtimeSpeedInput();
@@ -337,27 +331,6 @@ public partial class AITestScene : MonoBehaviour
             DrawNextAISteps(player);
 
         DrawChokepointOverlay();
-    }
-
-    void ClearAllInFlightWorkerGOs()
-    {
-        foreach (var kvp in workerGoByData)
-            if (kvp.Value != null) Destroy(kvp.Value.gameObject);
-        workerGoByData.Clear();
-        Workers.Clear();
-        if (Town != null)
-        {
-            Town.WorkersInFlight.Clear();
-            // Drop any in-flight projection state so the step-mode AI mirror sees a clean
-            // world (no phantom capture intents, no incoming reservations).
-            for (int i = 0; i < Town.Nodes.Count; i++)
-            {
-                var n = Town.Nodes[i];
-                n.IncomingByPlayer.Clear();
-                n.PendingCaptureBy = null;
-                n.PendingConstructBuilding = null;
-            }
-        }
     }
 
     void SyncInFlightWorkerGOs()
@@ -412,9 +385,9 @@ public partial class AITestScene : MonoBehaviour
     // straight back to the public fields each frame via OnValueChanged callbacks.
     void EnsureRealtimeControlPanel()
     {
-        if (realtimeToggle != null) return;
+        if (gameSpeedSlider != null) return;
 
-        // Make sure there's an EventSystem so the Toggle/Slider receive input. The scene may
+        // Make sure there's an EventSystem so the Slider receives input. The scene may
         // already have one for the existing buttons; if so, leave it alone.
         if (FindAnyObjectByType<EventSystem>() == null)
         {
@@ -430,59 +403,22 @@ public partial class AITestScene : MonoBehaviour
         canvasGO.GetComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
 
         // Background panel anchored to the top-right corner so it sits clear of the existing
-        // bottom-left Step/Reset buttons.
+        // bottom-left Reset button.
         var panel = CreateUIRect(canvasGO.transform, "Panel", new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1));
         var panelRect = panel.GetComponent<RectTransform>();
-        panelRect.sizeDelta = new Vector2(320, 170);
+        panelRect.sizeDelta = new Vector2(320, 130);
         panelRect.anchoredPosition = new Vector2(-10, -10);
         var bg = panel.AddComponent<Image>();
         bg.color = new Color(0f, 0f, 0f, 0.65f);
 
-        // Toggle (Realtime). Build the standard checkbox + label group manually so it renders
-        // even without a UI prefab dependency.
-        var toggleGO = CreateUIRect(panel.transform, "RealtimeToggle", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1));
-        var toggleRect = toggleGO.GetComponent<RectTransform>();
-        toggleRect.sizeDelta = new Vector2(300, 28);
-        toggleRect.anchoredPosition = new Vector2(10, -10);
-        realtimeToggle = toggleGO.AddComponent<Toggle>();
-
-        var checkBg = CreateUIRect(toggleGO.transform, "Background", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f));
-        var checkBgRect = checkBg.GetComponent<RectTransform>();
-        checkBgRect.sizeDelta = new Vector2(20, 20);
-        checkBgRect.anchoredPosition = new Vector2(10, 0);
-        var checkBgImg = checkBg.AddComponent<Image>();
-        checkBgImg.color = Color.white;
-        realtimeToggle.targetGraphic = checkBgImg;
-
-        var checkmark = CreateUIRect(checkBg.transform, "Checkmark", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-        var checkmarkRect = checkmark.GetComponent<RectTransform>();
-        checkmarkRect.sizeDelta = new Vector2(14, 14);
-        var checkImg = checkmark.AddComponent<Image>();
-        checkImg.color = new Color(0.2f, 0.8f, 0.2f, 1f);
-        realtimeToggle.graphic = checkImg;
-
-        var toggleLabel = CreateUIRect(toggleGO.transform, "Label", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f));
-        var toggleLabelRect = toggleLabel.GetComponent<RectTransform>();
-        toggleLabelRect.sizeDelta = new Vector2(240, 28);
-        toggleLabelRect.anchoredPosition = new Vector2(160, 0);
-        var toggleText = toggleLabel.AddComponent<Text>();
-        toggleText.text = "Realtime";
-        toggleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        toggleText.fontSize = 16;
-        toggleText.color = Color.white;
-        toggleText.alignment = TextAnchor.MiddleLeft;
-
-        realtimeToggle.isOn = Realtime;
-        realtimeToggle.onValueChanged.AddListener(v => Realtime = v);
-
         // Slider (GameSpeed 0..8).
         gameSpeedLabel = CreateLabel(panel.transform, "GameSpeedLabel", $"Game Speed: {GameSpeed:F2}x",
-            new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -42), new Vector2(300, 22));
+            new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -10), new Vector2(300, 22));
 
         var sliderGO = CreateUIRect(panel.transform, "GameSpeedSlider", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1));
         var sliderRect = sliderGO.GetComponent<RectTransform>();
         sliderRect.sizeDelta = new Vector2(300, 18);
-        sliderRect.anchoredPosition = new Vector2(10, -68);
+        sliderRect.anchoredPosition = new Vector2(10, -36);
         gameSpeedSlider = sliderGO.AddComponent<Slider>();
         gameSpeedSlider.minValue = 0f;
         gameSpeedSlider.maxValue = 8f;
@@ -533,7 +469,7 @@ public partial class AITestScene : MonoBehaviour
         gameSpeedSlider.onValueChanged.AddListener(v => GameSpeed = v);
 
         statusLabel = CreateLabel(panel.transform, "StatusLabel", "",
-            new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -90), new Vector2(300, 18));
+            new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -58), new Vector2(300, 18));
         statusLabel.fontSize = 12;
 
         EnsureRegressionTestsButton(panel);
@@ -569,7 +505,6 @@ public partial class AITestScene : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            Realtime = true;
             if (GameSpeed > 0f)
             {
                 speedBeforePause = GameSpeed;
@@ -585,7 +520,6 @@ public partial class AITestScene : MonoBehaviour
             if (!Input.GetKeyDown(KeyCode.Alpha0 + speed) && !Input.GetKeyDown(KeyCode.Keypad0 + speed))
                 continue;
 
-            Realtime = true;
             GameSpeed = speed;
             speedBeforePause = speed;
             return;
@@ -594,17 +528,13 @@ public partial class AITestScene : MonoBehaviour
 
     void RefreshRealtimeControlLabels()
     {
-        // Toggle/slider can be changed externally (inspector during play); keep widgets in
-        // sync with the underlying public fields.
-        if (realtimeToggle != null && realtimeToggle.isOn != Realtime)
-            realtimeToggle.SetIsOnWithoutNotify(Realtime);
+        // Slider can be changed externally (inspector during play); keep widget in sync with
+        // the underlying public field.
         if (gameSpeedSlider != null && !Mathf.Approximately(gameSpeedSlider.value, GameSpeed))
             gameSpeedSlider.SetValueWithoutNotify(GameSpeed);
         if (gameSpeedLabel != null)
             gameSpeedLabel.text = $"Game Speed: {GameSpeed:F2}x";
         if (statusLabel != null && Town != null)
-            statusLabel.text = Realtime
-                ? $"World Time: {Town.WorldTime:F1}s   In-flight: {Town.WorkersInFlight.Count}"
-                : "(Step mode)";
+            statusLabel.text = $"World Time: {Town.WorldTime:F1}s   In-flight: {Town.WorkersInFlight.Count}";
     }
 }

@@ -10,7 +10,7 @@ public class TownData
 
     // Realtime in-flight workers. List is the source of truth; the scene mirrors it 1:1 onto
     // Worker GameObjects each frame. Spawned by ExecuteRealtimeAction, advanced and resolved
-    // by RealtimeTick. Empty in step mode.
+    // by RealtimeTick.
     [HideInInspector] public List<WorkerData> WorkersInFlight = new();
 
     // Default WorkerDefn used when an AI dispatches workers in realtime mode. The scene seeds
@@ -21,10 +21,9 @@ public class TownData
     public Action<int> OnAIDebuggerUpdate { get; internal set; }
     public Action<WorkerData> OnWorkerSpawned;
     public Action<WorkerData> OnWorkerArrived;
-    public int TestOnePlayerId = 0;
 
-    // Bumped any time the world state changes in a way the AI cares about (currently: each
-    // Debug_WorldTurn). PlayerAI caches its decision against this and skips the full depth-7
+    // Bumped any time the world state changes in a way the AI cares about (worker dispatch,
+    // arrivals, captures). PlayerAI caches its decision against this and skips the full
     // search when the revision is unchanged, so the search no longer runs every Update frame.
     public int WorldRevision = 0;
 
@@ -93,26 +92,22 @@ public class TownData
         // garbage frontier pressure) and surfaces in the simulation dump as "(no building)".
         EnforceOwnedNodesHaveBuilding();
 
-        if (TestOnePlayerId == 0)
+        // Tests run headless without AITestScene.Instance; in that case there's no
+        // "debug player" to defer, just update each AI player in declaration order.
+        // Human players have no AI and are skipped.
+        var debugPlayer = AITestScene.Instance != null ? AITestScene.Instance.DebugPlayerToViewDetailsOn : null;
+        foreach (var player in Players)
         {
-            // Tests run headless without AITestScene.Instance; in that case there's no
-            // "debug player" to defer, just update each player in declaration order.
-            var debugPlayer = AITestScene.Instance != null ? AITestScene.Instance.DebugPlayerToViewDetailsOn : null;
-            foreach (var player in Players)
-                if (player != debugPlayer)
-                    player?.Update(this);
-            debugPlayer?.Update(this);
+            if (player == null || player.IsHuman) continue;
+            if (player == debugPlayer) continue;
+            player.Update(this);
         }
-        else
-        {
-            // or test just one player:
-            Players[TestOnePlayerId].Update(this);
-        }
+        if (debugPlayer != null && !debugPlayer.IsHuman)
+            debugPlayer.Update(this);
     }
 
-    // Realtime mode driver. Called from AITestScene.Update with deltaSeconds = Time.deltaTime
-    // * GameSpeed. Step mode never calls this; that path stays exclusively driven by
-    // OnStepClicked -> Debug_WorldTurn.
+    // Realtime driver. Called from AITestScene.Update with deltaSeconds = Time.deltaTime
+    // * GameSpeed.
     //
     // Order of operations (each per-tick):
     //  1) Advance WorldTime.
@@ -417,20 +412,8 @@ public class TownData
 
     void DriveRealtimeAI()
     {
-        if (TestOnePlayerId != 0)
-        {
-            // Test mode: just one player; ignore scheduling.
-            var p = Players[TestOnePlayerId];
-            if (p?.AI != null && WorldTime >= p.AI.NextRealtimeDecisionTime)
-            {
-                RunRealtimeDecisionFor(p);
-                p.AI.ScheduleNextRealtimeDecision(WorldTime);
-            }
-            return;
-        }
-
-        // Process all players, debug-viewed player last so its decision record reflects the
-        // most recent search when the dump panel reads it.
+        // Process all AI players, debug-viewed player last so its decision record reflects the
+        // most recent search when the dump panel reads it. Human players have no AI.
         var debugPlayer = AITestScene.Instance != null ? AITestScene.Instance.DebugPlayerToViewDetailsOn : null;
         for (int i = 0; i < Players.Count; i++)
         {
@@ -465,7 +448,7 @@ public class TownData
     }
 
     // Realtime executor: turns an AI-chosen action into in-flight workers (which resolve at
-    // their destinations later) instead of resolving instantly the way Debug_WorldTurn does.
+    // their destinations later) by spawning into WorkersInFlight.
     void ExecuteRealtimeAction(PlayerData player, AIAction action)
     {
         switch (action.Type)
@@ -737,266 +720,6 @@ public class TownData
         return path;
     }
 
-    internal void Debug_WorldTurn()
-    {
-        // Update resource gathering nodes (owned only; production scales with workers).
-        foreach (var node in Nodes)
-        {
-            if (node.OwnedBy == null) continue;
-            if (node.Building == null) continue;
-            var defn = node.Building.Defn;
-
-            if (ResourceProduction.ProducesResources(defn))
-            {
-                int produced = ResourceProduction.GetProducedPerTurn(defn, node.NumWorkers);
-                if (produced > 0)
-                {
-                    var goodType = ResourceProduction.GetProducedGoodType(defn);
-                    ResourceProduction.CreditInventory(node.Inventory, goodType, produced);
-                }
-            }
-            if (defn.CanGenerateWorkers)
-            {
-                if (node.NumWorkers < node.Building.MaxWorkers)
-                    node.NumWorkers = Math.Min(node.Building.MaxWorkers, node.NumWorkers + node.Building.WorkersGeneratedPerTurn);
-                else if (node.NumWorkers > node.Building.MaxWorkers)
-                    node.NumWorkers--;
-            }
-        }
-
-        // not how this will normally be done, but fine for testing purposes
-        foreach (var player in Players)
-        {
-            if (player == null) continue;
-            var moveToMake = player.AI.BestNextActionToTake;
-            if (moveToMake == null || moveToMake.Type == AIActionType.DoNothing) continue; // wasn't updated
-
-            player.AI.RememberLastAction(moveToMake);
-            player.AI.RecordExecutedAction(moveToMake, WorldTime);
-
-            // Convert from ai node data to real node data
-            var fromNode = moveToMake.SourceNode?.RealNode;
-            var toNode = moveToMake.DestNode?.RealNode;
-            switch (moveToMake.Type)
-            {
-                case AIActionType.UpgradeBuilding:
-                    fromNode.Building.Upgrade();
-                    fromNode.NumWorkers /= 2;
-                    break;
-
-                case AIActionType.AttackToNode:
-                    {
-                        var attackFromNodes = moveToMake.AttackFromNodes;
-                        foreach (var attackFromNode in attackFromNodes.Keys)
-                        {
-                            var sourceNode = attackFromNode.RealNode;
-                            // Game rule: each source must retain at least 1 worker
-                            // (NodeData.GetMaxSendableWorkers); a source drained to 0 by an
-                            // attack would be immediately captured itself.
-                            var numSent = Math.Min(attackFromNodes[attackFromNode], NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
-                            if (numSent <= 0) continue;
-
-                            sourceNode.NumWorkers -= numSent;
-                            toNode.NumWorkers -= numSent;
-
-                            // Step-mode attack heat: defender takes hostile arrivals proportional
-                            // to numSent. Matches the per-worker bumps the realtime path adds in
-                            // ResolveWorkerArrival so the AttackHeat signal is consistent across modes.
-                            toNode.AttackHeat += AttackHeatPerHostileArrival * numSent;
-
-                            // Only enemy-owned nodes can be taken by force. Neutral territory
-                            // requires constructing a building (ConstructBuildingInEmptyNode).
-                            if (toNode.NumWorkers <= 0 && toNode.OwnedBy != null)
-                            {
-                                toNode.OwnedBy = player;
-                                toNode.NumWorkers = -toNode.NumWorkers;
-                            }
-                        }
-                    }
-                    break;
-                case AIActionType.ConstructBuildingInEmptyNode:
-                    {
-                    // First verify that the action is still valid; e.g. another player hasn't captured the target node, the source node still has workers and is owned by player, etc
-
-                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
-                    // Can player still send enough workers from source node without draining it?
-                    if (NodeData.GetMaxSendableWorkers(fromNode.NumWorkers) < moveToMake.Count || fromNode.OwnedBy != player) break;
-
-                    // Is target node still capturable?
-                    if (toNode.OwnedBy != null) break;
-
-                    // Does player still have the necessary resources to build the building?
-                    // TODO: Assume so for now
-
-                    // Construct the building, move workers, etc
-                    int constructSent = moveToMake.Count;
-                    fromNode.NumWorkers -= constructSent;
-
-                    if (toNode.NumWorkers > 0)
-                    {
-                        if (constructSent <= toNode.NumWorkers)
-                        {
-                            toNode.NumWorkers -= constructSent;
-                            break;
-                        }
-                        toNode.NumWorkers = constructSent - toNode.NumWorkers;
-                    }
-                    else
-                    {
-                        toNode.NumWorkers = constructSent;
-                    }
-
-                    toNode.OwnedBy = player;
-
-                    var building = new BuildingData(moveToMake.BuildingToConstruct);
-                    toNode.ConstructBuilding(building);
-
-                    // consume resources needed to construct the building
-                    foreach (var req in moveToMake.BuildingToConstruct.ConstructionRequirements)
-                    {
-                        // hack
-                        var remainingNeeded = req.Amount;
-                        while (remainingNeeded > 0)
-                        {
-                            var node = getClosestNodeWithResource(player, toNode, req.Good.GoodType);
-                            if (node == null)
-                            {
-                                // shouldn't get here; should get caught by necessary-resource validationa bove
-                                Debug.LogError("Error: couldn't find node with resource " + req.Good.GoodType);
-                                break;
-                            }
-                            var amountToTake = Math.Min(remainingNeeded, node.Inventory[req.Good.GoodType]);
-                            node.Inventory[req.Good.GoodType] -= amountToTake;
-                            remainingNeeded -= amountToTake;
-                        }
-                    }
-
-                    break;
-                    }
-
-                case AIActionType.CaptureNeutralResourceNode:
-                    {
-                        // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
-                        if (NodeData.GetMaxSendableWorkers(fromNode.NumWorkers) < moveToMake.Count || fromNode.OwnedBy != player) break;
-                        if (toNode.OwnedBy != null) break;
-                        if (toNode.Building == null || !toNode.Building.Defn.CanBeGatheredFrom) break;
-
-                        int captureSent = moveToMake.Count;
-                        fromNode.NumWorkers -= captureSent;
-
-                        if (toNode.NumWorkers > 0)
-                        {
-                            if (captureSent <= toNode.NumWorkers)
-                            {
-                                toNode.NumWorkers -= captureSent;
-                                break;
-                            }
-                            toNode.NumWorkers = captureSent - toNode.NumWorkers;
-                        }
-                        else
-                        {
-                            toNode.NumWorkers = captureSent;
-                        }
-
-                        toNode.OwnedBy = player;
-                        break;
-                    }
-
-                case AIActionType.CaptureNeutralNode:
-                    {
-                        if (toNode.OwnedBy != null || toNode.Building != null) break;
-                        if (moveToMake.BuildingToConstruct == null) break;
-
-                        int totalSent = 0;
-                        foreach (var kvp in moveToMake.AttackFromNodes)
-                        {
-                            var sourceNode = kvp.Key.RealNode;
-                            if (sourceNode == null || sourceNode.OwnedBy != player) continue;
-                            // Game rule: each source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
-                            int numSent = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
-                            if (numSent <= 0) continue;
-                            sourceNode.NumWorkers -= numSent;
-                            totalSent += numSent;
-                        }
-
-                        if (totalSent <= 0) break;
-
-                        if (toNode.NumWorkers > 0)
-                        {
-                            if (totalSent <= toNode.NumWorkers)
-                            {
-                                toNode.NumWorkers -= totalSent;
-                                break;
-                            }
-                            toNode.NumWorkers = totalSent - toNode.NumWorkers;
-                        }
-                        else
-                        {
-                            toNode.NumWorkers = totalSent;
-                        }
-
-                        toNode.OwnedBy = player;
-                        toNode.ConstructBuilding(new BuildingData(moveToMake.BuildingToConstruct));
-
-                        foreach (var req in moveToMake.BuildingToConstruct.ConstructionRequirements)
-                        {
-                            int remainingNeeded = req.Amount;
-                            while (remainingNeeded > 0)
-                            {
-                                var node = getClosestNodeWithResource(player, toNode, req.Good.GoodType);
-                                if (node == null) break;
-                                var amountToTake = Math.Min(remainingNeeded, node.Inventory[req.Good.GoodType]);
-                                node.Inventory[req.Good.GoodType] -= amountToTake;
-                                remainingNeeded -= amountToTake;
-                            }
-                        }
-                        break;
-                    }
-
-                case AIActionType.SendWorkersToOwnedNode:
-
-                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
-                    // Can player still send enough workers from source node without draining it?
-                    if (NodeData.GetMaxSendableWorkers(fromNode.NumWorkers) < moveToMake.Count || fromNode.OwnedBy != player) continue;
-
-                    fromNode.NumWorkers -= moveToMake.Count;
-                    toNode.NumWorkers += moveToMake.Count;
-                    break;
-
-                case AIActionType.SendMultiSourceWorkersToOwnedNode:
-                    {
-                        if (toNode == null || toNode.OwnedBy != player) break;
-                        int totalSupport = 0;
-                        foreach (var kvp in moveToMake.AttackFromNodes)
-                        {
-                            var sourceNode = kvp.Key.RealNode;
-                            if (sourceNode == null || sourceNode.OwnedBy != player) continue;
-                            // Game rule: each source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
-                            int numSent = Math.Min(kvp.Value, NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
-                            if (numSent <= 0) continue;
-                            sourceNode.NumWorkers -= numSent;
-                            totalSupport += numSent;
-                        }
-                        toNode.NumWorkers += totalSupport;
-                        break;
-                    }
-            }
-        }
-
-        // Step-mode AttackHeat decay: one "turn" of decay per Debug_WorldTurn. Per-second decay
-        // constant is used as a per-turn factor for simplicity; step mode is mostly legacy.
-        for (int i = 0; i < Nodes.Count; i++)
-        {
-            var n = Nodes[i];
-            if (n.AttackHeat <= 0f) continue;
-            n.AttackHeat *= (1f - AttackHeatDecayPerSecond);
-            if (n.AttackHeat < 0.01f) n.AttackHeat = 0f;
-        }
-
-        // World mutated; invalidate per-player AI decision caches so the next Update re-searches.
-        WorldRevision++;
-    }
-
     private NodeData getClosestNodeWithResource(PlayerData player, NodeData startNode, GoodType goodType)
     {
         // for now, just find any node that the player owns and has > 0 of the resource
@@ -1004,5 +727,166 @@ public class TownData
             if (node.OwnedBy == player && node.Inventory[goodType] > 0)
                 return node;
         return null;
+    }
+
+    // ============================================================================
+    // Human-player input surface. The mouse-drag layer in HumanPlayerInput funnels
+    // every release-on-valid-dest through these two entry points. They mirror the
+    // corresponding ExecuteRealtimeAction switch cases but take NodeData directly so the
+    // input layer never needs to fabricate AI_NodeState mirrors.
+    // ============================================================================
+
+    public PlayerData GetHumanPlayer()
+    {
+        for (int i = 0; i < Players.Count; i++)
+            if (Players[i] != null && Players[i].IsHuman) return Players[i];
+        return null;
+    }
+
+    /// Strict owned-intermediate path test for human drag-to-send. Every node BETWEEN
+    /// `from` and `to` (exclusive) must be owned by `player`; the destination itself can
+    /// be anything (owned, enemy, neutral). Returns false if the only reachable path
+    /// would have to cross hostile/neutral ground -- that route would let workers get
+    /// intercepted on the way and is therefore not a legal human dispatch.
+    public bool HasValidOwnedPath(PlayerData player, NodeData from, NodeData to)
+    {
+        if (player == null || from == null || to == null || from == to) return false;
+        return BFSFindPath(from, to, player) != null;
+    }
+
+    /// Send half of `from`'s workers toward `to` as a single Galcon-style group. Intent
+    /// is chosen from destination ownership:
+    ///   - dest owned by player           -> Reinforce
+    ///   - dest owned by an enemy         -> Attack
+    ///   - dest neutral, has a building   -> Reinforce (capture-style; sets PendingCaptureBy)
+    /// Returns false if no workers were dispatched (path missing, source empty, etc.).
+    public bool HumanSendHalfWorkers(PlayerData player, NodeData from, NodeData to)
+    {
+        if (player == null || from == null || to == null) return false;
+        if (from.OwnedBy != player) return false;
+        if (!HasValidOwnedPath(player, from, to)) return false;
+
+        int toSend = NodeData.GetHalfSendableWorkers(from.NumWorkers);
+        if (toSend <= 0) return false;
+
+        WorkerIntent intent;
+        if (to.OwnedBy == player)
+        {
+            intent = WorkerIntent.Reinforce;
+        }
+        else if (to.OwnedBy != null)
+        {
+            intent = WorkerIntent.Attack;
+        }
+        else
+        {
+            // Empty neutral here would normally go through HumanConstructBuilding; callers
+            // should only route gatherable resource neutrals through this method.
+            if (to.Building == null || !to.Building.Defn.CanBeGatheredFrom) return false;
+            if (to.PendingCaptureBy != null && to.PendingCaptureBy != player) return false;
+            to.PendingCaptureBy = player;
+            intent = WorkerIntent.Reinforce;
+        }
+
+        SpawnWorkerGroup(player, from, to, toSend, intent, null);
+        from.NumWorkers -= toSend;
+        WorldRevision++;
+        return true;
+    }
+
+    /// True iff `player` could legally upgrade the building currently on `node`. Mirrors
+    /// the preconditions in HumanUpgradeBuilding so the click-menu can gray the option out
+    /// when it would no-op.
+    public bool CanHumanUpgrade(PlayerData player, NodeData node)
+    {
+        if (player == null || node == null) return false;
+        if (node.OwnedBy != player) return false;
+        if (node.Building == null) return false;
+        if (!node.Building.Defn.CanBeUpgraded) return false;
+        // Upgrade halves NumWorkers; require at least 2 so the post-halve count is >= 1
+        // (matches the AI's UpgradeBuilding precondition of "node has workers to spare").
+        if (node.NumWorkers < 2) return false;
+        return true;
+    }
+
+    /// Upgrade the building on `node` in-place. Mirrors AIActionType.UpgradeBuilding in
+    /// ExecuteRealtimeAction -- bumps the building level and halves the standing garrison.
+    /// Returns false if preconditions fail.
+    public bool HumanUpgradeBuilding(PlayerData player, NodeData node)
+    {
+        if (!CanHumanUpgrade(player, node)) return false;
+        node.Building.Upgrade();
+        node.NumWorkers /= 2;
+        WorldRevision++;
+        return true;
+    }
+
+    /// Construct `buildingDefn` on an empty neutral `to` by sending half of `from`'s
+    /// workers as a CaptureAndConstruct group. Mirrors AIActionType.ConstructBuildingInEmptyNode.
+    ///
+    /// Re-dispatch behavior: while a previous wave from the same `player` is still in
+    /// flight to `to`, additional calls reuse the existing PendingConstructBuilding (the
+    /// player's stored intent for that node) -- they do NOT re-pay the construction cost
+    /// and they do NOT re-prompt the building picker. Resources were already drained on
+    /// the first commit; if every wave dies before arrival, CleanupResolvedCaptureIntents
+    /// clears PendingCaptureBy and the next drag is treated as a fresh commit.
+    ///
+    /// Returns false if any precondition fails (e.g. someone else owns the capture intent,
+    /// the node has already been captured/built on, or there aren't enough workers to send).
+    public bool HumanConstructBuilding(PlayerData player, NodeData from, NodeData to, BuildingDefn buildingDefn)
+    {
+        if (player == null || from == null || to == null || buildingDefn == null) return false;
+        if (from.OwnedBy != player) return false;
+        if (to.OwnedBy != null) return false;
+        if (to.Building != null) return false;
+        // Another player committed first; "first one wins" -- we can't ride along.
+        if (to.PendingCaptureBy != null && to.PendingCaptureBy != player) return false;
+        if (!HasValidOwnedPath(player, from, to)) return false;
+
+        bool firstCommit = to.PendingCaptureBy == null;
+
+        // Affordability and cost are only checked / charged on the first commit. Follow-up
+        // waves to my own pending capture have already paid up front; charging again would
+        // double-bill the player. If the picker passed a different defn for a follow-up
+        // wave, we still ship workers with the originally-committed building so the in-
+        // flight intent stays coherent (the second drag won't normally re-ask the picker;
+        // see HumanPlayerInput.CompleteDrag for that bypass).
+        if (firstCommit)
+        {
+            if (!PlayerEconomy.CanAfford(player, this, buildingDefn)) return false;
+        }
+
+        int toSend = NodeData.GetHalfSendableWorkers(from.NumWorkers);
+        if (toSend <= 0) return false;
+
+        if (firstCommit)
+        {
+            to.PendingCaptureBy = player;
+            to.PendingConstructBuilding = buildingDefn;
+
+            // Pay for the building up front by draining the player's inventory in the same
+            // order AI construction does (closest-owned-node-first). Without this, free or
+            // partially-paid buildings would slip through when affordability changes mid-walk.
+            foreach (var req in buildingDefn.ConstructionRequirements)
+            {
+                int remaining = req.Amount;
+                while (remaining > 0)
+                {
+                    var srcNode = getClosestNodeWithResource(player, to, req.Good.GoodType);
+                    if (srcNode == null) break;
+                    int take = Math.Min(remaining, srcNode.Inventory[req.Good.GoodType]);
+                    srcNode.Inventory[req.Good.GoodType] -= take;
+                    remaining -= take;
+                }
+            }
+        }
+
+        // Use the stored intent if this is a follow-up wave; otherwise the freshly-set defn.
+        var buildIntent = to.PendingConstructBuilding ?? buildingDefn;
+
+        SpawnWorkerGroup(player, from, to, toSend, WorkerIntent.CaptureAndConstruct, buildIntent);
+        from.NumWorkers -= toSend;
+        WorldRevision++;
+        return true;
     }
 }

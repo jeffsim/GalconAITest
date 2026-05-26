@@ -1,7 +1,7 @@
 using System;
 
 /// <summary>
-/// Shared resource production math for realtime ticks, step-mode turns, and AI simulation.
+/// Shared resource production math for realtime ticks and AI simulation.
 /// Production scales linearly with the number of workers assigned to the node.
 /// </summary>
 public static class ResourceProduction
@@ -23,16 +23,6 @@ public static class ResourceProduction
     {
         if (defn == null || numWorkers <= 0) return 0f;
         return defn.ResourcesPerSecondPerWorker * numWorkers;
-    }
-
-    public static int GetProducedPerTurn(BuildingDefn defn, int numWorkers)
-    {
-        if (defn == null || numWorkers <= 0) return 0;
-        if (defn.CanGatherResources)
-            return defn.ResourceProducedPerWorkerPerTurn * numWorkers;
-        if (defn.CanBeGatheredFrom)
-            return defn.ResourceProducedPerWorkerPerTurn * numWorkers;
-        return 0;
     }
 
     // Realtime: accumulate fractional production and emit whole units.

@@ -63,7 +63,7 @@ public class AI_NodeState
     public int IncomingHostileWorkers;
 
     /// Decaying memory of recent hostile arrivals at this node (post-hoc pressure). Bumped
-    /// in TownData.ResolveWorkerArrival and Debug_WorldTurn; decayed each realtime tick.
+    /// in TownData.ResolveWorkerArrival; decayed each realtime tick.
     public float AttackHeat;
 
     /// True when an enemy node already has enough of our in-flight attackers to CAPTURE
@@ -96,9 +96,9 @@ public class AI_NodeState
     public bool HasBuilding;
     public BuildingDefn BuildingDefn;
     public int BuildingLevel;
-    /// World-time (in step-turns or realtime seconds, depending on mode) when the building
-    /// here was constructed/captured. Used by upgrade scoring to prefer freshly-built
-    /// buildings less than long-standing ones with sunk investment.
+    /// World-time (in realtime seconds) when the building here was constructed/captured.
+    /// Used by upgrade scoring to prefer freshly-built buildings less than long-standing
+    /// ones with sunk investment.
     public int TurnBuildingWasBuilt;
     public bool CanGoGatherResources;
     public GoodType ResourceThisNodeCanGoGather;

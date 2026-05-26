@@ -9,6 +9,12 @@ public class NodeGO : MonoBehaviour
     public MeshRenderer BaseObject;
     public MeshRenderer BuildingObject;
 
+    // Default (unowned) tile color captured at init so we can restore it when ownership
+    // drops back to neutral or when a drag highlight is cleared.
+    Color _defaultBaseColor;
+    bool _dragHighlighted;
+    static readonly Color DragHighlightColor = Color.yellow;
+
     public void InitializeForNodeData(NodeData data)
     {
         name = "Node " + data.NodeId + " - " + data.WorldLoc;
@@ -17,6 +23,8 @@ public class NodeGO : MonoBehaviour
 
         Data = data;
         transform.position = data.WorldLoc;
+
+        _defaultBaseColor = BaseObject.material.color;
 
         BuildingText.color = data.OwnedBy?.Color ?? Color.white;
         if (data.OwnedBy != null)
@@ -29,9 +37,22 @@ public class NodeGO : MonoBehaviour
             BuildingText.text = data.Building?.Defn.Name ?? "";
             BuildingObject.material.color = data.Building?.Defn.Color ?? Color.gray;
             BuildingObject.gameObject.SetActive(data.Building != null);
-            if (data.OwnedBy != null)
+            if (data.OwnedBy != null && !_dragHighlighted)
                 BaseObject.material.color = data.OwnedBy.Color;
         };
+    }
+
+    /// Force the tile to yellow while the human player is dragging over it as a valid
+    /// drop target. Restored automatically when the highlight is cleared; Update() will
+    /// not stomp the highlight while it's active.
+    public void SetDragHighlight(bool on)
+    {
+        if (_dragHighlighted == on) return;
+        _dragHighlighted = on;
+        if (on)
+            BaseObject.material.color = DragHighlightColor;
+        else
+            BaseObject.material.color = Data.OwnedBy != null ? Data.OwnedBy.Color : _defaultBaseColor;
     }
 
     int lastNumWorkers = -1;
@@ -43,7 +64,7 @@ public class NodeGO : MonoBehaviour
     
     void Update()
     {
-        if (Data.OwnedBy != null)
+        if (Data.OwnedBy != null && !_dragHighlighted)
             BaseObject.material.color = Data.OwnedBy.Color;
 
         if (Data.Building == null)

@@ -56,7 +56,9 @@ public class PlayerAI
     readonly List<AICandidate> candidatesThisTick = new();
     int candidatePoolIndex;
 
-    // Decision cache so we don't re-search in step mode every frame if nothing changed.
+    // Decision cache: skip the full search until something in the world actually moves
+    // (WorldRevision bumps). Realtime path additionally calls InvalidateDecisionCache()
+    // explicitly before each scheduled per-player decision.
     int lastSearchedWorldRevision = -1;
 
     int tickCount;
@@ -85,8 +87,7 @@ public class PlayerAI
 
     public void Update(TownData townData)
     {
-        // Decision cache: in step mode the world may not change between AITestScene.Update
-        // ticks. Skip work when WorldRevision is unchanged. Realtime path calls
+        // Decision cache: skip work when WorldRevision is unchanged. Realtime path calls
         // InvalidateDecisionCache() explicitly before its scheduled tick.
         if (lastSearchedWorldRevision == townData.WorldRevision && BestNextActionToTake.Type != AIActionType.DoNothing)
             return;

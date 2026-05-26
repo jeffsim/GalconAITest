@@ -30,7 +30,7 @@ public partial class AITestScene
 
         var sb = new StringBuilder(8192);
         sb.AppendLine("=== AI DEBUG ===");
-        sb.AppendLine($"WorldRevision={Town.WorldRevision} WorldTime={Town.WorldTime:F2} Realtime={Realtime}");
+        sb.AppendLine($"WorldRevision={Town.WorldRevision} WorldTime={Town.WorldTime:F2}");
         sb.AppendLine();
 
         sb.AppendLine("--- PER PLAYER ---");

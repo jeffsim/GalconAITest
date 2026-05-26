@@ -57,10 +57,7 @@ public class BuildingDefn : BaseDefn
     [Tooltip("Deprecated: use ResourcesPerSecondPerWorker. Kept for reference only.")]
     public float SecondsPerResourceProduced = 1.5f;
     [ShowIf("@CanGatherResources || CanBeGatheredFrom")]
-    [Tooltip("Step mode: each worker produces this many resources per turn.")]
-    public int ResourceProducedPerWorkerPerTurn = 1;
-    [ShowIf("@CanGatherResources || CanBeGatheredFrom")]
-    [Tooltip("Realtime: each worker produces this many resources per second.")]
+    [Tooltip("Each worker produces this many resources per second.")]
     public float ResourcesPerSecondPerWorker = 0.667f;
 
     // ResourceNode
@@ -80,9 +77,8 @@ public class BuildingDefn : BaseDefn
     public bool CanGenerateWorkers = false;
     [ShowIf("CanGenerateWorkers")]
     public WorkerDefn GeneratableWorker;
-    // Realtime mode only. How long (seconds) between each generated worker. Step mode keeps
-    // using BuildingData.WorkersGeneratedPerTurn unchanged.
+    // How long (seconds) between each generated worker.
     [ShowIf("CanGenerateWorkers")]
-    [Tooltip("Realtime: seconds between each generated worker. <=0 disables realtime generation.")]
+    [Tooltip("Seconds between each generated worker. <=0 disables generation.")]
     public float SecondsPerWorkerGenerated = 2f;
 }

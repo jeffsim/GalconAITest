@@ -101,4 +101,11 @@ public class NodeData
     {
         return numWorkers > 1 ? numWorkers - 1 : 0;
     }
+
+    // Half-send rule for human "drag from node" dispatch: round down, but never exceed
+    // GetMaxSendableWorkers (which enforces the >=1 garrison invariant).
+    public static int GetHalfSendableWorkers(int numWorkers)
+    {
+        return Math.Min(numWorkers / 2, GetMaxSendableWorkers(numWorkers));
+    }
 }

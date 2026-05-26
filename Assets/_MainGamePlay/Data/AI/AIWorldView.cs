@@ -93,8 +93,8 @@ public class AIWorldView
             }
         }
 
-        // Always project from this player's perspective. In step mode WorkersInFlight is
-        // empty so the projections are no-ops and we still get a clean mirror.
+        // Project from this player's perspective. In-flight workers fold into the per-node
+        // Incoming* projections; when there are none the projections are no-ops.
         for (int i = 0; i < NumNodes; i++)
             Nodes[i].Refresh(Player);
     }

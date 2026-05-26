@@ -542,8 +542,8 @@ public static class AIRegressionTests
     }
 
     // 19) Surplus workers drive upgrade: a generator node sitting at 150/10 workers is
-    //     hemorrhaging economy (Debug_WorldTurn decays 1 per turn while over-cap). The AI
-    //     must recognise this and choose UpgradeBuilding rather than DoNothing.
+    //     hemorrhaging economy (TickBuildingProduction decays 1 per spawn while over-cap).
+    //     The AI must recognise this and choose UpgradeBuilding rather than DoNothing.
     static void Test_HighSurplusUpgrades()
     {
         var w = new TestWorld();

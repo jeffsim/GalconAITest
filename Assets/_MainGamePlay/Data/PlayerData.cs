@@ -11,6 +11,7 @@ public class PlayerData
     public int Id;
     public Color Color = Color.white;
     public bool ControlledByAI;
+    public bool IsHuman => !ControlledByAI;
     public PlayerAI AI;
 
     public PlayerData(int id, PlayerAIDefn aiDefn, WorkerDefn workerDefn)
@@ -28,18 +29,19 @@ public class PlayerData
             Name = $"Player {id}";
             Color = id switch { 1 => Color.red, 2 => Color.green, 3 => Color.blue, _ => Color.white };
         }
-        ControlledByAI = true;
-        AI = new PlayerAI(this);
+        ControlledByAI = aiDefn == null || aiDefn.ControlType == PlayerControlType.AI;
+        if (ControlledByAI)
+            AI = new PlayerAI(this);
     }
 
     public void InitializeStaticData(TownData townData)
     {
-        AI.InitializeStaticData(townData);
+        AI?.InitializeStaticData(townData);
     }
     
     public void Update(TownData townData)
     {
-        AI.Update(townData);
+        AI?.Update(townData);
     }
 
     internal bool Hates(PlayerData player)

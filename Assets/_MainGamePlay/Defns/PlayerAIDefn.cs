@@ -1,5 +1,11 @@
 using UnityEngine;
 
+public enum PlayerControlType
+{
+    AI,
+    Human,
+}
+
 /// Personality definition for an AI player. Four orthogonal dials -- see
 /// PersonalityWeights for full semantics. Each one is designed to move ONE observable
 /// axis of behavior without bleeding into the others.
@@ -8,6 +14,10 @@ public class PlayerAIDefn : BaseDefn
 {
     public string Name;
     public Color Color = Color.white;
+
+    [Header("Control")]
+    [Tooltip("Human players are driven by mouse input; the AI loop ignores them.")]
+    public PlayerControlType ControlType = PlayerControlType.AI;
 
     [Header("Personality (each dial moves one observable axis)")]
     [Tooltip("Preference for attacks vs. all other actions. 0 = will never attack; 2 = strongly weights attack scoring.")]

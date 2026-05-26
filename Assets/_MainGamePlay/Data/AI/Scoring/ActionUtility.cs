@@ -304,9 +304,10 @@ public static class ActionUtility
         if (node.CanGenerateWorkers) baseValue += 5f;
         if (node.CanGoGatherResources) baseValue += 3f;
 
-        // Surplus-workers bonus. The game decays NumWorkers by 1 per turn while NumWorkers >
-        // MaxWorkers (see TownData.Debug_WorldTurn), so an over-cap node is BLEEDING economy.
-        // Each unit of surplus is "almost wasted"; doubling MaxWorkers via upgrade rescues it.
+        // Surplus-workers bonus. The game decays NumWorkers by 1 per spawn interval while
+        // NumWorkers > MaxWorkers (see TownData.TickBuildingProduction), so an over-cap
+        // node is BLEEDING economy. Each unit of surplus is "almost wasted"; doubling
+        // MaxWorkers via upgrade rescues it.
         // Cap so a once-grown 150/10 node doesn't single-handedly dominate scoring forever.
         int surplus = node.NumWorkers - node.MaxWorkers;
         if (surplus > 0)
@@ -320,7 +321,7 @@ public static class ActionUtility
         //   - If post-upgrade workers would fall meaningfully BELOW pressure, hard-veto --
         //     BUT only when there isn't enough surplus to absorb the halving. A node sitting
         //     at 54/10 next to a huge enemy stack is bleeding ~1 worker per turn via the
-        //     over-cap decay (see TownData.Tick / Debug_WorldTurn); refusing to upgrade
+        //     over-cap decay (see TownData.TickBuildingProduction); refusing to upgrade
         //     just lets that bleed continue and ALSO leaves us indefensible. Once
         //     surplus >= MaxWorkers, the halving keeps the post-upgrade garrison >= old
         //     MaxWorkers, so we're at least as defensible after the upgrade as we would

@@ -30,6 +30,16 @@ public class GameDefnsMgr
         BuildingDefnsByType.Clear();
         foreach (var buildingDefn in BuildingDefns.Values)
             BuildingDefnsByType[buildingDefn.BuildingType] = buildingDefn;
+
+        // Populate the per-GameSettings player-buildable list. The human-player building
+        // picker reads this; AI generators iterate BuildingDefns directly.
+        foreach (var settings in GameSettingsDefns.Values)
+        {
+            settings.PlayerBuildableBuildings.Clear();
+            foreach (var bd in BuildingDefns.Values)
+                if (bd.CanBeBuiltByPlayer)
+                    settings.PlayerBuildableBuildings.Add(bd);
+        }
     }
 
     private void loadDefns<T>(string folderName, Dictionary<string, T> defnDict) where T : BaseDefn
