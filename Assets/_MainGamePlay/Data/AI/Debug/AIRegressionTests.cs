@@ -49,6 +49,7 @@ public static class AIRegressionTests
         // adjacency, pending-capture reinforce):
         Run(results, "no send across enemy territory", Test_NoSendAcrossEnemyTerritory);
         Run(results, "high surplus drives upgrade", Test_HighSurplusUpgrades);
+        Run(results, "surplus upgrade beats pressure veto", Test_HighSurplusUpgradesUnderHighPressure);
         Run(results, "no gatherer build without adjacent resource", Test_GathererNeedsAdjacentResource);
         Run(results, "no reinforce on neutral with capture in flight", Test_NoReinforceOnPendingCapture);
 
@@ -545,6 +546,48 @@ public static class AIRegressionTests
         AssertEq(AIActionType.UpgradeBuilding, act.Type,
             $"150/10 surplus node should upgrade; got {act.Type}");
         AssertEq(1, act.SourceNode.NodeId, "upgrade should target the over-cap node #1");
+    }
+
+    // 19b) Surplus upgrade still fires under high enemy pressure. Live-play repro: Red's
+    //      #27 sat at 54/10 with three enemy neighbors totalling 161 workers. The old
+    //      defensive veto refused to upgrade because post-halve workers (27) << pressure
+    //      (161), but the surplus (44 workers) was bleeding off via over-cap decay so
+    //      refusing was strictly worse than upgrading. With surplus >= MaxWorkers, the
+    //      veto must stand down and the upgrade should be chosen (no reinforce viable
+    //      because all enemy-adjacent owned nodes are themselves drained).
+    static void Test_HighSurplusUpgradesUnderHighPressure()
+    {
+        var w = new TestWorld();
+        // Owned node A (#1): 54 workers, max 10 -> 44 surplus. Frontier with 3 enemies.
+        w.AddNode(1, owner: 1, workers: 54, hasGenerator: true, upgradable: true);
+        // Three enemy neighbors with combined 161 workers. Each is itself near-cap so
+        // they aren't viable attack targets (and their high garrison drives pressure).
+        w.AddNode(2, owner: 2, workers: 62, hasGenerator: true);
+        w.AddNode(3, owner: 2, workers: 61, hasGenerator: true);
+        w.AddNode(4, owner: 2, workers: 38, hasGenerator: true);
+        // Lone friendly interior #5 with no spare workers, so reinforce can't muster a wave.
+        w.AddNode(5, owner: 1, workers: 1, hasGenerator: true);
+        w.Connect(1, 2);
+        w.Connect(1, 3);
+        w.Connect(1, 4);
+        w.Connect(1, 5);
+        w.Build();
+
+        // Match Red's personality from the live dump.
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Aggression = 1.2f;
+        defn.Expansion = 1.0f;
+        defn.Caution = 0.9f;
+        defn.Tempo = 0.9f;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertEq(AIActionType.UpgradeBuilding, act.Type,
+            $"high-surplus frontier node should upgrade despite enemy pressure; got {act.Type}");
+        AssertEq(1, act.SourceNode.NodeId, "upgrade should target #1 (the 54/10 over-cap node)");
     }
 
     // 20) Gatherer adjacency: a StoneMiner/Woodcutter/LumberjackHut only produces resources

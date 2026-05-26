@@ -272,23 +272,37 @@ public static class ActionUtility
 
         // Risk: don't upgrade a frontier node if doing so leaves us under enemy pressure
         // (NumWorkers halves on upgrade). Two-tier check:
-        //   - If post-upgrade workers would fall meaningfully BELOW pressure, hard-veto.
-        //   - Otherwise apply a graduated risk penalty proportional to deficit + Caution.
+        //   - If post-upgrade workers would fall meaningfully BELOW pressure, hard-veto --
+        //     BUT only when there isn't enough surplus to absorb the halving. A node sitting
+        //     at 54/10 next to a huge enemy stack is bleeding ~1 worker per turn via the
+        //     over-cap decay (see TownData.Tick / Debug_WorldTurn); refusing to upgrade
+        //     just lets that bleed continue and ALSO leaves us indefensible. Once
+        //     surplus >= MaxWorkers, the halving keeps the post-upgrade garrison >= old
+        //     MaxWorkers, so we're at least as defensible after the upgrade as we would
+        //     have been after natural decay back to the cap.
+        //   - Otherwise apply a risk penalty scaled to the workers ACTUALLY burned by the
+        //     upgrade (capped at the post-upgrade shortfall vs pressure). The old formula
+        //     scaled with the full pressure gap and exploded into 100+ point penalties for
+        //     high-pressure nodes regardless of how many workers were on the node.
         int postUpgradeWorkers = node.NumWorkers / 2;
         int pressure = analysis.FrontierPressure[node.Index];
         if (pressure > 0 && postUpgradeWorkers < pressure)
         {
-            // Veto outright when the gap is large enough to lose the node.
-            if (pressure - postUpgradeWorkers >= 3 && p.Caution > 0.5f)
+            bool surplusCushionsHalving = surplus >= node.MaxWorkers;
+            if (!surplusCushionsHalving && pressure - postUpgradeWorkers >= 3 && p.Caution > 0.5f)
             {
                 c.Score = 0f;
-                c.Reason = $"upgrade #{node.NodeId} VETOED (post={postUpgradeWorkers} < pressure={pressure})";
+                c.Reason = $"upgrade #{node.NodeId} VETOED (post={postUpgradeWorkers} < pressure={pressure}, surplus={surplus} < cap={node.MaxWorkers})";
                 return;
             }
         }
         float risk = 0f;
         if (postUpgradeWorkers < pressure)
-            risk = (pressure - postUpgradeWorkers) * RiskPerOverSentWorker * p.Caution * 2f;
+        {
+            int workersBurned = node.NumWorkers - postUpgradeWorkers;            // workers lost to the halving
+            int workersBurnedThatMattered = Mathf.Min(workersBurned, pressure - postUpgradeWorkers);
+            risk = workersBurnedThatMattered * RiskPerOverSentWorker * p.Caution;
+        }
 
         // Upgrade is the canonical "Tempo" family. The personality multiplier is deliberately
         // muted (default ~0.8x) so an at-cap node doesn't auto-win every tick over more
