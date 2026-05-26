@@ -64,26 +64,27 @@ public class AttackGenerator : IActionGenerator
 
     static bool HasOwnedNeighborWithinHops(AI_NodeState target, PlayerData player, int hops)
     {
-        // BFS frontier; node set kept small with a HashSet of NodeId.
-        var visited = new HashSet<int> { target.NodeId };
-        var frontier = new Queue<(AI_NodeState node, int depth)>();
-        frontier.Enqueue((target, 0));
-        while (frontier.Count > 0)
-        {
-            var (n, d) = frontier.Dequeue();
-            if (d >= hops) continue;
-            foreach (var nb in n.NeighborNodes)
-            {
-                if (!visited.Add(nb.NodeId)) continue;
-                if (nb.OwnedBy == player) return true;
-                frontier.Enqueue((nb, d + 1));
-            }
-        }
+        // The viable-attack precondition is "is there an owned node we can route a wave from
+        // through friendly territory?". A wave can only RELAY through owned nodes -- workers
+        // passing through enemy / neutral intermediates get intercepted (see TownData.FindPath
+        // owner-aware variant and ResolveWorkerArrival). So the answer is simply: does the
+        // enemy target have at least one direct neighbor owned by `player`?
+        //
+        // The `hops` parameter is retained for compatibility but is implicit: a 2-hop owned
+        // source is reachable iff the depth-1 relay is owned, and we check that here.
+        for (int k = 0; k < target.NumNeighbors; k++)
+            if (target.NeighborNodes[k].OwnedBy == player) return true;
         return false;
     }
 
     static List<AI_NodeState> CollectOwnedSources(AI_NodeState target, AIWorldView view, StrategicAnalysis analysis)
     {
+        // BFS outward from the target, but ONLY relay through nodes owned by view.Player.
+        // The target itself is enemy-owned (that's the whole point); its direct neighbors are
+        // candidate first-hop owned relays/sources; from each owned relay we can step further
+        // out through OWNED chain only. Stopping the BFS at non-owned nodes is what makes
+        // "owned path required" actually true -- without it the generator happily proposes
+        // a 2-hop wave that physically has to cross enemy territory and would get killed.
         var sources = new List<AI_NodeState>();
         var visited = new HashSet<int> { target.NodeId };
         var frontier = new Queue<(AI_NodeState node, int depth)>();
@@ -95,11 +96,9 @@ public class AttackGenerator : IActionGenerator
             foreach (var nb in n.NeighborNodes)
             {
                 if (!visited.Add(nb.NodeId)) continue;
-                if (nb.OwnedBy == view.Player && analysis.SafeToSendFrom[nb.Index] > 0)
+                if (nb.OwnedBy != view.Player) continue; // can't relay or source from enemy/neutral
+                if (analysis.SafeToSendFrom[nb.Index] > 0)
                     sources.Add(nb);
-                // Continue BFS even past non-owned nodes (allows a coordinated 2-hop wave through
-                // a friendly relay). We don't pathfind here -- the realtime executor handles
-                // path planning. We only need force.
                 frontier.Enqueue((nb, d + 1));
             }
         }

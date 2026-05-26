@@ -71,6 +71,14 @@ public class AI_NodeState
     /// not commit additional waves when this is set.
     public bool AttackAlreadySufficient;
 
+    /// True for a NEUTRAL node that currently has a capture wave from `viewerPlayer` in flight
+    /// (RealNode.PendingCaptureBy == viewerPlayer). The node is NOT yet owned -- OwnedBy
+    /// remains null and NumWorkers reflects reality -- but the capture/build generators must
+    /// suppress further proposals against this target until the in-flight wave resolves
+    /// (otherwise we'd double-dispatch). Reinforce/attack generators ignore the node naturally
+    /// via the standard "OwnedBy == player" / "OwnedBy is enemy" filters.
+    public bool PendingMyCapture;
+
     // Buildings
     public bool HasBuilding;
     public BuildingDefn BuildingDefn;
@@ -174,35 +182,27 @@ public class AI_NodeState
         IncomingFriendlyWorkers = 0;
         IncomingHostileWorkers = 0;
         AttackAlreadySufficient = false;
+        PendingMyCapture = false;
 
         if (viewerPlayer == null)
             return;
 
-        // Capture intent: an empty neutral that one of viewer's groups is converging on
-        // looks "already mine" so generators do not pile on duplicate sends.
-        if (OwnedBy == null && RealNode.PendingCaptureBy != null)
-        {
-            OwnedBy = RealNode.PendingCaptureBy;
-            // Pending-capture targets have no physical workers yet; the inbound wave IS
-            // their only "garrison". Treat as physical so EffectiveDefenseGarrison still
-            // sums correctly without double-counting incoming workers.
-            NumWorkers = RealNode.GetIncomingFor(RealNode.PendingCaptureBy);
+        // Capture-intent suppression. Earlier versions of this Refresh used to overwrite
+        // OwnedBy = PendingCaptureBy when a capture was in flight, with the intent of
+        // suppressing duplicate Capture proposals. That hack caused a real bug: with the
+        // node now looking "owned by me" to the generators, ReinforceGenerator would emit
+        // SendWorkersToOwnedNode to a node that the executor still saw as a neutral with
+        // no building -- and ResolveWorkerArrival kills any non-CaptureAndConstruct arrival
+        // at an empty neutral. The result was a steady stream of dead reinforcement waves
+        // until a real CaptureNeutralNode action finally landed and flipped ownership.
+        //
+        // The fix: leave OwnedBy/NumWorkers/Building untouched (so the world looks like the
+        // real game state) and use a dedicated PendingMyCapture flag that ONLY the capture
+        // and build generators consult to skip duplicate proposals.
+        if (OwnedBy == null && RealNode.PendingCaptureBy == viewerPlayer)
+            PendingMyCapture = true;
 
-            if (RealNode.PendingCaptureBy == viewerPlayer && RealNode.PendingConstructBuilding != null)
-            {
-                HasBuilding = true;
-                BuildingDefn = RealNode.PendingConstructBuilding;
-                BuildingLevel = 1;
-                MaxWorkers = 10;
-                CanGoGatherResources = RealNode.PendingConstructBuilding.CanGatherResources;
-                if (CanGoGatherResources)
-                    ResourceThisNodeCanGoGather = RealNode.PendingConstructBuilding.ResourceThisNodeCanGoGather.GoodType;
-                CanGenerateWorkers = RealNode.PendingConstructBuilding.CanGenerateWorkers;
-                if (CanGenerateWorkers)
-                    WorkerGenerated = RealNode.PendingConstructBuilding.GeneratableWorker;
-            }
-        }
-        else if (OwnedBy == viewerPlayer)
+        if (OwnedBy == viewerPlayer)
         {
             IncomingFriendlyWorkers = RealNode.GetIncomingFor(viewerPlayer);
 

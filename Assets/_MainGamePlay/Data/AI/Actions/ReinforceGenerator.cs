@@ -88,6 +88,9 @@ public class ReinforceGenerator : IActionGenerator
 
     static List<AI_NodeState> CollectOwnedSources(AI_NodeState target, AIWorldView view, StrategicAnalysis analysis)
     {
+        // Owned-only BFS outward from the friendly target. The reinforcement wave physically
+        // routes source -> friendly chain -> target, so any non-owned intermediate would
+        // intercept it. (See AttackGenerator.CollectOwnedSources for the same reasoning.)
         var sources = new List<AI_NodeState>();
         var visited = new HashSet<int> { target.NodeId };
         var frontier = new Queue<(AI_NodeState n, int d)>();
@@ -99,7 +102,8 @@ public class ReinforceGenerator : IActionGenerator
             foreach (var nb in n.NeighborNodes)
             {
                 if (!visited.Add(nb.NodeId)) continue;
-                if (nb.OwnedBy == view.Player && analysis.SafeToSendFrom[nb.Index] > 0)
+                if (nb.OwnedBy != view.Player) continue;
+                if (analysis.SafeToSendFrom[nb.Index] > 0)
                     sources.Add(nb);
                 frontier.Enqueue((nb, d + 1));
             }

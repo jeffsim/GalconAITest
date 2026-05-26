@@ -133,18 +133,50 @@ public partial class AITestScene : MonoBehaviour
         pathSteps.Add(new PathStep { Start = startNode, End = endNode, LineRenderer = lineRenderer });
     }
 
+    // Half-width of a node's visible square in world units (Node.prefab base mesh is a
+    // unit cube scaled 1x1 in XZ). Used to clip debug arrows so the line/arrow-head sits
+    // on the edge of the source/dest squares rather than at their centers, where the
+    // arrow head was previously indistinguishable from the destination node itself.
+    const float NodeSquareHalfExtent = 0.5f;
+
     void DrawArrow(Vector3 start, Vector3 end, Color color, string label)
     {
         var draw = Drawing.Draw.ingame;
         draw.PushLineWidth(4);
         start.y += 0.1f;
         end.y += 0.1f;
-        draw.Arrow(start, end, new Unity.Mathematics.float3(0, 1, 0), 0.4f, color);
+
+        // Pull each endpoint inward to the edge of its node's XZ square so the arrow
+        // visibly starts/ends at the node boundary instead of being buried in the
+        // square (where the arrow head was the same size and color as the dest node).
+        var clippedEnd = ClipPointToNodeEdge(start, end, NodeSquareHalfExtent);
+        var clippedStart = ClipPointToNodeEdge(end, start, NodeSquareHalfExtent);
+
+        draw.Arrow(clippedStart, clippedEnd, new Unity.Mathematics.float3(0, 1, 0), 0.4f, color);
         draw.PopLineWidth();
-        var pos = (start + end) / 2;
+        var pos = (clippedStart + clippedEnd) / 2;
 
         draw.Label2D(pos, label, 20, Drawing.LabelAlignment.Center, Color.black);
         draw.Label2D(pos + new Vector3(-.02f, 0.02f, .05f), label, 20, Drawing.LabelAlignment.Center, Color.white);
+    }
+
+    // Given a line from lineFrom to nodeCenter, returns the point where the line first
+    // crosses the axis-aligned XZ square of half-extent `halfExtent` centered on
+    // nodeCenter (i.e. the edge of the destination node's visible square). Used to
+    // shorten debug arrows so they terminate on the node boundary instead of its center.
+    static Vector3 ClipPointToNodeEdge(Vector3 lineFrom, Vector3 nodeCenter, float halfExtent)
+    {
+        float absDx = Mathf.Abs(lineFrom.x - nodeCenter.x);
+        float absDz = Mathf.Abs(lineFrom.z - nodeCenter.z);
+        // If lineFrom is already inside the square in XZ, no clipping (degenerate).
+        if (absDx <= halfExtent && absDz <= halfExtent) return nodeCenter;
+        // For each axis, find the parameter t in [0,1] along (lineFrom -> nodeCenter)
+        // where the line first enters that axis's slab. The line enters the box at the
+        // MAX of the two per-axis entry params (both slabs must be satisfied).
+        float tx = absDx > halfExtent ? 1f - halfExtent / absDx : 0f;
+        float tz = absDz > halfExtent ? 1f - halfExtent / absDz : 0f;
+        float tEnter = Mathf.Clamp01(Mathf.Max(tx, tz));
+        return lineFrom + (nodeCenter - lineFrom) * tEnter;
     }
 
     // Overlay a yellow "★ score" ring around every chokepoint node. Radius scales with

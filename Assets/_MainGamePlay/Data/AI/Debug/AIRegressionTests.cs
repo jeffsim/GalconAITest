@@ -45,6 +45,13 @@ public static class AIRegressionTests
         Run(results, "personality: caution scales overkill", Test_CautionScaling);
         Run(results, "personality: expansion=0 disables captures", Test_ExpansionDisablesCaptures);
 
+        // Regression coverage for the bug-fix batch (owned-path, surplus upgrade, gatherer
+        // adjacency, pending-capture reinforce):
+        Run(results, "no send across enemy territory", Test_NoSendAcrossEnemyTerritory);
+        Run(results, "high surplus drives upgrade", Test_HighSurplusUpgrades);
+        Run(results, "no gatherer build without adjacent resource", Test_GathererNeedsAdjacentResource);
+        Run(results, "no reinforce on neutral with capture in flight", Test_NoReinforceOnPendingCapture);
+
         sw.Stop();
         bool allPassed = true;
         foreach (var r in results) if (!r.Passed) { allPassed = false; break; }
@@ -432,9 +439,13 @@ public static class AIRegressionTests
 
     static float RunAttackScore(float aggression)
     {
+        // Source workers must be <= MaxWorkers so the over-cap surplus bonus does not pull
+        // UpgradeBuilding into competition with the attack we want to isolate. workers=9
+        // means safe = 9-MinReserve(2)-pressure(2) = 5 = exactly enough for a 5-worker attack
+        // (required = ceil(2 * 1.25) = 3, but we send at least 3).
         var w = new TestWorld();
-        w.AddNode(1, owner: 1, workers: 30, hasGenerator: true);
-        w.AddNode(2, owner: 2, workers: 4,  hasGenerator: true);
+        w.AddNode(1, owner: 1, workers: 9, hasGenerator: true);
+        w.AddNode(2, owner: 2, workers: 2, hasGenerator: true);
         w.Connect(1, 2);
         w.Build();
         w.GetPlayer(1).AIDefn.Aggression = aggression;
@@ -476,6 +487,137 @@ public static class AIRegressionTests
         var act = p1.AI.BestNextActionToTake;
         AssertTrue(act.Type != AIActionType.CaptureNeutralResourceNode,
             "Expansion=0 should suppress capture candidates");
+    }
+
+    // ============================================================================
+    // Regression coverage for the post-rewrite bug batch
+    // ============================================================================
+
+    // 18) Owned-path requirement: two owned nodes #1 and #3 separated by an enemy #2.
+    //     The AI must NOT propose a SendWorkers reinforce to #3 from #1 -- workers would have
+    //     to physically route through enemy territory and get killed mid-transit.
+    static void Test_NoSendAcrossEnemyTerritory()
+    {
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 15, hasGenerator: true);
+        w.AddNode(2, owner: 2, workers: 5,  hasGenerator: true); // enemy wedge
+        w.AddNode(3, owner: 1, workers: 1,  hasGenerator: true); // isolated friendly island
+        w.Connect(1, 2);
+        w.Connect(2, 3);
+        w.Build();
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        bool reinforcingIsland =
+            (act.Type == AIActionType.SendWorkersToOwnedNode || act.Type == AIActionType.SendMultiSourceWorkersToOwnedNode)
+            && act.DestNode != null && act.DestNode.NodeId == 3;
+        AssertTrue(!reinforcingIsland,
+            "should not reinforce #3 across enemy territory (no owned path from #1 to #3)");
+
+        // Also scan candidates: no reinforce candidate should ever target #3.
+        foreach (var snap in p1.AI.DecisionRecord.TopCandidates)
+        {
+            bool isReinforce = snap.Type == AIActionType.SendWorkersToOwnedNode
+                            || snap.Type == AIActionType.SendMultiSourceWorkersToOwnedNode;
+            AssertTrue(!(isReinforce && snap.DestNodeId == 3),
+                $"reinforce candidate targets #3 but no owned path exists: {snap.Description}");
+        }
+    }
+
+    // 19) Surplus workers drive upgrade: a generator node sitting at 150/10 workers is
+    //     hemorrhaging economy (Debug_WorldTurn decays 1 per turn while over-cap). The AI
+    //     must recognise this and choose UpgradeBuilding rather than DoNothing.
+    static void Test_HighSurplusUpgrades()
+    {
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 150, hasGenerator: true);
+        // No other nodes: isolate the upgrade decision so no Attack/Capture can outscore it.
+        w.Build();
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertEq(AIActionType.UpgradeBuilding, act.Type,
+            $"150/10 surplus node should upgrade; got {act.Type}");
+        AssertEq(1, act.SourceNode.NodeId, "upgrade should target the over-cap node #1");
+    }
+
+    // 20) Gatherer adjacency: a StoneMiner/Woodcutter/LumberjackHut only produces resources
+    //     when next to a matching deposit. The AI must not propose constructing a gatherer
+    //     on a node that has no adjacent matching resource (it would gather nothing -- pure
+    //     economy waste). Verified against the live BuildingDefns loaded via GameDefns.
+    static void Test_GathererNeedsAdjacentResource()
+    {
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);
+        w.AddNode(2, owner: 0, workers: 0); // empty grass neutral, no resource adjacency
+        w.Connect(1, 2);
+        w.Build();
+
+        // Crank shortage so the AI is highly motivated to build a gatherer if the filter
+        // missed it -- with no shortage pressure the test passes trivially.
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Expansion = 2f;
+        defn.TargetWoodStockpile = 100;
+        defn.TargetStoneStockpile = 100;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        // If the chosen action is build/capture-empty, the building cannot be a gatherer
+        // (because #2 has no adjacent resource of any kind).
+        if ((act.Type == AIActionType.ConstructBuildingInEmptyNode || act.Type == AIActionType.CaptureNeutralNode)
+            && act.BuildingToConstruct != null
+            && act.BuildingToConstruct.CanGatherResources)
+        {
+            throw new Exception(
+                $"AI proposed gatherer {act.BuildingToConstruct.Id} on a node with no matching adjacent resource");
+        }
+    }
+
+    // 21) Pending-capture neutral must not be reinforced. Before the fix, AI_NodeState.Refresh
+    //     overwrote OwnedBy = PendingCaptureBy, making the neutral look "already mine" to
+    //     ReinforceGenerator -- which then sent workers with WorkerIntent.Reinforce. Those
+    //     workers arrive at a still-neutral node and die (ResolveWorkerArrival only allows
+    //     CaptureAndConstruct intents to flip ownership of an empty neutral). The new Refresh
+    //     uses a PendingMyCapture flag instead so the world looks like the real game state.
+    static void Test_NoReinforceOnPendingCapture()
+    {
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);
+        w.AddForestNeutral(2);
+        w.Connect(1, 2);
+        w.Build();
+
+        var neutral = w.NodesById[2];
+        neutral.PendingCaptureBy = w.GetPlayer(1);
+        neutral.IncomingByPlayer[w.GetPlayer(1)] = 5; // 5 workers already in flight
+        w.Town.WorldRevision++;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        bool reinforcingPendingNeutral =
+            (act.Type == AIActionType.SendWorkersToOwnedNode || act.Type == AIActionType.SendMultiSourceWorkersToOwnedNode)
+            && act.DestNode != null && act.DestNode.NodeId == 2;
+        AssertTrue(!reinforcingPendingNeutral,
+            "should not reinforce a still-neutral node with a capture wave in flight (workers would die)");
+
+        // Also: no second Capture proposal against the same neutral.
+        bool reCapturing =
+            act.Type == AIActionType.CaptureNeutralResourceNode
+            && act.DestNode != null && act.DestNode.NodeId == 2;
+        AssertTrue(!reCapturing,
+            "should not double-dispatch capture while one is already in flight");
     }
 
     // ============================================================================

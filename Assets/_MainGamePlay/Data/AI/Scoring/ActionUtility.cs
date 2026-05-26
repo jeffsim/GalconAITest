@@ -259,6 +259,14 @@ public static class ActionUtility
         if (node.CanGenerateWorkers) baseValue += 5f;
         if (node.CanGoGatherResources) baseValue += 3f;
 
+        // Surplus-workers bonus. The game decays NumWorkers by 1 per turn while NumWorkers >
+        // MaxWorkers (see TownData.Debug_WorldTurn), so an over-cap node is BLEEDING economy.
+        // Each unit of surplus is "almost wasted"; doubling MaxWorkers via upgrade rescues it.
+        // Cap so a once-grown 150/10 node doesn't single-handedly dominate scoring forever.
+        int surplus = node.NumWorkers - node.MaxWorkers;
+        if (surplus > 0)
+            baseValue += Mathf.Min(15f, surplus * 0.5f);
+
         // Forward-lookahead: if upgrading would let us hit a previously-too-strong neighbor.
         float forward = ForwardLookupForUpgrade(node, view, p);
 
