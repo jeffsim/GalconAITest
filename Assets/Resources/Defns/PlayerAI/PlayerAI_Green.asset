@@ -25,11 +25,12 @@ MonoBehaviour:
   IsEnabled: 1
   Name: Player G
   Color: {r: 0, g: 1, b: 0, a: 1}
+  ControlType: 0
   Aggression: 1.5
   Expansion: 1.4
   Caution: 0.6
   Tempo: 0.7
-  DecisionIntervalSeconds: 0.59
-  DecisionVarianceSeconds: 0.5
+  DecisionIntervalSeconds: 4.4
+  DecisionVarianceSeconds: 0.84
   TargetWoodStockpile: 12
   TargetStoneStockpile: 12
