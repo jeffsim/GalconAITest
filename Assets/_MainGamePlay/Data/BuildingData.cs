@@ -15,6 +15,9 @@ public class BuildingData
     public float ResourceProductionAccum = 0f;
     public float WorkerGenerationAccum = 0f;
 
+    // Next world-time this gatherer building may dispatch another worker (spread sends).
+    public float NextGathererDispatchTime;
+
     public BuildingData(BuildingDefn defn)
     {
         Defn = defn;

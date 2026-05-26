@@ -11,8 +11,9 @@ using UnityEngine.EventSystems;
 ///       destination tile recolors yellow when it's a legal drop (path exists with every
 ///       intermediate node owned by the human; dest may be owned/enemy/neutral).
 ///     - on release at a valid dest:
-///         owned (self/enemy) or gatherable neutral -> dispatch half the source's workers
+///         owned (self/enemy)                       -> dispatch half the source's workers
 ///         empty neutral                            -> open building-picker menu at cursor
+///         resource deposits (Forest/StoneMine)     -> not valid drag targets
 ///     - on release at an invalid dest: no-op.
 ///
 ///   CLICK -- press and release LMB on the same owned node without dragging onto another:
@@ -156,7 +157,9 @@ public class HumanPlayerInput : MonoBehaviour
 
         bool valid = hovered != null
                   && hovered != source
-                  && town.HasValidOwnedPath(human, source, hovered);
+                  && town.HasValidOwnedPath(human, source, hovered)
+                  && !(hovered.OwnedBy == null && hovered.Building != null
+                       && hovered.Building.Defn.CanBeGatheredFrom);
 
         if (hovered != _session.HoveredDest)
         {
@@ -300,26 +303,7 @@ public class HumanPlayerInput : MonoBehaviour
         _pendingPickerDest = null;
     }
 
-    static List<BuildingDefn> GetPlayerBuildableDefns()
-    {
-        var result = new List<BuildingDefn>();
-        if (GameDefns.Instance == null) return result;
-        foreach (var settings in GameDefns.Instance.GameSettingsDefns.Values)
-        {
-            if (settings != null && settings.PlayerBuildableBuildings.Count > 0)
-            {
-                result.AddRange(settings.PlayerBuildableBuildings);
-                break;
-            }
-        }
-        // Fallback: if the GameSettings list is empty for any reason, iterate BuildingDefns
-        // directly so the picker is still useful instead of silently blank.
-        if (result.Count == 0)
-            foreach (var bd in GameDefns.Instance.BuildingDefns.Values)
-                if (bd.CanBeBuiltByPlayer)
-                    result.Add(bd);
-        return result;
-    }
+    static List<BuildingDefn> GetPlayerBuildableDefns() => PlayerBuildingCatalog.GetPlayerBuildableDefns();
 
     static string FormatBuildingOption(BuildingDefn defn, bool affordable)
     {

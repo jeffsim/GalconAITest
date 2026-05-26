@@ -6,21 +6,35 @@ public class TownInventoryPanel : MonoBehaviour
     public TextMeshProUGUI Wood;
     public TextMeshProUGUI Stone;
 
-    void Update()
-    {
-        var player = AITestScene.Instance.DebugPlayerToViewDetailsOn;
+    const float LabelFontSize = 36f;
 
-        // todo: cache
-        Wood.text = "Wood: " + getNumItemInPlayerInventory(player, GoodType.Wood);
-        Stone.text = "Stone: " + getNumItemInPlayerInventory(player, GoodType.Stone);
+    static readonly System.Collections.Generic.Dictionary<GoodType, int> ScratchTotals = new();
+
+    void Awake()
+    {
+        ApplyFontSize(Wood);
+        ApplyFontSize(Stone);
     }
 
-    private int getNumItemInPlayerInventory(PlayerData player, GoodType good)
+    static void ApplyFontSize(TextMeshProUGUI label)
     {
-        int count = 0;
-        foreach (var node in AITestScene.Instance.Town.Nodes)
-            if (node.OwnedBy == player)
-                count += node.Inventory[good];
-        return count;
+        if (label != null)
+            label.fontSize = LabelFontSize;
+    }
+
+    void Update()
+    {
+        var town = AITestScene.Instance?.Town;
+        if (town == null) return;
+
+        // Human test scene: show the human's town-wide inventory, not the AI debug target.
+        var player = town.GetHumanPlayer() ?? AITestScene.Instance.DebugPlayerToViewDetailsOn;
+        if (player == null) return;
+
+        PlayerEconomy.GetTotalInventory(player, town, ScratchTotals);
+        ScratchTotals.TryGetValue(GoodType.Wood, out int wood);
+        ScratchTotals.TryGetValue(GoodType.Stone, out int stone);
+        Wood.text = "Wood: " + wood;
+        Stone.text = "Stone: " + stone;
     }
 }

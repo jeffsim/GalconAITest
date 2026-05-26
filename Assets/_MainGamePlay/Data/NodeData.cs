@@ -22,6 +22,10 @@ public class NodeData
     public BuildingData Building;
     public int NumWorkers;
 
+    // Gatherer workers dispatched from this node (tracked here, not on BuildingData, so
+    // returns still resolve correctly if the gatherer building is destroyed/replaced).
+    public List<GatheringWorkerData> GatheringWorkers = new();
+
     public SerializedDictionary<GoodType, int> Inventory = new();
 
     // Realtime: how many in-flight workers are currently heading to this node, keyed by their
@@ -110,7 +114,10 @@ public class NodeData
         NodeId = nodeDefn.NodeId;
         NumWorkers = nodeDefn.NumStartingWorkers;
         if (nodeDefn.StartingBuilding != null)
+        {
             Building = new BuildingData(nodeDefn.StartingBuilding);
+            ResourceGathering.OnGathererBuildingConstructed(this);
+        }
 
         // Populate starting inventory. force keys to exist
         // foreach (var value in GameDefns.Instance.GoodDefns.Values)
@@ -126,6 +133,7 @@ public class NodeData
     public void ConstructBuilding(BuildingData building)
     {
         Building = building;
+        ResourceGathering.OnGathererBuildingConstructed(this);
         OnBuildingConstructed?.Invoke();
     }
 

@@ -37,7 +37,13 @@ MonoBehaviour:
   CanGatherResources: 1
   ResourceThisNodeCanGoGather: {fileID: 11400000, guid: 9a523d1c224125c49a8fe6ab1c85b83d,
     type: 2}
-  ResourceProducedPerWorkerPerTurn: 1
+  ResourceProducedPerTurn: 1
+  SecondsPerResourceProduced: 1.5
+  SecondsToGatherAtResource: 2
+  SecondsBetweenGathererDispatch: 1
+  GathererDispatchIntervalVarianceMin: -0.2
+  GathererDispatchIntervalVarianceMax: 1.5
+  SecondsRestBetweenGatherRuns: 1
   ResourcesPerSecondPerWorker: 0.667
   CanBeGatheredFrom: 0
   ResourceGatheredFromThisNode: {fileID: 0}
@@ -45,3 +51,4 @@ MonoBehaviour:
   CraftableGoods: []
   CanGenerateWorkers: 0
   GeneratableWorker: {fileID: 0}
+  SecondsPerWorkerGenerated: 2

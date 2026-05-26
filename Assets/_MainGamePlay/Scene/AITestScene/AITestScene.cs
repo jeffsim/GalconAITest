@@ -36,6 +36,7 @@ public partial class AITestScene : MonoBehaviour
     // Lookup so AdvanceRealtime can pair WorkerData (data) with its rendered Worker (GO) and
     // remove the GO when the data leaves WorkersInFlight.
     Dictionary<WorkerData, Worker> workerGoByData = new Dictionary<WorkerData, Worker>();
+    Dictionary<GatheringWorkerData, GatheringWorker> gatheringWorkerGoByData = new Dictionary<GatheringWorkerData, GatheringWorker>();
 
     /// Player whose decision record is shown on the on-screen overlay and copied first by the
     /// AI debug dump button. The new AI has no recursive tree to "view details on"; this is
@@ -57,12 +58,23 @@ public partial class AITestScene : MonoBehaviour
         Instance = this;
         EnsureRealtimeControlPanel();
         EnsureHumanPlayerInput();
+        EnsureBuildableBuildingsPanel();
         ResetTown();
 
         // Application.targetFrameRate = 60;
     }
 
     HumanPlayerInput humanInput;
+
+    BuildableBuildingsPanel buildableBuildingsPanel;
+
+    void EnsureBuildableBuildingsPanel()
+    {
+        if (buildableBuildingsPanel != null) return;
+        var host = new GameObject("BuildableBuildingsPanelHost");
+        host.transform.SetParent(transform, false);
+        buildableBuildingsPanel = host.AddComponent<BuildableBuildingsPanel>();
+    }
 
     void EnsureHumanPlayerInput()
     {
@@ -87,6 +99,7 @@ public partial class AITestScene : MonoBehaviour
         Nodes.Clear();
         Workers.Clear();
         workerGoByData.Clear();
+        gatheringWorkerGoByData.Clear();
 
         // Initialize each AI's first realtime decision time to "now" so the simulation kicks
         // off immediately instead of sitting idle for one DecisionInterval before the very
@@ -322,6 +335,7 @@ public partial class AITestScene : MonoBehaviour
         {
             Town.RealtimeTick(dt, GameSpeed);
             SyncInFlightWorkerGOs();
+            SyncGatheringWorkerGOs();
         }
 
         HandleRealtimeSpeedInput();
@@ -331,6 +345,55 @@ public partial class AITestScene : MonoBehaviour
             DrawNextAISteps(player);
 
         DrawChokepointOverlay();
+    }
+
+    void SyncGatheringWorkerGOs()
+    {
+        var alive = new HashSet<GatheringWorkerData>();
+        for (int n = 0; n < Town.Nodes.Count; n++)
+        {
+            var list = Town.Nodes[n].GatheringWorkers;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var data = list[i];
+                if (data.Phase == GatheringWorkerPhase.RestingAtHome) continue;
+                alive.Add(data);
+                if (!gatheringWorkerGoByData.TryGetValue(data, out var go))
+                {
+                    go = InstantiateGatheringWorkerGO();
+                    go.InitializeForData(data);
+                    gatheringWorkerGoByData[data] = go;
+                }
+                else
+                {
+                    go.Data = data;
+                    go.SyncFromData();
+                }
+            }
+        }
+
+        if (gatheringWorkerGoByData.Count > alive.Count)
+        {
+            var stale = new List<GatheringWorkerData>();
+            foreach (var kvp in gatheringWorkerGoByData)
+                if (!alive.Contains(kvp.Key))
+                    stale.Add(kvp.Key);
+            foreach (var dead in stale)
+            {
+                var go = gatheringWorkerGoByData[dead];
+                gatheringWorkerGoByData.Remove(dead);
+                if (go != null) Destroy(go.gameObject);
+            }
+        }
+    }
+
+    GatheringWorker InstantiateGatheringWorkerGO()
+    {
+        var go = Instantiate(WorkerPrefab);
+        go.transform.SetParent(WorkersFolder.transform);
+        var workerComp = go.GetComponent<Worker>();
+        if (workerComp != null) Destroy(workerComp);
+        return go.gameObject.AddComponent<GatheringWorker>();
     }
 
     void SyncInFlightWorkerGOs()

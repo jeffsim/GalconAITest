@@ -193,14 +193,6 @@ public static class ActionUtility
 
         float baseValue = CaptureBase + ValueOfNeutralTarget(target, c.BuildingToConstruct);
 
-        // Resource shortage bonus: capturing a node we'll gather a shortage resource from
-        // is more valuable than the same capture when we have plenty.
-        if (target.CanBeGatheredFrom)
-        {
-            int shortage = analysis.GetResourceShortage(target.ResourceGatheredFromThisNode);
-            baseValue += Mathf.Min(8f, shortage * 0.3f);
-        }
-
         // Articulation-point bonus: claiming a neutral cut vertex BEFORE the enemy does
         // extends our reach AND denies them a future amputation target. Same multiplier
         // shape as ScoreAttack so the two action families are comparable at a glance.
@@ -234,7 +226,6 @@ public static class ActionUtility
     static float ValueOfNeutralTarget(AI_NodeState target, BuildingDefn willBuild)
     {
         float v = 0f;
-        if (target.CanBeGatheredFrom) v += 3f;
         if (willBuild != null)
         {
             if (willBuild.CanGenerateWorkers) v += 4f;

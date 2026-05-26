@@ -31,11 +31,14 @@ public class ContextMenuDialog : MonoBehaviour
     readonly List<Button> _buttonPool = new();
     bool _resolved;
 
-    const int ButtonHeight = 28;
-    const int ButtonSpacing = 4;
-    const int PanelPaddingX = 10;
-    const int PanelPaddingY = 8;
-    const int PanelWidth = 240;
+    const int UiScale = 2;
+    const int ButtonHeight = 28 * UiScale;
+    const int ButtonSpacing = 4 * UiScale;
+    const int PanelPaddingX = 10 * UiScale;
+    const int PanelPaddingY = 8 * UiScale;
+    const int PanelWidth = 240 * UiScale;
+    const int LabelFontSize = 13 * UiScale;
+    const int LabelPaddingX = 8 * UiScale;
 
     void Awake()
     {
@@ -107,9 +110,11 @@ public class ContextMenuDialog : MonoBehaviour
             btn.gameObject.SetActive(true);
 
             var rt = btn.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(-PanelPaddingX * 2, ButtonHeight);
             rt.anchoredPosition = new Vector2(0, -(PanelPaddingY + i * (ButtonHeight + ButtonSpacing)));
 
             var label = btn.GetComponentInChildren<Text>();
+            label.fontSize = LabelFontSize;
             label.text = opt.Label ?? "";
             label.color = opt.Enabled ? Color.white : new Color(0.55f, 0.55f, 0.55f, 1f);
 
@@ -205,11 +210,11 @@ public class ContextMenuDialog : MonoBehaviour
         var labelRT = labelGO.GetComponent<RectTransform>();
         labelRT.anchorMin = Vector2.zero;
         labelRT.anchorMax = Vector2.one;
-        labelRT.offsetMin = new Vector2(8, 0);
-        labelRT.offsetMax = new Vector2(-8, 0);
+        labelRT.offsetMin = new Vector2(LabelPaddingX, 0);
+        labelRT.offsetMax = new Vector2(-LabelPaddingX, 0);
         var text = labelGO.GetComponent<Text>();
         text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 13;
+        text.fontSize = LabelFontSize;
         text.color = Color.white;
         text.alignment = TextAnchor.MiddleLeft;
 

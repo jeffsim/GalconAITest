@@ -54,10 +54,23 @@ public class BuildingDefn : BaseDefn
     [ShowIf("CanGatherResources")]
     public int ResourceProducedPerTurn = 3;
     [ShowIf("CanGatherResources")]
-    [Tooltip("Deprecated: use ResourcesPerSecondPerWorker. Kept for reference only.")]
+    [Tooltip("Deprecated: passive per-tick production removed; gatherers use worker trips.")]
     public float SecondsPerResourceProduced = 1.5f;
+    [ShowIf("CanGatherResources")]
+    [Tooltip("Seconds a gatherer worker spends at the deposit node per trip.")]
+    public float SecondsToGatherAtResource = 2f;
+    [ShowIf("CanGatherResources")]
+    [Tooltip("Base seconds between dispatching each gatherer worker from this building.")]
+    public float SecondsBetweenGathererDispatch = 0.5f;
+    [ShowIf("CanGatherResources")]
+    public float GathererDispatchIntervalVarianceMin = -0.2f;
+    [ShowIf("CanGatherResources")]
+    public float GathererDispatchIntervalVarianceMax = 1.5f;
+    [ShowIf("CanGatherResources")]
+    [Tooltip("Seconds a gatherer rests at home before becoming available again.")]
+    public float SecondsRestBetweenGatherRuns = 1f;
     [ShowIf("@CanGatherResources || CanBeGatheredFrom")]
-    [Tooltip("Each worker produces this many resources per second.")]
+    [Tooltip("Deprecated: passive production. Deposit nodes no longer tick resources.")]
     public float ResourcesPerSecondPerWorker = 0.667f;
 
     // ResourceNode

@@ -6,8 +6,8 @@ using System;
 /// </summary>
 public static class ResourceProduction
 {
-    public static bool ProducesResources(BuildingDefn defn) =>
-        defn != null && (defn.CanGatherResources || defn.CanBeGatheredFrom);
+    // Passive per-tick production removed; gatherers use worker trips, deposits are visit-only.
+    public static bool ProducesResources(BuildingDefn defn) => false;
 
     public static GoodType GetProducedGoodType(BuildingDefn defn)
     {

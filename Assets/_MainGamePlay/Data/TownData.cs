@@ -135,6 +135,9 @@ public class TownData
         EnforceOwnedNodesHaveBuilding();
 
         TickBuildingProduction(deltaSeconds);
+        bool gatheringChanged = ResourceGathering.TickGathererBuildings(this, deltaSeconds);
+        gatheringChanged |= ResourceGathering.AdvanceAllGatheringWorkers(this, deltaSeconds, gameSpeed);
+        if (gatheringChanged) WorldRevision++;
         TickAttackHeatDecay(deltaSeconds);
         AdvanceInFlightWorkers(deltaSeconds, gameSpeed);
         DriveRealtimeAI();
@@ -354,6 +357,7 @@ public class TownData
             node.AttackHeat = 0f;
             node.PendingCaptureBy = null;
             node.PendingConstructBuilding = null;
+            node.GatheringWorkers.Clear();
             WorldRevision++;
         }
     }
@@ -566,27 +570,6 @@ public class TownData
                 }
                 break;
 
-            case AIActionType.CaptureNeutralResourceNode:
-                {
-                    var fromNode = action.SourceNode?.RealNode;
-                    var toNode = action.DestNode?.RealNode;
-                    if (fromNode == null || toNode == null) return;
-                    if (fromNode.OwnedBy != player) return;
-                    if (toNode.OwnedBy != null) return;
-                    if (toNode.PendingCaptureBy != null) return;
-                    if (toNode.Building == null || !toNode.Building.Defn.CanBeGatheredFrom) return;
-
-                    // Game rule: source must retain at least 1 worker (NodeData.GetMaxSendableWorkers).
-                    int numToSend = Math.Min(action.Count, NodeData.GetMaxSendableWorkers(fromNode.NumWorkers));
-                    if (numToSend <= 0) return;
-
-                    toNode.PendingCaptureBy = player;
-                    SpawnWorkerGroup(player, fromNode, toNode, numToSend, WorkerIntent.Reinforce, null);
-                    fromNode.NumWorkers -= numToSend;
-                    WorldRevision++;
-                }
-                break;
-
             case AIActionType.CaptureNeutralNode:
                 {
                     var toNode = action.DestNode?.RealNode;
@@ -784,14 +767,7 @@ public class TownData
             intent = WorkerIntent.Attack;
         }
         else
-        {
-            // Empty neutral here would normally go through HumanConstructBuilding; callers
-            // should only route gatherable resource neutrals through this method.
-            if (to.Building == null || !to.Building.Defn.CanBeGatheredFrom) return false;
-            if (to.PendingCaptureBy != null && to.PendingCaptureBy != player) return false;
-            to.PendingCaptureBy = player;
-            intent = WorkerIntent.Reinforce;
-        }
+            return false;
 
         SpawnWorkerGroup(player, from, to, toSend, intent, null);
         from.NumWorkers -= toSend;

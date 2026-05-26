@@ -281,28 +281,36 @@ public static class AIRegressionTests
         AssertEq(1, act.AttackFromNodes.Count, "should attack from exactly one source");
     }
 
-    // 8) Resource shortage drives capture: when wood inventory is zero and target stockpile
-    //    is high, the AI should prefer to capture a Forest resource node next door.
+    // 8) Resource shortage drives gatherer build: when wood inventory is zero and target
+    //    stockpile is high, the AI should build a gatherer on an empty node beside a Forest.
     static void Test_ResourceShortage()
     {
         var w = new TestWorld();
         w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);
-        w.AddForestNeutral(2);                                 // gatherable Wood
+        w.AddNode(2, owner: 0, workers: 0);                    // empty build site
+        w.AddForestNeutral(3);                                 // Wood deposit (not captured)
         w.Connect(1, 2);
+        w.Connect(2, 3);
         w.Build();
 
         var defn = w.GetPlayer(1).AIDefn;
-        defn.TargetWoodStockpile = 30;                          // high shortage
+        defn.TargetWoodStockpile = 30;
         defn.TargetStoneStockpile = 0;
-        defn.Expansion = 2f;                                    // strongly weights captures
+        defn.Expansion = 2f;
 
         var p1 = w.GetPlayer(1);
         p1.AI.InvalidateDecisionCache();
         p1.AI.Update(w.Town);
         var act = p1.AI.BestNextActionToTake;
 
-        AssertEq(AIActionType.CaptureNeutralResourceNode, act.Type, $"expected resource capture, got {act.Type}");
-        AssertEq(2, act.DestNode.NodeId, "capture should target the Forest neutral");
+        bool isGathererBuild =
+            (act.Type == AIActionType.ConstructBuildingInEmptyNode || act.Type == AIActionType.CaptureNeutralNode)
+            && act.BuildingToConstruct != null
+            && act.BuildingToConstruct.CanGatherResources
+            && act.BuildingToConstruct.ResourceThisNodeCanGoGather != null
+            && act.BuildingToConstruct.ResourceThisNodeCanGoGather.GoodType == GoodType.Wood;
+        AssertTrue(isGathererBuild, $"expected wood gatherer build beside forest, got {act.Type}");
+        AssertEq(2, act.DestNode.NodeId, "gatherer should be built on empty #2 beside forest #3");
     }
 
     // 9) Build affordability: if the player has no resources, build candidates that require
@@ -387,7 +395,7 @@ public static class AIRegressionTests
     {
         var w = new TestWorld();
         w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);
-        w.AddForestNeutral(2);
+        w.AddNode(2, owner: 0, workers: 0);
         w.Connect(1, 2);
         w.Build();
 
@@ -404,7 +412,9 @@ public static class AIRegressionTests
         p1.AI.Update(w.Town);
         var act = p1.AI.BestNextActionToTake;
 
-        AssertTrue(act.Type != AIActionType.CaptureNeutralResourceNode || act.DestNode.NodeId != 2,
+        AssertTrue(
+            (act.Type != AIActionType.CaptureNeutralNode && act.Type != AIActionType.ConstructBuildingInEmptyNode)
+            || act.DestNode.NodeId != 2,
             "should not propose a second capture of the same neutral while one is in flight");
     }
 
@@ -492,7 +502,7 @@ public static class AIRegressionTests
     {
         var w = new TestWorld();
         w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);
-        w.AddForestNeutral(2);
+        w.AddNode(2, owner: 0, workers: 0);
         w.Connect(1, 2);
         w.Build();
 
@@ -507,7 +517,7 @@ public static class AIRegressionTests
         p1.AI.InvalidateDecisionCache();
         p1.AI.Update(w.Town);
         var act = p1.AI.BestNextActionToTake;
-        AssertTrue(act.Type != AIActionType.CaptureNeutralResourceNode,
+        AssertTrue(act.Type != AIActionType.CaptureNeutralNode && act.Type != AIActionType.ConstructBuildingInEmptyNode,
             "Expansion=0 should suppress capture candidates");
     }
 
@@ -880,22 +890,24 @@ public static class AIRegressionTests
     }
 
     // 20f) Race-margin / uncontested-expansion bias (Phase 4 of the preprocessing plan).
-    //      Two forest neutrals are both 1 hop from P1's spawn #1. #2 sits next to P2's
-    //      spawn (tied race -> margin 0); #3 is far from P2 (margin +2). With Aggression=0
-    //      to neutralise the articulation bonus on captures, the AI must prefer #3.
+    //      Two empty build sites beside forests: #2 is a race tie with P2; #3 is uncontested.
+    //      With Aggression=0 the AI must prefer building on #3 over #2.
     static void Test_PreferUncontestedExpansion()
     {
         var w = new TestWorld();
-        w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);  // P1 spawn / source
-        w.AddForestNeutral(2);                                     // neutral, also touches enemy
-        w.AddForestNeutral(3);                                     // neutral, uncontested side
-        w.AddNode(5, owner: 2, workers: 1, hasGenerator: true);    // P2 spawn
+        w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);
+        w.AddNode(2, owner: 0, workers: 0);
+        w.AddForestNeutral(4);
+        w.AddNode(3, owner: 0, workers: 0);
+        w.AddForestNeutral(6);
+        w.AddNode(5, owner: 2, workers: 1, hasGenerator: true);
         w.Connect(1, 2);
+        w.Connect(2, 4);
+        w.Connect(5, 4);
         w.Connect(1, 3);
-        w.Connect(5, 2);
+        w.Connect(3, 6);
         w.Build();
 
-        // Sanity-check the race margin matches what we expect.
         var view = w.GetPlayer(1).AI.GetWorldView();
         AI_NodeState m2 = null, m3 = null;
         for (int i = 0; i < view.NumNodes; i++)
@@ -906,17 +918,12 @@ public static class AIRegressionTests
         AssertEq(0, m2.GetRaceMargin(1), "#2 should be a race tie (both spawns are 1 hop away)");
         AssertGreater(m3.GetRaceMargin(1), 0, "#3 should be uncontested (P2 spawn is >1 hop away)");
 
-        // Tune personality to isolate the race-margin signal:
-        //   Aggression=0 -> articulation bonus on capture is zero (otherwise #2's
-        //                   articulation status would dominate the comparison).
-        //   Expansion high -> captures outscore upgrades and other actions.
-        //   Caution=0    -> small wave size, plenty of safe-to-send for either target.
         var defn = w.GetPlayer(1).AIDefn;
         defn.Aggression = 0f;
         defn.Expansion = 2f;
         defn.Caution = 0f;
         defn.Tempo = 0f;
-        defn.TargetWoodStockpile = 0; // no shortage bias (would apply to both equally)
+        defn.TargetWoodStockpile = 0;
         defn.TargetStoneStockpile = 0;
 
         var p1 = w.GetPlayer(1);
@@ -924,10 +931,11 @@ public static class AIRegressionTests
         p1.AI.Update(w.Town);
         var act = p1.AI.BestNextActionToTake;
 
-        AssertEq(AIActionType.CaptureNeutralResourceNode, act.Type,
-            $"expected a resource capture, got {act.Type}");
+        bool isCaptureOrBuild =
+            act.Type == AIActionType.CaptureNeutralNode || act.Type == AIActionType.ConstructBuildingInEmptyNode;
+        AssertTrue(isCaptureOrBuild, $"expected a neutral capture/build, got {act.Type}");
         AssertEq(3, act.DestNode != null ? act.DestNode.NodeId : -1,
-            $"AI should capture uncontested #3 over contested #2; chose #{act.DestNode?.NodeId}");
+            $"AI should prefer uncontested build site #3 over contested #2; chose #{act.DestNode?.NodeId}");
     }
 
     // 20g) Same-region reinforcement preference (Phase 6). Two triangles joined by a
@@ -1152,7 +1160,7 @@ public static class AIRegressionTests
     {
         var w = new TestWorld();
         w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);
-        w.AddForestNeutral(2);
+        w.AddNode(2, owner: 0, workers: 0);
         w.Connect(1, 2);
         w.Build();
 
@@ -1174,7 +1182,7 @@ public static class AIRegressionTests
 
         // Also: no second Capture proposal against the same neutral.
         bool reCapturing =
-            act.Type == AIActionType.CaptureNeutralResourceNode
+            (act.Type == AIActionType.CaptureNeutralNode || act.Type == AIActionType.ConstructBuildingInEmptyNode)
             && act.DestNode != null && act.DestNode.NodeId == 2;
         AssertTrue(!reCapturing,
             "should not double-dispatch capture while one is already in flight");

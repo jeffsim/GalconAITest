@@ -24,5 +24,6 @@ MonoBehaviour:
   Id: Stone
   FriendlyName: Stone
   GoodType: 2
+  GoodColor: {r: 0.55, g: 0.55, b: 0.58, a: 1}
   CraftingRequirements: []
   Sprite: {fileID: 0}

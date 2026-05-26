@@ -31,6 +31,7 @@ public class GoodDefn : BaseDefn
 {
     public string FriendlyName;
     public GoodType GoodType;
+    public Color GoodColor = Color.white;
     public List<Good_CraftingRequirements> CraftingRequirements = new List<Good_CraftingRequirements>();
     public Sprite Sprite;
 }

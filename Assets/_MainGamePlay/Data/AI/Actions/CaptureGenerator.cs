@@ -4,9 +4,6 @@ using UnityEngine;
 /// Generates capture candidates against neutral nodes. Two flavors emerge naturally
 /// depending on what the target looks like:
 ///
-///   Target has a Forest/StoneMine building (CanBeGatheredFrom):
-///     Emit AIActionType.CaptureNeutralResourceNode (single-source).
-///
 ///   Target is an empty neutral (HasBuilding == false):
 ///     Emit AIActionType.CaptureNeutralNode with the highest-scoring building this
 ///     player can afford and build, and however many sources are needed to overcome any
@@ -37,58 +34,10 @@ public class CaptureGenerator : IActionGenerator
             if (target.PendingMyCapture) continue;
             if (!HasDirectOwnedNeighbor(target, view.Player)) continue;
 
-            if (target.HasBuilding && target.CanBeGatheredFrom)
-                GenerateResourceCapture(target, view, analysis, p, ai, sink);
-            else if (!target.HasBuilding)
+            // Forest / StoneMine deposits are not captured; build a gatherer on an adjacent empty node.
+            if (!target.HasBuilding)
                 GenerateEmptyCapture(target, view, analysis, p, ai, sink);
-            // else: HasBuilding && !CanBeGatheredFrom -- no game case today, skip silently.
         }
-    }
-
-    void GenerateResourceCapture(
-        AI_NodeState target,
-        AIWorldView view,
-        StrategicAnalysis analysis,
-        PersonalityWeights p,
-        PlayerAI ai,
-        List<AICandidate> sink)
-    {
-        // Resource captures are simple: pick the adjacent owned node with the most safe-to-send,
-        // and send Min(safe, defender + overkill) workers. We don't multi-source these because
-        // resource nodes are tiny -- one wave from one node is enough.
-        AI_NodeState bestSource = null;
-        int bestSafe = 0;
-        for (int k = 0; k < target.NumNeighbors; k++)
-        {
-            var src = target.NeighborNodes[k];
-            if (src.OwnedBy != view.Player) continue;
-            int safe = analysis.SafeToSendFrom[src.Index];
-            if (safe > bestSafe)
-            {
-                bestSafe = safe;
-                bestSource = src;
-            }
-        }
-        if (bestSource == null || bestSafe < StrategicAnalysis.MinCaptureWave) return;
-
-        // Capture-flip rule (TownData.ResolveWorkerArrival neutral branch): each attacker
-        // trades 1:1 with the neutral garrison, then the NEXT arrival captures. So we need
-        // (defenders + 1) attackers to LAND, scaled by AttackOverkill. Neutrals don't
-        // generate workers, so no travel regen term is needed here.
-        int defenderGarrison = target.NumWorkers;
-        int required = Mathf.CeilToInt((defenderGarrison + 1) * p.AttackOverkill);
-        int send = Mathf.Clamp(required, StrategicAnalysis.MinCaptureWave, bestSafe);
-        // Refuse to dribble: if even the largest single source can't muster the full
-        // capture-flip wave, skip rather than send a doomed partial attack.
-        if (send < required) return;
-
-        var c = ai.AcquireCandidate();
-        c.Type = AIActionType.CaptureNeutralResourceNode;
-        c.SourceNode = bestSource;
-        c.DestNode = target;
-        c.Count = send;
-        ActionUtility.ScoreCapture(c, view, analysis, p);
-        if (c.Score > 0f) sink.Add(c); else ai.ReleaseCandidate(c);
     }
 
     void GenerateEmptyCapture(

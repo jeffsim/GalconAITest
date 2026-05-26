@@ -24,5 +24,6 @@ MonoBehaviour:
   Id: Wood
   FriendlyName: Wood
   GoodType: 1
+  GoodColor: {r: 0.55, g: 0.35, b: 0.12, a: 1}
   CraftingRequirements: []
   Sprite: {fileID: 0}
