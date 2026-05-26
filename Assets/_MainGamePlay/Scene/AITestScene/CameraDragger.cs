@@ -3,8 +3,11 @@ using UnityEngine;
 
 public class CameraDragger : MonoBehaviour
 {
-    private Vector3 lastMousePosition;
-    private bool isDragging = false;
+    private Camera _camera;
+    private bool _isDragging;
+    private Vector3 _dragAnchorWorld;
+
+    static readonly Plane GroundPlane = new Plane(Vector3.up, Vector3.zero);
 
     // You can adjust these values to control zoom sensitivity and limits
     public float zoomSensitivity = 10.0f;
@@ -154,33 +157,41 @@ public class CameraDragger : MonoBehaviour
         return true;
     }
 
+    void Awake()
+    {
+        _camera = GetComponent<Camera>();
+    }
+
+    bool TryGetGroundHit(Vector3 screenPosition, out Vector3 worldPoint)
+    {
+        var ray = _camera.ScreenPointToRay(screenPosition);
+        if (GroundPlane.Raycast(ray, out float enter))
+        {
+            worldPoint = ray.GetPoint(enter);
+            return true;
+        }
+
+        worldPoint = default;
+        return false;
+    } 
+
     void Update()
     {
         if (Input.GetMouseButtonDown(1))
         {
-            lastMousePosition = Input.mousePosition;
-            isDragging = true;
+            if (TryGetGroundHit(Input.mousePosition, out var hit))
+            {
+                _isDragging = true;
+                _dragAnchorWorld = hit;
+            }
         }
         else if (Input.GetMouseButtonUp(1))
         {
-            isDragging = false;
+            _isDragging = false;
         }
 
-        if (isDragging && Input.GetMouseButton(1))
-        {
-            Vector3 delta = Input.mousePosition - lastMousePosition;
-            lastMousePosition = Input.mousePosition;
-
-            float scaleFactor = 0.01f;
-            delta *= scaleFactor;
-
-            Vector3 forward = transform.forward;
-            forward.y = 0;
-            Vector3 right = transform.right;
-
-            Vector3 movement = right * delta.x + forward * delta.y;
-            transform.Translate(-movement, Space.World);
-        }
+        if (_isDragging && Input.GetMouseButton(1) && TryGetGroundHit(Input.mousePosition, out var currentHit))
+            transform.position += _dragAnchorWorld - currentHit;
 
         // Zoom functionality
         float scroll = Input.GetAxis("Mouse ScrollWheel");
