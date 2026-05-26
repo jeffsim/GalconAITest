@@ -55,6 +55,41 @@ public static class ActionUtility
     // the player does not yet own. Stacks with base build value.
     const float MissingTierBonus = 6f;
 
+    // Articulation-point amplification (Phase 3 of the preprocessing plan). A node whose
+    // removal disconnects the map is structurally more valuable than a leaf -- losing one
+    // amputates a slice of territory; capturing one amputates the enemy's. The amplifier
+    // is graded by the relevant personality dial so cautious AIs defend articulation
+    // points harder, while aggressive AIs target enemy articulation points harder.
+    //   ScoreReinforce: baseValue *= 1 + ArticulationDefenseAmp * Caution
+    //   ScoreAttack   : baseValue *= 1 + ArticulationOffenseAmp * Aggression
+    //   ScoreCapture  : baseValue *= 1 + ArticulationOffenseAmp * Aggression
+    //   ScoreUpgrade  : baseValue += ArticulationUpgradeBonus * BuildingLevel (small)
+    const float ArticulationDefenseAmp = 0.5f;
+    const float ArticulationOffenseAmp = 0.5f;
+    const float ArticulationUpgradeBonus = 2f;
+
+    // Race-margin score swing for captures (Phase 4). Positive race margin = our spawn is
+    // closer to this neutral than any enemy spawn = uncontested expansion; negative = the
+    // enemy will win the race. Bounded so a single far-away neutral can't dominate the
+    // capture priority queue, and the negative half is capped tighter than the positive
+    // half so "this is contested" reduces preference without producing a hard veto.
+    const float RaceMarginBonusCap = 6f;
+    const float RaceMarginPenaltyCap = 3f;
+
+    // Build-site quality bonuses (Phase 7). Composed on top of the existing baseValue so
+    // they stack additively with MissingTierBonus and the gatherer-shortage scaling. Sized
+    // small relative to MissingTierBonus -- "filling a missing tier" should still outweigh
+    // "placing the same building on a slightly nicer node".
+    //   HubBarracksBonus       : a worker generator launches from a Hub (deg >= 4); more
+    //                            directions reachable per worker spawned.
+    //   ForwardBaseBonus       : a worker generator on uncontested ground (we'll arrive
+    //                            first) is a real forward base, not a contested coin-flip.
+    //   ArticulationBuildBonus : a non-gatherer, non-generator building on a cut vertex
+    //                            adds structural redundancy to the keystone node.
+    const float HubBarracksBonus = 4f;
+    const float ForwardBaseBonus = 3f;
+    const float ArticulationBuildBonus = 3f;
+
     // ============================================================================
     // Attack
     // ============================================================================
@@ -65,6 +100,10 @@ public static class ActionUtility
 
         // Target value: territory + chokepoint + their building (if any).
         float baseValue = AttackBase + ValueOfEnemyNode(target);
+        // Articulation-point amputation bonus: capturing one of these slices the enemy's
+        // territory in two, which is a strictly bigger prize than capturing a leaf.
+        if (target.IsArticulationPoint)
+            baseValue *= 1f + ArticulationOffenseAmp * p.Aggression;
         float chokeMult = 1f + target.ChokepointScore * ChokepointAttackAmp * p.Aggression;
 
         // Force margin: do we have meaningfully MORE than required to actually CAPTURE
@@ -162,6 +201,20 @@ public static class ActionUtility
             baseValue += Mathf.Min(8f, shortage * 0.3f);
         }
 
+        // Articulation-point bonus: claiming a neutral cut vertex BEFORE the enemy does
+        // extends our reach AND denies them a future amputation target. Same multiplier
+        // shape as ScoreAttack so the two action families are comparable at a glance.
+        if (target.IsArticulationPoint)
+            baseValue *= 1f + ArticulationOffenseAmp * p.Aggression;
+
+        // Race-margin bonus / penalty (Phase 4): bias captures toward our "natural" zone.
+        // Positive margin = we'd arrive first; negative = enemy has the shorter route.
+        int raceMargin = target.GetRaceMargin(view.Player != null ? view.Player.Id : -1);
+        if (raceMargin > 0)
+            baseValue += Mathf.Min(RaceMarginBonusCap, raceMargin);
+        else if (raceMargin < 0)
+            baseValue -= Mathf.Min(RaceMarginPenaltyCap, -raceMargin);
+
         // Contested-neutral bonus -- a chokepoint between us and them is worth more.
         float chokeMult = 1f + target.ChokepointScore * ChokepointCaptureAmp * p.Expansion;
         if (target.NumContestedNeutralWorkersNearby > 0 && c.BuildingToConstruct != null)
@@ -209,6 +262,12 @@ public static class ActionUtility
         float coverage = Mathf.Min(1f, sent / (float)deficit);
         float baseValue = ReinforceBase + deficit * 2f * coverage;
 
+        // Articulation-point defense bonus: losing one of these slices our territory in
+        // two. We scale by Caution so defensive AIs (high Caution) prioritise these even
+        // more aggressively, while reckless AIs (low Caution) treat them more like leaves.
+        if (target.IsArticulationPoint)
+            baseValue *= 1f + ArticulationDefenseAmp * p.Caution;
+
         // Chokepoint defense amp: defending a chokepoint is structurally more valuable.
         float chokeMult = 1f + target.ChokepointScore * ChokepointDefenseAmp * p.Caution;
 
@@ -248,6 +307,23 @@ public static class ActionUtility
         // Missing-tier boost: filling out our building portfolio is worth real points.
         if (analysis.IsBuildingTypeMissing(building.BuildingType))
             baseValue += MissingTierBonus;
+
+        // Phase 7 site-quality tuning: a build's value depends on WHERE on the map it lands,
+        // not just what it does. The three checks are mutually exclusive (Barracks vs
+        // gatherer vs generic) so they never double-count.
+        if (building.CanGenerateWorkers)
+        {
+            if (target.Role == NodeRole.Hub) baseValue += HubBarracksBonus;
+            // Race margin == int.MaxValue is the "solo player" sentinel from MapTopology -
+            // treat that as the strongest possible forward-base score, but cap it through
+            // the same fixed bonus so a solo-player build doesn't run away.
+            int rm = target.GetRaceMargin(view.Player != null ? view.Player.Id : -1);
+            if (rm > 0 || rm == int.MaxValue) baseValue += ForwardBaseBonus;
+        }
+        else if (!building.CanGatherResources)
+        {
+            if (target.IsArticulationPoint) baseValue += ArticulationBuildBonus;
+        }
 
         // Forward-lookahead: if this is a Barracks adjacent to an enemy, it enables an
         // attack we couldn't otherwise launch. Reward that future option.
@@ -312,6 +388,13 @@ public static class ActionUtility
         int surplus = node.NumWorkers - node.MaxWorkers;
         if (surplus > 0)
             baseValue += Mathf.Min(15f, surplus * 0.5f);
+
+        // Articulation-point upgrade bonus: a higher MaxWorkers cap on a cut vertex is
+        // structural redundancy against losing the slice it controls. Modest -- the main
+        // articulation-defense lever is ScoreReinforce; this just nudges the AI toward
+        // building up the keystone node when it's already at cap.
+        if (node.IsArticulationPoint)
+            baseValue += ArticulationUpgradeBonus * Mathf.Max(1, node.BuildingLevel);
 
         // Forward-lookahead: if upgrading would let us hit a previously-too-strong neighbor.
         float forward = ForwardLookupForUpgrade(node, view, p);

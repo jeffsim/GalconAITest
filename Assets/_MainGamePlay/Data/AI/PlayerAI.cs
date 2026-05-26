@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 /// Per-player AI brain. Single-pass utility evaluator. Each tick:
@@ -49,6 +50,11 @@ public class PlayerAI
     StrategicAnalysis analysis = new();
     PersonalityWeights personality;
 
+    /// Per-tick flood-fill of the owned subgraph. Refreshed only when ownership signature
+    /// changes; consumed by AttackGenerator / CaptureGenerator / ReinforceGenerator in
+    /// place of their old per-target BFS for collecting source nodes (Phase 5).
+    public readonly OwnedReachabilityCache OwnedReachability = new();
+
     readonly List<IActionGenerator> generators = new();
 
     // Per-tick candidate pool. Re-used across ticks; index reset at the start of each.
@@ -92,18 +98,33 @@ public class PlayerAI
         if (lastSearchedWorldRevision == townData.WorldRevision && BestNextActionToTake.Type != AIActionType.DoNothing)
             return;
 
+        long tStart = Stopwatch.GetTimestamp();
+
         // Re-read personality each tick in case an inspector edit happened mid-play.
         personality = PersonalityWeights.From(player.AIDefn);
 
         worldView.Refresh(townData);
+        OwnedReachability.Refresh(worldView);
         analysis.Compute(worldView, player, personality);
 
+        long tAfterRefresh = Stopwatch.GetTimestamp();
+
         DecisionRecord.BeginTick(player, ++tickCount, townData.WorldTime);
+        DecisionRecord.TickRefreshUs = AIDecisionRecord.TicksToMicroseconds(tAfterRefresh - tStart);
 
         ResetCandidatePool();
         candidatesThisTick.Clear();
         for (int g = 0; g < generators.Count; g++)
+        {
+            long tGenStart = Stopwatch.GetTimestamp();
             generators[g].Generate(worldView, analysis, personality, this, candidatesThisTick);
+            long tGenEnd = Stopwatch.GetTimestamp();
+            DecisionRecord.RecordGeneratorTiming(
+                generators[g].GetType().Name,
+                AIDecisionRecord.TicksToMicroseconds(tGenEnd - tGenStart));
+        }
+
+        long tAfterGenerate = Stopwatch.GetTimestamp();
 
         // Record every candidate considered for debug; pick the best for execution.
         AICandidate best = null;
@@ -125,6 +146,10 @@ public class PlayerAI
             RememberLastAction(BestNextActionToTake);
         }
         DecisionRecord.RecordChosen(best);
+
+        long tEnd = Stopwatch.GetTimestamp();
+        DecisionRecord.TickSelectUs = AIDecisionRecord.TicksToMicroseconds(tEnd - tAfterGenerate);
+        DecisionRecord.FinalizeTickTiming(AIDecisionRecord.TicksToMicroseconds(tEnd - tStart));
 
         lastSearchedWorldRevision = townData.WorldRevision;
     }

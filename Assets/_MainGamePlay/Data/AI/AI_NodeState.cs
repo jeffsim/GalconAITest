@@ -34,6 +34,55 @@ public class AI_NodeState
     /// during play, so we mirror RealNode.ChokepointScore exactly once at construction.
     public float ChokepointScore;
 
+    /// Static resource bitmasks mirrored from <see cref="MapTopologyAnalysis"/>. Terrain
+    /// doesn't change during play, so these are set once in the ctor and never refreshed.
+    ///   LocalGatherableMask  : bits set for resources THIS node yields if stood on.
+    ///   AdjacentResourceMask : OR of every direct neighbor's LocalGatherableMask.
+    public uint LocalGatherableMask;
+    public uint AdjacentResourceMask;
+
+    /// Static graph-structural facts mirrored from <see cref="MapTopologyAnalysis"/>
+    /// (Phase 2). Topology doesn't change during play, so these are set once at construction.
+    ///   Degree     : count of distinct neighbors.
+    ///   Role       : coarse degree-bucket classification (Leaf / Corridor / Junction / Hub).
+    ///   DistanceTo : hop distance to every other node, indexed by AI_NodeState.Index.
+    ///                int.MaxValue means unreachable.
+    public int Degree;
+    public NodeRole Role;
+    public int[] DistanceTo;
+
+    /// Static articulation / bridge facts mirrored from <see cref="MapTopologyAnalysis"/>
+    /// (Phase 3).
+    ///   IsArticulationPoint   : removing THIS node would disconnect the graph.
+    ///   BridgeNeighborIndices : indices (matching AI_NodeState.Index) of neighbors
+    ///                           connected via a bridge edge. Reference-shared with the
+    ///                           NodeData copy -- the set is never mutated after Compute.
+    public bool IsArticulationPoint;
+    public HashSet<int> BridgeNeighborIndices;
+
+    /// Static 2-edge-connected component id mirrored from <see cref="MapTopologyAnalysis"/>
+    /// (Phase 6). Two nodes share a RegionId iff a non-bridge path connects them. The
+    /// reinforce generator prefers same-region sources so a stretched territory doesn't
+    /// drain the wrong room across a bridge.
+    public int RegionId;
+
+    /// Static spawn-distance / race-margin maps mirrored from <see cref="MapTopologyAnalysis"/>
+    /// (Phase 4). All arrays indexed by player slot (PlayerData.Id). Same reference as the
+    /// NodeData copy -- the arrays are never mutated after Compute.
+    public int[] PlayerSpawnDistance;
+    public int OwnerOfNearestSpawn;
+    public int[] RaceMargin;
+
+    /// Convenience: signed race-margin for <paramref name="playerSlot"/> at this node.
+    /// Falls back to 0 if Phase 4 hasn't been computed (e.g. minimal harness world).
+    public int GetRaceMargin(int playerSlot)
+    {
+        if (RaceMargin == null || playerSlot < 0 || playerSlot >= RaceMargin.Length) return 0;
+        int m = RaceMargin[playerSlot];
+        if (m == int.MaxValue || m == int.MinValue) return 0;
+        return m;
+    }
+
     // ============================================================================
     // Dynamic, refreshed each tick by Refresh()
     // ============================================================================
@@ -142,6 +191,17 @@ public class AI_NodeState
         RealNode = nodeData;
         NodeId = nodeData.NodeId;
         ChokepointScore = nodeData.ChokepointScore;
+        LocalGatherableMask = nodeData.LocalGatherableMask;
+        AdjacentResourceMask = nodeData.AdjacentResourceMask;
+        Degree = nodeData.Degree;
+        Role = nodeData.Role;
+        DistanceTo = nodeData.DistanceTo;
+        IsArticulationPoint = nodeData.IsArticulationPoint;
+        BridgeNeighborIndices = nodeData.BridgeNeighborIndices;
+        RegionId = nodeData.RegionId;
+        PlayerSpawnDistance = nodeData.PlayerSpawnDistance;
+        OwnerOfNearestSpawn = nodeData.OwnerOfNearestSpawn;
+        RaceMargin = nodeData.RaceMargin;
         Refresh(null);
     }
 

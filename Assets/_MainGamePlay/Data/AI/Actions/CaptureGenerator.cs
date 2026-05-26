@@ -16,7 +16,6 @@ using UnityEngine;
 /// no such case today (every neutral building is either Forest or StoneMine).
 public class CaptureGenerator : IActionGenerator
 {
-    const int MaxHops = 2;
     /// Per-target, only consider the top N candidate buildings (avoid emitting one
     /// candidate per buildable type per neutral neighbor).
     const int MaxBuildingsPerTarget = 2;
@@ -36,7 +35,7 @@ public class CaptureGenerator : IActionGenerator
             // node; emitting another would double-dispatch (and the second one's intent might
             // not be CaptureAndConstruct so its workers would die on arrival).
             if (target.PendingMyCapture) continue;
-            if (!HasOwnedNeighborWithinHops(target, view.Player, MaxHops)) continue;
+            if (!HasDirectOwnedNeighbor(target, view.Player)) continue;
 
             if (target.HasBuilding && target.CanBeGatheredFrom)
                 GenerateResourceCapture(target, view, analysis, p, ai, sink);
@@ -106,8 +105,9 @@ public class CaptureGenerator : IActionGenerator
         var topBuildings = SelectTopBuildings(view, analysis, target);
         if (topBuildings.Count == 0) return;
 
-        // Determine force we can muster from BFS sources.
-        var sources = CollectOwnedSources(target, view, analysis);
+        // Determine force we can muster from the owned components reachable via direct
+        // owned neighbors of this neutral target.
+        var sources = CollectOwnedSources(target, view, analysis, ai.OwnedReachability);
         if (sources.Count == 0) return;
         sources.Sort((a, b) => analysis.SafeToSendFrom[b.Index].CompareTo(analysis.SafeToSendFrom[a.Index]));
 
@@ -176,7 +176,7 @@ public class CaptureGenerator : IActionGenerator
         {
             if (!bd.CanBeBuiltByPlayer) continue;
             if (!CanAfford(bd, view)) continue;
-            if (!HasMatchingAdjacentResource(target, bd)) continue;
+            if (!MapTopologyAnalysis.HasMatchingAdjacentResource(target, bd)) continue;
             float s = 1f;
             if (analysis.IsBuildingTypeMissing(bd.BuildingType)) s += 3f;
             if (bd.CanGenerateWorkers) s += 2f;
@@ -189,56 +189,46 @@ public class CaptureGenerator : IActionGenerator
         return result;
     }
 
-    static bool HasOwnedNeighborWithinHops(AI_NodeState target, PlayerData player, int hops)
+    static bool HasDirectOwnedNeighbor(AI_NodeState target, PlayerData player)
     {
-        // See AttackGenerator.HasOwnedNeighborWithinHops for the rationale: with owned-only
-        // relays required, the answer is simply "does this neutral have a direct owned
-        // neighbor?". The `hops` parameter is retained for symmetry only.
+        // A viable capture requires a DIRECT owned neighbor as the entry point into one
+        // of this player's owned components. Workers physically route source -> friendly
+        // chain -> neutral landing site; any non-owned intermediate would intercept the
+        // wave (see TownData.FindPath owner-aware variant + ResolveWorkerArrival).
         for (int k = 0; k < target.NumNeighbors; k++)
             if (target.NeighborNodes[k].OwnedBy == player) return true;
         return false;
     }
 
-    static List<AI_NodeState> CollectOwnedSources(AI_NodeState target, AIWorldView view, StrategicAnalysis analysis)
+    /// <summary>
+    /// Collect every owned source that has spare workers, restricted to nodes inside an
+    /// owned component reachable through one of <paramref name="target"/>'s direct owned
+    /// neighbors. Replaces the per-target owned-only BFS with an O(component) lookup
+    /// against the per-tick <see cref="OwnedReachabilityCache"/>.
+    /// </summary>
+    static List<AI_NodeState> CollectOwnedSources(
+        AI_NodeState target,
+        AIWorldView view,
+        StrategicAnalysis analysis,
+        OwnedReachabilityCache cache)
     {
-        // Owned-only BFS outward from the neutral target. The wave physically routes from
-        // each source -> friendly chain -> neutral landing site, so any non-owned node mid-
-        // path would intercept the wave (workers die at the wrong neutral, see
-        // ResolveWorkerArrival). Relaying through owned only matches the executor's actual
-        // pathfinding (TownData.FindPath with preferredOwner = view.Player).
         var sources = new List<AI_NodeState>();
-        var visited = new HashSet<int> { target.NodeId };
-        var frontier = new Queue<(AI_NodeState n, int d)>();
-        frontier.Enqueue((target, 0));
-        while (frontier.Count > 0)
+        var seenComponents = new HashSet<int>();
+        for (int k = 0; k < target.NumNeighbors; k++)
         {
-            var (n, d) = frontier.Dequeue();
-            if (d >= MaxHops) continue;
-            foreach (var nb in n.NeighborNodes)
+            var entry = target.NeighborNodes[k];
+            if (entry.OwnedBy != view.Player) continue;
+            int compId = cache.GetComponent(entry);
+            if (compId < 0 || !seenComponents.Add(compId)) continue;
+            var members = cache.NodesInComponent(compId);
+            if (members == null) continue;
+            for (int m = 0; m < members.Count; m++)
             {
-                if (!visited.Add(nb.NodeId)) continue;
-                if (nb.OwnedBy != view.Player) continue;
-                if (analysis.SafeToSendFrom[nb.Index] > 0)
-                    sources.Add(nb);
-                frontier.Enqueue((nb, d + 1));
+                var src = members[m];
+                if (analysis.SafeToSendFrom[src.Index] > 0)
+                    sources.Add(src);
             }
         }
         return sources;
-    }
-
-    /// True iff this gatherer building would have at least one adjacent resource node that
-    /// produces its required good. A StoneMiner with no adjacent Stone deposit produces
-    /// nothing and is purely an economy waste, so we refuse to emit such proposals.
-    static bool HasMatchingAdjacentResource(AI_NodeState target, BuildingDefn bd)
-    {
-        if (!bd.CanGatherResources || bd.ResourceThisNodeCanGoGather == null) return true;
-        var needed = bd.ResourceThisNodeCanGoGather.GoodType;
-        for (int k = 0; k < target.NumNeighbors; k++)
-        {
-            var nb = target.NeighborNodes[k];
-            if (nb.CanBeGatheredFrom && nb.ResourceGatheredFromThisNode == needed)
-                return true;
-        }
-        return false;
     }
 }

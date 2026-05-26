@@ -25,10 +25,6 @@ using UnityEngine;
 ///     hadn't.
 public class AttackGenerator : IActionGenerator
 {
-    /// BFS source-collection cap. Beyond this many hops the wave would arrive too far
-    /// apart in time to be considered coordinated.
-    const int MaxHops = 2;
-
     public void Generate(
         AIWorldView view,
         StrategicAnalysis analysis,
@@ -41,10 +37,11 @@ public class AttackGenerator : IActionGenerator
             var target = view.Nodes[i];
             if (target.OwnedBy == null || target.OwnedBy == view.Player) continue;
             if (target.AttackAlreadySufficient) continue;
-            // Need at least one of our nodes adjacent (or within MaxHops) to even consider.
-            if (!HasOwnedNeighborWithinHops(target, view.Player, MaxHops)) continue;
+            // Need at least one direct owned neighbor (the entry point into an owned
+            // component) to even consider attacking this target.
+            if (!HasDirectOwnedNeighbor(target, view.Player)) continue;
 
-            var sources = CollectOwnedSources(target, view, analysis, out int minSourceHops);
+            var sources = CollectOwnedSources(target, view, analysis, ai.OwnedReachability, out int minSourceHops);
             if (sources.Count == 0) continue;
 
             // Total attackers we want to LAND alive at the target (capture-flip + regen,
@@ -91,56 +88,67 @@ public class AttackGenerator : IActionGenerator
         }
     }
 
-    static bool HasOwnedNeighborWithinHops(AI_NodeState target, PlayerData player, int hops)
+    static bool HasDirectOwnedNeighbor(AI_NodeState target, PlayerData player)
     {
-        // The viable-attack precondition is "is there an owned node we can route a wave from
-        // through friendly territory?". A wave can only RELAY through owned nodes -- workers
-        // passing through enemy / neutral intermediates get intercepted (see TownData.FindPath
-        // owner-aware variant and ResolveWorkerArrival). So the answer is simply: does the
-        // enemy target have at least one direct neighbor owned by `player`?
-        //
-        // The `hops` parameter is retained for compatibility but is implicit: a 2-hop owned
-        // source is reachable iff the depth-1 relay is owned, and we check that here.
+        // A wave can only relay through owned nodes -- workers crossing an enemy / neutral
+        // intermediate get intercepted (see TownData.FindPath owner-aware variant and
+        // ResolveWorkerArrival). So a viable attack requires at least one DIRECT owned
+        // neighbor as the entry point into an owned component.
         for (int k = 0; k < target.NumNeighbors; k++)
             if (target.NeighborNodes[k].OwnedBy == player) return true;
         return false;
     }
 
+    /// <summary>
+    /// Collect every node in the same owned component(s) as one of <paramref name="target"/>'s
+    /// direct owned neighbors that currently has spare workers (SafeToSendFrom > 0). The
+    /// per-tick <see cref="OwnedReachabilityCache"/> already flood-filled the owned
+    /// subgraph; we just iterate the relevant component members. <paramref name="minSourceHops"/>
+    /// is the closest contributing source's full-graph hop distance to the target (used by
+    /// <see cref="AttackSizing"/> to estimate defender regen during travel).
+    /// </summary>
     static List<AI_NodeState> CollectOwnedSources(
         AI_NodeState target,
         AIWorldView view,
         StrategicAnalysis analysis,
+        OwnedReachabilityCache cache,
         out int minSourceHops)
     {
-        // BFS outward from the target, but ONLY relay through nodes owned by view.Player.
-        // The target itself is enemy-owned (that's the whole point); its direct neighbors are
-        // candidate first-hop owned relays/sources; from each owned relay we can step further
-        // out through OWNED chain only. Stopping the BFS at non-owned nodes is what makes
-        // "owned path required" actually true -- without it the generator happily proposes
-        // a 2-hop wave that physically has to cross enemy territory and would get killed.
         var sources = new List<AI_NodeState>();
-        var visited = new HashSet<int> { target.NodeId };
-        var frontier = new Queue<(AI_NodeState node, int depth)>();
-        frontier.Enqueue((target, 0));
+        var seenComponents = new HashSet<int>();
         minSourceHops = int.MaxValue;
-        while (frontier.Count > 0)
+
+        for (int k = 0; k < target.NumNeighbors; k++)
         {
-            var (n, d) = frontier.Dequeue();
-            if (d >= MaxHops) continue;
-            foreach (var nb in n.NeighborNodes)
+            var entry = target.NeighborNodes[k];
+            if (entry.OwnedBy != view.Player) continue;
+            int compId = cache.GetComponent(entry);
+            if (compId < 0 || !seenComponents.Add(compId)) continue;
+            var members = cache.NodesInComponent(compId);
+            if (members == null) continue;
+            for (int m = 0; m < members.Count; m++)
             {
-                if (!visited.Add(nb.NodeId)) continue;
-                if (nb.OwnedBy != view.Player) continue; // can't relay or source from enemy/neutral
-                int hopsFromTarget = d + 1;
-                if (analysis.SafeToSendFrom[nb.Index] > 0)
-                {
-                    sources.Add(nb);
-                    if (hopsFromTarget < minSourceHops) minSourceHops = hopsFromTarget;
-                }
-                frontier.Enqueue((nb, hopsFromTarget));
+                var src = members[m];
+                if (analysis.SafeToSendFrom[src.Index] <= 0) continue;
+                sources.Add(src);
+                int hops = HopsTargetToSource(target, src);
+                if (hops > 0 && hops < minSourceHops) minSourceHops = hops;
             }
         }
-        if (minSourceHops == int.MaxValue) minSourceHops = 1; // no source found; harmless fallback
+        if (minSourceHops == int.MaxValue) minSourceHops = 1;
         return sources;
+    }
+
+    static int HopsTargetToSource(AI_NodeState target, AI_NodeState src)
+    {
+        // DistanceTo is the static all-pairs (full-graph) shortest path matrix populated
+        // by MapTopologyAnalysis. For sources inside an owned component the true wave
+        // travel time follows the owned chain, which is >= the full-graph distance; using
+        // the static distance gives AttackSizing a tight lower bound on travel time, which
+        // is exactly what its regen estimate wants.
+        if (target.DistanceTo == null || src.Index < 0 || src.Index >= target.DistanceTo.Length)
+            return 1;
+        int d = target.DistanceTo[src.Index];
+        return d == int.MaxValue ? 1 : d;
     }
 }

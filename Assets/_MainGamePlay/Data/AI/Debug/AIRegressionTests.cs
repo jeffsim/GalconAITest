@@ -51,6 +51,14 @@ public static class AIRegressionTests
         Run(results, "high surplus drives upgrade", Test_HighSurplusUpgrades);
         Run(results, "surplus upgrade beats pressure veto", Test_HighSurplusUpgradesUnderHighPressure);
         Run(results, "no gatherer build without adjacent resource", Test_GathererNeedsAdjacentResource);
+        Run(results, "adjacency mask recognizes adjacent resource", Test_AdjacencyMaskRecognizesAdjacentResource);
+        Run(results, "distance matrix symmetric and correct", Test_DistanceMatrixSymmetricAndCorrect);
+        Run(results, "defend articulation point", Test_DefendArticulationPoint);
+        Run(results, "attack articulation point preferred over leaf", Test_AttackArticulationPoint);
+        Run(results, "prefer uncontested expansion (race margin)", Test_PreferUncontestedExpansion);
+        Run(results, "same-region reinforce first (Phase 6)", Test_SameRegionReinforceFirst);
+        Run(results, "cross-bridge reinforce when dry (Phase 6)", Test_CrossBridgeReinforceWhenDry);
+        Run(results, "barracks prefers hub over corridor (Phase 7)", Test_BarracksPrefersHubOverCorridor);
         Run(results, "no reinforce on neutral with capture in flight", Test_NoReinforceOnPendingCapture);
 
         // Attack sizing (the drip-feed fix). These exercise the rules that the previous
@@ -636,6 +644,502 @@ public static class AIRegressionTests
             throw new Exception(
                 $"AI proposed gatherer {act.BuildingToConstruct.Id} on a node with no matching adjacent resource");
         }
+    }
+
+    // 20b) Resource-adjacency bitmask (Phase 1 of the map preprocessing plan): direct test
+    //      of the precomputed AdjacentResourceMask / LocalGatherableMask + the bit-test
+    //      HasMatchingAdjacentResource helper, independent of the generator wiring above.
+    //      Verifies a Forest-adjacent node accepts a Woodcutter and rejects a StoneMiner,
+    //      catching regressions in either the mask population or the lookup helper.
+    static void Test_AdjacencyMaskRecognizesAdjacentResource()
+    {
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 5, hasGenerator: true);
+        w.AddForestNeutral(2); // gatherable Wood next to #1
+        w.AddNode(3, owner: 0, workers: 0); // isolated empty grass, no resource adjacency
+        w.Connect(1, 2);
+        w.Build();
+
+        var p1 = w.GetPlayer(1);
+        var view = p1.AI.GetWorldView();
+        AI_NodeState mirror1 = null, mirror2 = null, mirror3 = null;
+        for (int i = 0; i < view.NumNodes; i++)
+        {
+            if (view.Nodes[i].NodeId == 1) mirror1 = view.Nodes[i];
+            else if (view.Nodes[i].NodeId == 2) mirror2 = view.Nodes[i];
+            else if (view.Nodes[i].NodeId == 3) mirror3 = view.Nodes[i];
+        }
+        AssertTrue(mirror1 != null && mirror2 != null && mirror3 != null, "test mirrors should exist");
+
+        uint woodBit = MapTopologyAnalysis.MaskFor(GoodType.Wood);
+        uint stoneBit = MapTopologyAnalysis.MaskFor(GoodType.Stone);
+
+        // The forest neutral itself yields Wood as its local resource.
+        AssertTrue((mirror2.LocalGatherableMask & woodBit) != 0,
+            "forest neutral #2 should have Wood bit in LocalGatherableMask");
+
+        // #1 (forest-adjacent) reports the Wood bit in its adjacency mask, NOT the Stone bit.
+        AssertTrue((mirror1.AdjacentResourceMask & woodBit) != 0,
+            "#1 (adjacent to forest #2) should have Wood bit in AdjacentResourceMask");
+        AssertTrue((mirror1.AdjacentResourceMask & stoneBit) == 0,
+            "#1 should NOT have Stone bit in AdjacentResourceMask (no stone neighbor)");
+
+        // #3 has no neighbors at all, so the mask is 0.
+        AssertEq(0u, mirror3.AdjacentResourceMask,
+            "isolated #3 should have empty AdjacentResourceMask");
+
+        // Concrete validation of the helper: a real Forest BuildingDefn is accepted on a
+        // forest-adjacent node, and a StoneMiner-like defn (Stone gatherer) is rejected.
+        BuildingDefn woodcutter = null, stoneMiner = null;
+        if (GameDefns.Instance != null)
+        {
+            foreach (var bd in GameDefns.Instance.BuildingDefns.Values)
+            {
+                if (!bd.CanGatherResources || bd.ResourceThisNodeCanGoGather == null) continue;
+                if (bd.ResourceThisNodeCanGoGather.GoodType == GoodType.Wood && woodcutter == null) woodcutter = bd;
+                if (bd.ResourceThisNodeCanGoGather.GoodType == GoodType.Stone && stoneMiner == null) stoneMiner = bd;
+            }
+        }
+        if (woodcutter != null)
+            AssertTrue(MapTopologyAnalysis.HasMatchingAdjacentResource(mirror1, woodcutter),
+                "Woodcutter should be accepted next to forest");
+        if (stoneMiner != null)
+            AssertTrue(!MapTopologyAnalysis.HasMatchingAdjacentResource(mirror1, stoneMiner),
+                "StoneMiner should be rejected when no Stone is adjacent");
+    }
+
+    // 20c) All-pairs distance matrix + Role classification (Phase 2). Builds a tiny graph
+    //      with known structure and asserts each invariant: dist[i][i] == 0, symmetry,
+    //      a hand-checked shortest path, and the degree-bucket NodeRole labelling.
+    static void Test_DistanceMatrixSymmetricAndCorrect()
+    {
+        // Layout:           #4
+        //                    |
+        //          #1 -- #2 -- #3        (#3 also connects to #4 -- branch)
+        // Degrees:  1     2    3   1
+        // Distances from #1: self=0, #2=1, #3=2, #4=3.
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 1, hasGenerator: true);
+        w.AddNode(2, owner: 1, workers: 1, hasGenerator: true);
+        w.AddNode(3, owner: 1, workers: 1, hasGenerator: true);
+        w.AddNode(4, owner: 1, workers: 1, hasGenerator: true);
+        w.Connect(1, 2);
+        w.Connect(2, 3);
+        w.Connect(3, 4);
+        w.Build();
+
+        var view = w.GetPlayer(1).AI.GetWorldView();
+        AI_NodeState m1 = null, m2 = null, m3 = null, m4 = null;
+        for (int i = 0; i < view.NumNodes; i++)
+        {
+            var node = view.Nodes[i];
+            if (node.NodeId == 1) m1 = node;
+            else if (node.NodeId == 2) m2 = node;
+            else if (node.NodeId == 3) m3 = node;
+            else if (node.NodeId == 4) m4 = node;
+        }
+        AssertTrue(m1 != null && m2 != null && m3 != null && m4 != null, "all mirrors should exist");
+
+        // Self-distance is zero.
+        AssertEq(0, m1.DistanceTo[m1.Index], "dist[#1][#1] should be 0");
+        AssertEq(0, m4.DistanceTo[m4.Index], "dist[#4][#4] should be 0");
+
+        // Hand-checked distances on a 4-node chain.
+        AssertEq(1, m1.DistanceTo[m2.Index], "dist[#1][#2] should be 1");
+        AssertEq(2, m1.DistanceTo[m3.Index], "dist[#1][#3] should be 2");
+        AssertEq(3, m1.DistanceTo[m4.Index], "dist[#1][#4] should be 3");
+
+        // Symmetry on the bidirectional graph.
+        AssertEq(m1.DistanceTo[m3.Index], m3.DistanceTo[m1.Index], "distance should be symmetric (#1<->#3)");
+        AssertEq(m2.DistanceTo[m4.Index], m4.DistanceTo[m2.Index], "distance should be symmetric (#2<->#4)");
+
+        // Degree + role classification.
+        AssertEq(1, m1.Degree, "#1 should have degree 1");
+        AssertEq(2, m2.Degree, "#2 should have degree 2");
+        AssertEq(2, m3.Degree, "#3 should have degree 2 in this chain");
+        AssertEq(1, m4.Degree, "#4 should have degree 1");
+        AssertEq(NodeRole.Leaf, m1.Role, "#1 (deg 1) should be Leaf");
+        AssertEq(NodeRole.Corridor, m2.Role, "#2 (deg 2) should be Corridor");
+        AssertEq(NodeRole.Leaf, m4.Role, "#4 (deg 1) should be Leaf");
+    }
+
+    // 20d) Articulation-point defense (Phase 3 of the preprocessing plan). Builds a
+    //      triangle plus a tail (#4 attached only via #2) -- the unique articulation
+    //      point is #2. With identical pressure on #1 and #2, the AI must prefer to
+    //      reinforce the articulation point because losing it amputates the tail.
+    static void Test_DefendArticulationPoint()
+    {
+        // Graph:
+        //   #1 - #2 - #3 - #1 (triangle), #4 - #2 (tail), #5 - #1 / #5 - #2 (enemy P2)
+        // Articulation: #2 (its removal isolates #4 from {#1, #3}).
+        // #1 and #2 both touch enemy #5 with the same garrison and same own-workers, so
+        // their DefensiveDeficits are identical. The only differentiator is articulation.
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(2, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(3, owner: 1, workers: 12, hasGenerator: true); // interior source with safe spare
+        w.AddNode(4, owner: 1, workers: 1, hasGenerator: true);  // the tail behind #2
+        w.AddNode(5, owner: 2, workers: 8, hasGenerator: true);  // enemy pressuring #1 and #2
+        w.Connect(1, 2);
+        w.Connect(2, 3);
+        w.Connect(1, 3);
+        w.Connect(2, 4);
+        w.Connect(1, 5);
+        w.Connect(2, 5);
+        w.Build();
+
+        var view = w.GetPlayer(1).AI.GetWorldView();
+        AI_NodeState m1 = null, m2 = null, m3 = null, m4 = null;
+        for (int i = 0; i < view.NumNodes; i++)
+        {
+            var node = view.Nodes[i];
+            if (node.NodeId == 1) m1 = node;
+            else if (node.NodeId == 2) m2 = node;
+            else if (node.NodeId == 3) m3 = node;
+            else if (node.NodeId == 4) m4 = node;
+        }
+
+        // Articulation flags: only #2 should be flagged. #1/#3 are in a cycle, #4 is a leaf.
+        AssertTrue(m2.IsArticulationPoint, "#2 should be articulation (tail #4 hangs off it)");
+        AssertTrue(!m1.IsArticulationPoint, "#1 should NOT be articulation (cycle keeps graph connected without it)");
+        AssertTrue(!m3.IsArticulationPoint, "#3 should NOT be articulation (cycle)");
+        AssertTrue(!m4.IsArticulationPoint, "#4 (leaf) should NOT be articulation");
+
+        // Tune personality so reinforce is the dominant decision (suppress upgrade tempo
+        // and attack aggression so we are clearly comparing reinforce vs reinforce).
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Caution = 1f;
+        defn.Aggression = 0.2f;
+        defn.Expansion = 0.2f;
+        defn.Tempo = 0f;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertTrue(
+            act.Type == AIActionType.SendWorkersToOwnedNode
+                || act.Type == AIActionType.SendMultiSourceWorkersToOwnedNode,
+            $"expected a reinforce action, got {act.Type}");
+        AssertEq(2, act.DestNode != null ? act.DestNode.NodeId : -1,
+            $"AI should reinforce articulation #2 over non-articulation #1; chose #{act.DestNode?.NodeId}");
+    }
+
+    // 20e) Attack prefers an enemy articulation point over a same-strength leaf. The
+    //      bonus must be strong enough to outscore an equally-weak alternative target
+    //      when the source can mount either wave.
+    static void Test_AttackArticulationPoint()
+    {
+        // Layout:
+        //   #1 (P1, lots of workers) -- #2 (P2, 1w, articulation) -- #3 (P2, 1w, leaf)
+        //                          \-- #4 (P2, 1w, leaf, directly off #1)
+        // Articulation analysis (all P2-owned, but topology is what matters):
+        //   - #2: removing disconnects #3 from {#1, #4}. ARTICULATION.
+        //   - #4: removing leaves {#1, #2, #3} connected. NOT articulation.
+        var w = new TestWorld();
+        // #1 needs enough workers for safe-to-send to cover the regen-padded wave:
+        //   pressure=2 (from #2, #4), MinReserve(Caution=0)=1, so safe = N - 3.
+        //   required vs an L1 generator at 1 hop = ceil((1 + 4regen + 1) * 1.0) = 6.
+        // 12 workers -> safe=9, comfortably above 6 for either target.
+        w.AddNode(1, owner: 1, workers: 12, hasGenerator: true);
+        w.AddNode(2, owner: 2, workers: 1, hasGenerator: true);
+        w.AddNode(3, owner: 2, workers: 1, hasGenerator: true);
+        w.AddNode(4, owner: 2, workers: 1, hasGenerator: true);
+        w.Connect(1, 2);
+        w.Connect(2, 3);
+        w.Connect(1, 4);
+        w.Build();
+
+        var view = w.GetPlayer(1).AI.GetWorldView();
+        AI_NodeState m2 = null, m4 = null;
+        for (int i = 0; i < view.NumNodes; i++)
+        {
+            if (view.Nodes[i].NodeId == 2) m2 = view.Nodes[i];
+            else if (view.Nodes[i].NodeId == 4) m4 = view.Nodes[i];
+        }
+        AssertTrue(m2.IsArticulationPoint, "#2 should be articulation (#3 hangs behind it)");
+        AssertTrue(!m4.IsArticulationPoint, "#4 (leaf) should NOT be articulation");
+
+        // Push personality hard toward attack and away from defense / upgrade so the AI
+        // genuinely chooses BETWEEN the two attack targets.
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Aggression = 1.5f;
+        defn.Caution = 0f;
+        defn.Expansion = 0.2f;
+        defn.Tempo = 0f;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertEq(AIActionType.AttackToNode, act.Type, $"expected an attack, got {act.Type}");
+        AssertEq(2, act.DestNode != null ? act.DestNode.NodeId : -1,
+            $"AI should attack articulation #2 over leaf #4; chose #{act.DestNode?.NodeId}");
+    }
+
+    // 20f) Race-margin / uncontested-expansion bias (Phase 4 of the preprocessing plan).
+    //      Two forest neutrals are both 1 hop from P1's spawn #1. #2 sits next to P2's
+    //      spawn (tied race -> margin 0); #3 is far from P2 (margin +2). With Aggression=0
+    //      to neutralise the articulation bonus on captures, the AI must prefer #3.
+    static void Test_PreferUncontestedExpansion()
+    {
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 20, hasGenerator: true);  // P1 spawn / source
+        w.AddForestNeutral(2);                                     // neutral, also touches enemy
+        w.AddForestNeutral(3);                                     // neutral, uncontested side
+        w.AddNode(5, owner: 2, workers: 1, hasGenerator: true);    // P2 spawn
+        w.Connect(1, 2);
+        w.Connect(1, 3);
+        w.Connect(5, 2);
+        w.Build();
+
+        // Sanity-check the race margin matches what we expect.
+        var view = w.GetPlayer(1).AI.GetWorldView();
+        AI_NodeState m2 = null, m3 = null;
+        for (int i = 0; i < view.NumNodes; i++)
+        {
+            if (view.Nodes[i].NodeId == 2) m2 = view.Nodes[i];
+            else if (view.Nodes[i].NodeId == 3) m3 = view.Nodes[i];
+        }
+        AssertEq(0, m2.GetRaceMargin(1), "#2 should be a race tie (both spawns are 1 hop away)");
+        AssertGreater(m3.GetRaceMargin(1), 0, "#3 should be uncontested (P2 spawn is >1 hop away)");
+
+        // Tune personality to isolate the race-margin signal:
+        //   Aggression=0 -> articulation bonus on capture is zero (otherwise #2's
+        //                   articulation status would dominate the comparison).
+        //   Expansion high -> captures outscore upgrades and other actions.
+        //   Caution=0    -> small wave size, plenty of safe-to-send for either target.
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Aggression = 0f;
+        defn.Expansion = 2f;
+        defn.Caution = 0f;
+        defn.Tempo = 0f;
+        defn.TargetWoodStockpile = 0; // no shortage bias (would apply to both equally)
+        defn.TargetStoneStockpile = 0;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertEq(AIActionType.CaptureNeutralResourceNode, act.Type,
+            $"expected a resource capture, got {act.Type}");
+        AssertEq(3, act.DestNode != null ? act.DestNode.NodeId : -1,
+            $"AI should capture uncontested #3 over contested #2; chose #{act.DestNode?.NodeId}");
+    }
+
+    // 20g) Same-region reinforcement preference (Phase 6). Two triangles joined by a
+    //      single bridge form two distinct 2-edge-connected regions. The target #3 sits
+    //      in region A and has an enemy pressing it; #4 (across the bridge in region B)
+    //      has the largest spare garrison, but draining it would leave region B exposed.
+    //      The AI must prefer to pull from an in-region defender (#1 or #2) even though
+    //      #4 has more workers available.
+    static void Test_SameRegionReinforceFirst()
+    {
+        var w = new TestWorld();
+        // Triangle A (region A): #1, #2, #3
+        w.AddNode(1, owner: 1, workers: 15, hasGenerator: true);
+        w.AddNode(2, owner: 1, workers: 15, hasGenerator: true);
+        w.AddNode(3, owner: 1, workers: 1, hasGenerator: true); // target, under pressure
+        // Triangle B (region B): #4, #5, #6
+        w.AddNode(4, owner: 1, workers: 30, hasGenerator: true); // bridge endpoint w/ largest reserve
+        w.AddNode(5, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(6, owner: 1, workers: 5, hasGenerator: true);
+        // Enemy adjacent to #3
+        w.AddNode(7, owner: 2, workers: 8, hasGenerator: true);
+
+        w.Connect(1, 2); w.Connect(2, 3); w.Connect(1, 3); // triangle A
+        w.Connect(4, 5); w.Connect(5, 6); w.Connect(4, 6); // triangle B
+        w.Connect(3, 4); // bridge
+        w.Connect(3, 7); // enemy
+        w.Build();
+
+        // Region invariants must hold before we test the AI's choice.
+        var view = w.GetPlayer(1).AI.GetWorldView();
+        AI_NodeState m1 = null, m2 = null, m3 = null, m4 = null, m5 = null, m6 = null;
+        for (int i = 0; i < view.NumNodes; i++)
+        {
+            var n = view.Nodes[i];
+            if (n.NodeId == 1) m1 = n;
+            else if (n.NodeId == 2) m2 = n;
+            else if (n.NodeId == 3) m3 = n;
+            else if (n.NodeId == 4) m4 = n;
+            else if (n.NodeId == 5) m5 = n;
+            else if (n.NodeId == 6) m6 = n;
+        }
+        AssertEq(m1.RegionId, m2.RegionId, "#1 and #2 should share region A");
+        AssertEq(m2.RegionId, m3.RegionId, "#3 should share region A");
+        AssertEq(m4.RegionId, m5.RegionId, "#4 and #5 should share region B");
+        AssertEq(m5.RegionId, m6.RegionId, "#6 should share region B");
+        AssertTrue(m3.RegionId != m4.RegionId, "region A and region B should be distinct");
+
+        // Tune personality so reinforce dominates and we are comparing reinforce-vs-reinforce
+        // sources, not reinforce-vs-attack.
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Caution = 1f;
+        defn.Aggression = 0.2f;
+        defn.Expansion = 0f;
+        defn.Tempo = 0f;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        AssertTrue(act.Type == AIActionType.SendWorkersToOwnedNode
+                || act.Type == AIActionType.SendMultiSourceWorkersToOwnedNode,
+            $"expected reinforce, got {act.Type}");
+        AssertEq(3, act.DestNode != null ? act.DestNode.NodeId : -1,
+            "reinforce should target the pressured #3");
+
+        // The chosen source(s) must live in #3's region, NOT cross the bridge to #4.
+        if (act.Type == AIActionType.SendWorkersToOwnedNode)
+        {
+            AssertTrue(act.SourceNode.RegionId == m3.RegionId,
+                $"single-source should be in-region; #{act.SourceNode.NodeId} (region {act.SourceNode.RegionId}) is not in #3's region ({m3.RegionId})");
+        }
+        else
+        {
+            foreach (var kv in act.AttackFromNodes)
+                AssertTrue(kv.Key.RegionId == m3.RegionId,
+                    $"multi-source should be in-region; #{kv.Key.NodeId} (region {kv.Key.RegionId}) crosses a bridge");
+        }
+    }
+
+    // 20h) Cross-bridge reinforcement is allowed when same-region is dry (Phase 6). Same
+    //      layout as Test_SameRegionReinforceFirst but the in-region defenders are stripped
+    //      to 1 worker each (no safe-to-send). The wave MUST then spill across the bridge
+    //      to #4 -- the alternative is dying because we held a same-region preference too
+    //      hard.
+    static void Test_CrossBridgeReinforceWhenDry()
+    {
+        var w = new TestWorld();
+        // Triangle A: in-region defenders are bare (no safe spare).
+        w.AddNode(1, owner: 1, workers: 1, hasGenerator: true);
+        w.AddNode(2, owner: 1, workers: 1, hasGenerator: true);
+        w.AddNode(3, owner: 1, workers: 1, hasGenerator: true); // target
+        // Triangle B: across the bridge, plenty of workers.
+        w.AddNode(4, owner: 1, workers: 30, hasGenerator: true);
+        w.AddNode(5, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(6, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(7, owner: 2, workers: 8, hasGenerator: true);
+
+        w.Connect(1, 2); w.Connect(2, 3); w.Connect(1, 3);
+        w.Connect(4, 5); w.Connect(5, 6); w.Connect(4, 6);
+        w.Connect(3, 4);
+        w.Connect(3, 7);
+        w.Build();
+
+        var defn = w.GetPlayer(1).AIDefn;
+        defn.Caution = 1f;
+        defn.Aggression = 0.2f;
+        defn.Expansion = 0f;
+        defn.Tempo = 0f;
+
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var act = p1.AI.BestNextActionToTake;
+
+        // The AI may pick reinforce OR fall back to do-nothing depending on score thresholds.
+        // What it absolutely must NOT do is reinforce #3 from #1 or #2 (they have nothing
+        // to send) -- and if it DOES reinforce, the only viable source is across the bridge.
+        if (act.Type == AIActionType.SendWorkersToOwnedNode
+            || act.Type == AIActionType.SendMultiSourceWorkersToOwnedNode)
+        {
+            AssertEq(3, act.DestNode.NodeId, "reinforce should target #3");
+            if (act.Type == AIActionType.SendWorkersToOwnedNode)
+                AssertEq(4, act.SourceNode.NodeId,
+                    $"with same-region dry, must source from cross-bridge #4; got #{act.SourceNode.NodeId}");
+            else
+                foreach (var kv in act.AttackFromNodes)
+                    AssertTrue(kv.Key.NodeId == 4 || kv.Key.NodeId == 5 || kv.Key.NodeId == 6,
+                        $"multi-source must use the dry side's region (#4/#5/#6); got #{kv.Key.NodeId}");
+        }
+    }
+
+    // 20i) Build-site quality (Phase 7). Two empty neutrals are equally close to source
+    //      #1; #2 is a Corridor (degree 2), #3 is a Hub (degree 4). A worker-generator
+    //      build (Barracks-like) must score strictly higher on the Hub site so the AI
+    //      prefers it as a launchpad. We hand-construct AICandidates and call ScoreBuild
+    //      directly to isolate the site-quality bonus from BuildGenerator's filtering
+    //      and the GameDefns-driven affordability checks.
+    static void Test_BarracksPrefersHubOverCorridor()
+    {
+        var w = new TestWorld();
+        w.AddNode(1, owner: 1, workers: 30, hasGenerator: true);   // source
+        w.AddNode(2, owner: 0, workers: 0);                         // Corridor candidate
+        w.AddNode(3, owner: 0, workers: 0);                         // Hub candidate
+        w.AddNode(4, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(5, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(6, owner: 1, workers: 5, hasGenerator: true);
+        w.AddNode(7, owner: 1, workers: 5, hasGenerator: true);
+
+        w.Connect(1, 2);
+        w.Connect(2, 7); // #2 degree 2 -> Corridor
+        w.Connect(1, 3);
+        w.Connect(3, 4);
+        w.Connect(3, 5);
+        w.Connect(3, 6); // #3 degree 4 -> Hub
+        w.Build();
+
+        var view = w.GetPlayer(1).AI.GetWorldView();
+        AI_NodeState mSource = null, mCorridor = null, mHub = null;
+        for (int i = 0; i < view.NumNodes; i++)
+        {
+            var n = view.Nodes[i];
+            if (n.NodeId == 1) mSource = n;
+            else if (n.NodeId == 2) mCorridor = n;
+            else if (n.NodeId == 3) mHub = n;
+        }
+        AssertEq(NodeRole.Corridor, mCorridor.Role, "#2 (deg 2) should classify as Corridor");
+        AssertEq(NodeRole.Hub, mHub.Role, "#3 (deg 4) should classify as Hub");
+
+        // Drive the AI so analysis is populated (we'll reuse its StrategicAnalysis below).
+        var p1 = w.GetPlayer(1);
+        p1.AI.InvalidateDecisionCache();
+        p1.AI.Update(w.Town);
+        var analysis = p1.AI.GetAnalysis();
+
+        // Hand-rolled Barracks defn -- ScoreBuild only cares about the CanGenerateWorkers
+        // flag and the BuildingType for missing-tier detection. Defaulting to a unique
+        // BuildingType (None) keeps the MissingTierBonus contribution equal for both
+        // candidates so the only score delta is Phase 7's site-quality bonus.
+        var barracksDefn = ScriptableObject.CreateInstance<BuildingDefn>();
+        barracksDefn.Id = "TestBarracksForSiteQuality";
+        barracksDefn.Name = "TestBarracksForSiteQuality";
+        barracksDefn.IsEnabled = true;
+        barracksDefn.CanBeBuiltByPlayer = true;
+        barracksDefn.CanGenerateWorkers = true;
+        barracksDefn.BuildingType = BuildingType.None; // same for both candidates -> wash
+        barracksDefn.ConstructionRequirements = new List<Good_CraftingRequirements>();
+
+        var weights = new PersonalityWeights(1f, 1f, 1f, 1f);
+
+        var corridorCandidate = new AICandidate
+        {
+            Type = AIActionType.ConstructBuildingInEmptyNode,
+            SourceNode = mSource,
+            DestNode = mCorridor,
+            Count = 3,
+            BuildingToConstruct = barracksDefn,
+        };
+        ActionUtility.ScoreBuild(corridorCandidate, view, analysis, weights);
+
+        var hubCandidate = new AICandidate
+        {
+            Type = AIActionType.ConstructBuildingInEmptyNode,
+            SourceNode = mSource,
+            DestNode = mHub,
+            Count = 3,
+            BuildingToConstruct = barracksDefn,
+        };
+        ActionUtility.ScoreBuild(hubCandidate, view, analysis, weights);
+
+        AssertGreater(hubCandidate.Score, corridorCandidate.Score,
+            $"Barracks on Hub ({hubCandidate.Score:F2}) should beat Corridor ({corridorCandidate.Score:F2})");
     }
 
     // 21) Pending-capture neutral must not be reinforced. Before the fix, AI_NodeState.Refresh

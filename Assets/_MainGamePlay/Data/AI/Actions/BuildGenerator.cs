@@ -62,7 +62,7 @@ public class BuildGenerator : IActionGenerator
         foreach (var bd in buildable)
         {
             if (!CanAfford(bd, view)) continue;
-            if (!HasMatchingAdjacentResource(target, bd)) continue;
+            if (!MapTopologyAnalysis.HasMatchingAdjacentResource(target, bd)) continue;
             float s = 1f;
             if (analysis.IsBuildingTypeMissing(bd.BuildingType)) s += 3f;
             if (bd.CanGenerateWorkers) s += 2f;
@@ -114,20 +114,4 @@ public class BuildGenerator : IActionGenerator
         return true;
     }
 
-    /// True iff this gatherer building would have at least one adjacent resource node that
-    /// produces its required good. Non-gatherer buildings (Outpost, Barracks, etc.) always
-    /// return true. A StoneMiner with no adjacent Stone deposit returns false -- it would
-    /// generate zero resource per turn so it is purely an economy waste.
-    static bool HasMatchingAdjacentResource(AI_NodeState target, BuildingDefn bd)
-    {
-        if (!bd.CanGatherResources || bd.ResourceThisNodeCanGoGather == null) return true;
-        var needed = bd.ResourceThisNodeCanGoGather.GoodType;
-        for (int k = 0; k < target.NumNeighbors; k++)
-        {
-            var nb = target.NeighborNodes[k];
-            if (nb.CanBeGatheredFrom && nb.ResourceGatheredFromThisNode == needed)
-                return true;
-        }
-        return false;
-    }
 }

@@ -26,6 +26,13 @@ public class StrategicAnalysis
     public bool[] IsOwned;                // owned by `player`
     public bool[] IsFrontier;             // owned and at least one non-friendly neighbor
 
+    // Per-region rollups (Phase 6). Indexed by AI_NodeState.RegionId. Sized to the highest
+    // RegionId observed this tick (regions never change once the map is loaded, so this is
+    // a stable upper bound). Generators consult these to bias toward in-region sources.
+    public int[] RegionPressure;          // sum of FrontierPressure across owned nodes in region
+    public int[] RegionSafeToSend;        // sum of SafeToSendFrom across owned nodes in region
+    int regionCapacity;
+
     // Player-level derived facts.
     public readonly Dictionary<GoodType, int> ResourceShortage = new();
     public readonly HashSet<BuildingType> OwnedBuildingTypes = new();
@@ -136,8 +143,57 @@ public class StrategicAnalysis
             SafeToSendFrom[i] = safe;
         }
 
+        // --- Pass 3: per-region rollups (Phase 6 of the preprocessing plan). Cheap loop
+        // over already-classified nodes; lets generators ask "does my region as a whole
+        // have spare workers?" without re-summing.
+        ComputeRegionRollups(n);
+
         // --- Player-level demand vector ---
         ComputeResourceShortage();
+    }
+
+    void ComputeRegionRollups(int n)
+    {
+        int maxRegion = -1;
+        for (int i = 0; i < n; i++)
+        {
+            int r = view.Nodes[i].RegionId;
+            if (r > maxRegion) maxRegion = r;
+        }
+        int regionCount = maxRegion + 1;
+        if (regionCount <= 0)
+        {
+            // MapTopologyAnalysis hasn't filled RegionId (shouldn't happen on a normal build).
+            // Zero out arrays defensively so callers don't dereference null.
+            if (RegionPressure == null) RegionPressure = new int[0];
+            if (RegionSafeToSend == null) RegionSafeToSend = new int[0];
+            return;
+        }
+        if (RegionPressure == null || RegionPressure.Length < regionCount)
+        {
+            RegionPressure = new int[regionCount];
+            RegionSafeToSend = new int[regionCount];
+            regionCapacity = regionCount;
+        }
+        else
+        {
+            for (int r = 0; r < regionCount; r++)
+            {
+                RegionPressure[r] = 0;
+                RegionSafeToSend[r] = 0;
+            }
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            int r = view.Nodes[i].RegionId;
+            if (r < 0) continue;
+            if (IsOwned[i])
+            {
+                RegionPressure[r] += FrontierPressure[i];
+                RegionSafeToSend[r] += SafeToSendFrom[i];
+            }
+        }
     }
 
     void EnsureCapacity(int n)

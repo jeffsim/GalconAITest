@@ -70,6 +70,11 @@ public class TownData
         // those copy NodeData.ChokepointScore into AI_NodeState.ChokepointScore once.
         ChokepointAnalysis.Compute(this);
 
+        // Static topology preprocessing: resource-adjacency bitmasks, distance matrix,
+        // articulation points, regions, etc. Same once-at-load timing as chokepoint
+        // scoring; mirror also flows into AI_NodeState in InitializeStaticData below.
+        MapTopologyAnalysis.Compute(this);
+
         foreach (var player in Players)
             player?.InitializeStaticData(this);
     }
