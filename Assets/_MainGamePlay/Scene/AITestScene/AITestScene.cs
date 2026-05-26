@@ -40,30 +40,10 @@ public partial class AITestScene : MonoBehaviour
     // remove the GO when the data leaves WorkersInFlight.
     Dictionary<WorkerData, Worker> workerGoByData = new Dictionary<WorkerData, Worker>();
 
-#if DEBUG
+    /// Player whose decision record is shown on the on-screen overlay and copied first by the
+    /// AI debug dump button. The new AI has no recursive tree to "view details on"; this is
+    /// just a focus hint for the dump.
     public PlayerData DebugPlayerToViewDetailsOn;
-
-    // Debugger panel
-    public AIDebuggerPanel AIDebuggerPanel;
-    public int MaxAIDepth = 7;
-    public bool ShowDebuggerAI = true;
-    public bool ShowFullActionPath = true;
-    bool lastShowDebuggerAI;
-    public bool DebugOutputStrategyToConsole = false;
-    public bool DebugOutputStrategyReasons = false;
-    public bool DebugOutputActionBeforeScore = false;
-    public bool TrackDebugAIInfo = true;
-
-    // When false, recursive AI search skips building the debugger tree entirely.
-    // This avoids per-branch AIDebuggerEntryData pool allocations and the BestNextAction chain wiring.
-    // Cost: AIDebuggerPanel and ShowFullActionPath arrows are empty for the search; planned root action still draws.
-    public bool TrackSearchDebugger = true;
-
-    // When true, the depth-0 entry point uses Phase-1 heuristic candidate generation and only
-    // runs simulate+recurse on the top-K (HybridTopK) candidates, dramatically reducing branching
-    // at the root without lowering MaxAIDepth.
-    public bool EnableHybridSearch = true;
-#endif
 
     public static AITestScene Instance;
     public List<PathStep> pathSteps = new();
@@ -113,20 +93,7 @@ public partial class AITestScene : MonoBehaviour
             foreach (var conn in nodeData.NodeConnections)
                 addLineRenderer(conn.Start, conn.End);
 
-        // Workers
-        // foreach (var workerData in Town.Workers)
-        // {
-        //     var workerGO = Instantiate(WorkerPrefab);
-        //     workerGO.transform.SetParent(WorkersFolder.transform);
-        //     workerGO.InitializeForData(workerData);
-        //     Workers.Add(workerGO);
-        // }
-
         DebugPlayerToViewDetailsOn = Town.Players[1];
-
-        lastShowDebuggerAI = ShowDebuggerAI;
-
-        AIDebuggerPanel.InitializeForTown(Town);
 
         var cameraDragger = FindAnyObjectByType<CameraDragger>();
         cameraDragger?.FrameTown();
@@ -142,16 +109,7 @@ public partial class AITestScene : MonoBehaviour
         // move the world forward one turn
         Town.Debug_WorldTurn();
         Town.Update(); // force an update to get latest AI
-        AIDebuggerPanel.ShowBestClicked();
     }
-
-#if DEBUG
-    public void OnToggleSearchDebuggerTrackingClicked()
-    {
-        TrackSearchDebugger = !TrackSearchDebugger;
-        Debug.Log($"AI search debugger tracking: {(TrackSearchDebugger ? "ON" : "OFF")}");
-    }
-#endif
 
     public class PathStep
     {
@@ -239,39 +197,9 @@ public partial class AITestScene : MonoBehaviour
         if (player == null || player.AI == null) return;
         var move = player.AI.GetActionForArrowDisplay();
         if (move == null) return;
-
-        var color = player.Color;
-
-        // Draw from BestNextActionToTake (always populated per player). Debugger entries are
-        // optional and only built for the inspected player when the panel is enabled.
-        if (Realtime || !ShowFullActionPath)
-        {
-            drawActionArrow(0, move, player, color);
-            return;
-        }
-
-        var entry = move.AIDebuggerEntry;
-        if (entry == null)
-        {
-            drawActionArrow(0, move, player, color);
-            return;
-        }
-
-        int i = 1;
-        while (entry != null)
-        {
-            switch (i)
-            {
-                case 1: color = Color.green; break;
-                case 2: color = Color.blue; break;
-                case 3: color = Color.yellow; break;
-                case 4: color = Color.red; break;
-                case 5: color = Color.magenta; break;
-            }
-            drawActionArrow(i, entry, player, color);
-            i++;
-            entry = entry.BestNextAction;
-        }
+        // Single arrow per player -- the new AI is a single-pass evaluator, so there's no
+        // recursive "and then..." chain of follow-up actions to draw.
+        drawActionArrow(0, move, player, player.Color);
     }
 
     private void drawActionArrow(int actionIndex, AIAction action, PlayerData player, Color color)
@@ -279,7 +207,6 @@ public partial class AITestScene : MonoBehaviour
         switch (action.Type)
         {
             case AIActionType.DoNothing: break;
-            case AIActionType.RootAction: break;
 
             case AIActionType.ConstructBuildingInEmptyNode:
                 if (action.SourceNode != null && action.DestNode != null)
@@ -343,70 +270,6 @@ public partial class AITestScene : MonoBehaviour
         }
     }
 
-    private void drawActionArrow(int actionIndex, AIDebuggerEntryData action, PlayerData player, Color color)
-    {
-        switch (action.ActionType)
-        {
-            case AIActionType.DoNothing: break;
-            case AIActionType.RootAction: break;
-
-            case AIActionType.ConstructBuildingInEmptyNode:
-                if (action.FromNode != null && action.ToNode != null)
-                    DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Send " + action.NumSent + ", build\n" + action.BuildingDefn.Id);
-                break;
-
-            case AIActionType.CaptureNeutralResourceNode:
-                if (action.FromNode != null && action.ToNode != null)
-                {
-                    string resourceLabel = action.ToNode.CanBeGatheredFrom
-                        ? action.ToNode.ResourceGatheredFromThisNode.ToString()
-                        : "resource";
-                    DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color,
-                        actionIndex + ". Capture " + resourceLabel + "\n" + action.NumSent + " workers");
-                }
-                break;
-
-            case AIActionType.CaptureNeutralNode:
-                if (action.NumSentFromEachNode != null && action.ToNode != null)
-                {
-                    string buildLabel = action.BuildingDefn != null ? action.BuildingDefn.Id : "?";
-                    foreach (var kvp in action.NumSentFromEachNode)
-                        DrawArrow(kvp.Key.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color,
-                            actionIndex + ". Build " + buildLabel + "\n" + kvp.Value + " workers");
-                }
-                break;
-
-            case AIActionType.AttackToNode:
-                if (action.NumSentFromEachNode != null && action.ToNode != null)
-                {
-                    foreach (var nodeState in action.NumSentFromEachNode)
-                        DrawArrow(nodeState.Key.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Attack " + action.NumSentFromEachNode[nodeState.Key]);
-                }
-                break;
-            case AIActionType.SendWorkersToOwnedNode:
-                if (action.FromNode != null && action.ToNode != null)
-                    DrawArrow(action.FromNode.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color, actionIndex + ". Support " + action.NumSent);
-                break;
-            case AIActionType.SendMultiSourceWorkersToOwnedNode:
-                if (action.NumSentFromEachNode != null && action.ToNode != null)
-                {
-                    foreach (var kvp in action.NumSentFromEachNode)
-                        DrawArrow(kvp.Key.RealNode.WorldLoc, action.ToNode.RealNode.WorldLoc, color,
-                            actionIndex + ". Support " + kvp.Value);
-                }
-                break;
-
-            case AIActionType.UpgradeBuilding:
-                if (action.FromNode != null)
-                    DrawCircle(action.FromNode.RealNode.WorldLoc, 1, color, actionIndex + ". Upgrade");
-                break;
-
-            default:
-                Debug.Log("Unknown action type: " + action.ActionType);
-                break;
-        }
-    }
-
     void Update()
     {
         if (Realtime)
@@ -442,15 +305,6 @@ public partial class AITestScene : MonoBehaviour
             DrawNextAISteps(player);
 
         DrawChokepointOverlay();
-#if DEBUG
-        if (lastShowDebuggerAI != ShowDebuggerAI)
-        {
-            lastShowDebuggerAI = ShowDebuggerAI;
-            AIDebuggerPanel.gameObject.SetActive(lastShowDebuggerAI);
-            if (lastShowDebuggerAI)
-                AIDebuggerPanel.Refresh();
-        }
-#endif
     }
 
     void ClearAllInFlightWorkerGOs()
@@ -547,7 +401,7 @@ public partial class AITestScene : MonoBehaviour
         // bottom-left Step/Reset buttons.
         var panel = CreateUIRect(canvasGO.transform, "Panel", new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1));
         var panelRect = panel.GetComponent<RectTransform>();
-        panelRect.sizeDelta = new Vector2(320, 110);
+        panelRect.sizeDelta = new Vector2(320, 170);
         panelRect.anchoredPosition = new Vector2(-10, -10);
         var bg = panel.AddComponent<Image>();
         bg.color = new Color(0f, 0f, 0f, 0.65f);
@@ -649,6 +503,8 @@ public partial class AITestScene : MonoBehaviour
         statusLabel = CreateLabel(panel.transform, "StatusLabel", "",
             new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -90), new Vector2(300, 18));
         statusLabel.fontSize = 12;
+
+        EnsureRegressionTestsButton(panel);
     }
 
     static GameObject CreateUIRect(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot)

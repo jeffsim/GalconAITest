@@ -1,36 +1,38 @@
 using UnityEngine;
 
+/// Personality definition for an AI player. Four orthogonal dials -- see
+/// PersonalityWeights for full semantics. Each one is designed to move ONE observable
+/// axis of behavior without bleeding into the others.
 [CreateAssetMenu()]
 public class PlayerAIDefn : BaseDefn
 {
     public string Name;
     public Color Color = Color.white;
 
-    [Header("Tactic Weights")]
-    [Tooltip("Multiplier for capturing neutral nodes and other territory-growth actions.")]
-    [Range(0f, 2f)] public float TerritoryExpansionWeight = 1f;
-    [Tooltip("Multiplier for upgrades, construction, and other in-place economic growth.")]
-    [Range(0f, 2f)] public float EconomicExpansionWeight = 1f;
-    [Range(0f, 2f)] public float DefenseWeight = 1f;
-    [Range(0f, 2f)] public float AggressivenessWeight = 1f;
+    [Header("Personality (each dial moves one observable axis)")]
+    [Tooltip("Preference for attacks vs. all other actions. 0 = will never attack; 2 = strongly weights attack scoring.")]
+    [Range(0f, 2f)] public float Aggression = 1f;
 
-    [Header("Combat")]
-    [Tooltip("Force sizing for attacks and contested neutral captures: ceil(threat * this). 1 = minimum to hold/win; 1.25 = ~25% extra.")]
-    [Range(1f, 3f)] public float AttackOverkillMultiplier = 1f;
+    [Tooltip("Preference for capturing neutrals and building economy. 0 = stagnant; 2 = aggressive expander.")]
+    [Range(0f, 2f)] public float Expansion = 1f;
 
-    [Header("Realtime Decision")]
-    [Tooltip("Average seconds between this AI's decisions in realtime mode.")]
+    [Tooltip("Safety margin on every send AND attack overkill multiplier. 0 = drains nodes to the legal minimum; 2 = leaves a large garrison and over-commits on attacks.")]
+    [Range(0f, 2f)] public float Caution = 1f;
+
+    [Tooltip("Patience -- preference for upgrades & long-term investment over immediate force. 0 = always prefer force; 2 = always prefer building up.")]
+    [Range(0f, 2f)] public float Tempo = 1f;
+
+    [Header("Realtime decision cadence")]
+    [Tooltip("Average seconds between decisions in realtime mode.")]
     [Range(0.05f, 10f)] public float DecisionIntervalSeconds = 1.0f;
-    [Tooltip("Uniform +/- variance applied to DecisionIntervalSeconds each time the next decision is scheduled.")]
+    [Tooltip("Uniform +/- jitter applied to the interval each time the next decision is scheduled.")]
     [Range(0f, 5f)] public float DecisionVarianceSeconds = 0.5f;
 
-    [Header("Resource Stockpiles")]
-    [Tooltip("Desired minimum wood on hand. Drives MaintainStockpile goals when below target.")]
+    [Header("Resource stockpile targets")]
+    [Tooltip("Desired minimum wood on hand. Drives demand for wood-gathering captures and builds.")]
     public int TargetWoodStockpile = 15;
-    [Tooltip("Desired minimum stone on hand. Drives MaintainStockpile goals when below target.")]
+    [Tooltip("Desired minimum stone on hand. Drives demand for stone-gathering captures and builds.")]
     public int TargetStoneStockpile = 15;
-    [Tooltip("Multiplier for how strongly the AI pursues stockpile goals.")]
-    [Range(0f, 2f)] public float ResourceStockpileWeight = 1f;
 
     public int GetTargetStockpile(GoodType goodType)
     {

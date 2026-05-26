@@ -5,7 +5,6 @@ public partial class AITestScene
 {
     /// <summary>
     /// Builds a succinct snapshot of the current simulation state, logs it, and copies it to the clipboard.
-    /// Wire to a UI button via OnDumpStateClicked or call directly.
     /// </summary>
     public void DumpSimulationState()
     {
@@ -19,19 +18,14 @@ public partial class AITestScene
 
     string BuildSimulationStateReport()
     {
-        if (Town == null)
-            return "=== SIMULATION STATE ===\n(no town loaded)";
+        if (Town == null) return "=== SIMULATION STATE ===\n(no town loaded)";
 
         var sb = new StringBuilder(4096);
         sb.AppendLine("=== SIMULATION STATE ===");
 
         string townName = TestTownDefn != null ? TestTownDefn.Id : "?";
         sb.AppendLine($"Town: {townName} | Nodes: {Town.Nodes.Count}");
-
-#if DEBUG
-        sb.AppendLine($"MaxAIDepth: {MaxAIDepth} | DebugPlayer: {DebugPlayerToViewDetailsOn?.Name ?? "none"}");
-#endif
-        sb.AppendLine("AI approach: recursive (4)");
+        sb.AppendLine("AI: utility-based single-pass evaluator");
         sb.AppendLine();
 
         AppendConfigSection(sb);
@@ -55,14 +49,14 @@ public partial class AITestScene
         AppendPlayerAIDefnConfig(sb, 3, Player3AIDefn);
     }
 
-    void AppendPlayerAIDefnConfig(StringBuilder sb, int slot, PlayerAIDefn defn)
+    static void AppendPlayerAIDefnConfig(StringBuilder sb, int slot, PlayerAIDefn defn)
     {
         if (defn == null)
         {
             sb.AppendLine($"  Player{slot} AIDefn: (none)");
             return;
         }
-        sb.AppendLine($"  Player{slot} AIDefn: {defn.Id} | terr={defn.TerritoryExpansionWeight:F2} econ={defn.EconomicExpansionWeight:F2} def={defn.DefenseWeight:F2} agg={defn.AggressivenessWeight:F2} overkill={defn.AttackOverkillMultiplier:F2}");
+        sb.AppendLine($"  Player{slot} AIDefn: {defn.Id} | agg={defn.Aggression:F2} exp={defn.Expansion:F2} cau={defn.Caution:F2} tempo={defn.Tempo:F2}");
     }
 
     void AppendPlayersSection(StringBuilder sb)
@@ -91,9 +85,9 @@ public partial class AITestScene
 
             sb.Append($"  P{player.Id} {player.Name}");
             if (player.AIDefn != null)
-                sb.Append($" [terr={player.AIDefn.TerritoryExpansionWeight:F2} econ={player.AIDefn.EconomicExpansionWeight:F2} def={player.AIDefn.DefenseWeight:F2} agg={player.AIDefn.AggressivenessWeight:F2} overkill={player.AIDefn.AttackOverkillMultiplier:F2}]");
+                sb.Append($" [agg={player.AIDefn.Aggression:F2} exp={player.AIDefn.Expansion:F2} cau={player.AIDefn.Caution:F2} tempo={player.AIDefn.Tempo:F2}]");
             sb.AppendLine();
-            sb.AppendLine($"    nodes={nodeCount} workers={totalWorkers} hasExcessWorkers={PlayerHasExcessWorkers(player)}");
+            sb.AppendLine($"    nodes={nodeCount} workers={totalWorkers}");
 
             if (inventory.Count > 0)
             {
@@ -102,26 +96,18 @@ public partial class AITestScene
                     sb.Append($" {inv.Key}={inv.Value}");
                 sb.AppendLine();
             }
-            else
-            {
-                sb.AppendLine("    inventory: (empty)");
-            }
+            else sb.AppendLine("    inventory: (empty)");
 
             var action = player.AI?.BestNextActionToTake;
             sb.AppendLine($"    planned: {FormatAIAction(action)}");
-#if DEBUG
             if (player.AI != null)
-                sb.AppendLine($"    actionsTried: {player.AI.debugOutput_ActionsTried}");
-#endif
-            AppendPlannedActionPath(sb, player);
-            AppendGoals(sb, player);
-            AppendResourceDemand(sb, player);
+                player.AI.DecisionRecord.AppendDump(sb);
             AppendRecentActions(sb, player);
             sb.AppendLine();
         }
     }
 
-    void AppendRecentActions(StringBuilder sb, PlayerData player)
+    static void AppendRecentActions(StringBuilder sb, PlayerData player)
     {
         var history = player.AI?.RecentExecutedActions;
         if (history == null || history.Count == 0)
@@ -130,80 +116,8 @@ public partial class AITestScene
             return;
         }
         sb.AppendLine($"    recentActions (last {history.Count}, oldest first):");
-        // Most-recent-last matches how a player reads a log -- scroll to the bottom for "now".
-        // Cap on PlayerAI.MaxRecentExecutedActions guarantees this stays bounded.
         for (int i = 0; i < history.Count; i++)
             sb.AppendLine($"      {history[i]}");
-    }
-
-    void AppendGoals(StringBuilder sb, PlayerData player)
-    {
-        var goals = player.AI?.GetActiveGoalsForDump();
-        if (goals == null || goals.Count == 0)
-        {
-            sb.AppendLine("    goals: (none)");
-            return;
-        }
-
-        sb.AppendLine($"    goals ({goals.Count}):");
-        foreach (var goal in goals)
-        {
-            string target;
-            switch (goal.Type)
-            {
-                case AIGoalType.CaptureNode:
-                    target = goal.TargetNode != null ? $"#{goal.TargetNode.NodeId}" : "?";
-                    break;
-                case AIGoalType.DefendFrontier:
-                    target = goal.TargetNode != null ? $"#{goal.TargetNode.NodeId}" : "?";
-                    break;
-                case AIGoalType.EconomicTier:
-                    target = goal.TargetBuilding != null ? goal.TargetBuilding.BuildingType.ToString() : "?";
-                    break;
-                case AIGoalType.MaintainStockpile:
-                    target = goal.TargetGoodType.ToString();
-                    break;
-                case AIGoalType.StrategicUpgrade:
-                    target = goal.TargetNode != null ? $"#{goal.TargetNode.NodeId}" : "?";
-                    break;
-                default:
-                    target = "?";
-                    break;
-            }
-            float urgency = goal.Value / System.Math.Max(1, goal.HorizonTurns);
-            sb.AppendLine($"      {goal.Type} {target} | val={goal.Value:F2} horiz={goal.HorizonTurns} urg={urgency:F2} | {goal.DebugReason}");
-        }
-    }
-
-    void AppendResourceDemand(StringBuilder sb, PlayerData player)
-    {
-        var demand = player.AI?.GetResourceDemandForDump();
-        if (demand == null || demand.Count == 0)
-        {
-            sb.AppendLine("    demand: (none)");
-            return;
-        }
-        sb.Append("    demand:");
-        foreach (var kvp in demand)
-            sb.Append($" {kvp.Key}={kvp.Value}");
-        sb.AppendLine();
-    }
-
-    void AppendPlannedActionPath(StringBuilder sb, PlayerData player)
-    {
-#if DEBUG
-        var entry = player.AI?.BestNextActionToTake?.AIDebuggerEntry;
-        if (entry == null) return;
-
-        int step = 1;
-        entry = entry.BestNextAction;
-        while (entry != null)
-        {
-            sb.AppendLine($"    path[{step}]: {FormatDebuggerEntry(entry)}");
-            entry = entry.BestNextAction;
-            step++;
-        }
-#endif
     }
 
     void AppendNodesSection(StringBuilder sb)
@@ -218,34 +132,19 @@ public partial class AITestScene
             GetTerritoryInfo(node, out int enemyWorkersNearby, out bool onEdge);
 
             sb.Append($"  #{node.NodeId} {owner}");
-
             if (node.Building != null)
                 sb.Append($" {node.Building.Defn.BuildingType} L{node.Building.Level}");
             else
                 sb.Append(" (no building)");
 
             sb.Append($" | workers {node.NumWorkers}/{GetMaxWorkers(node)}");
-
             if (node.OwnedBy != null)
-            {
                 sb.Append($" | edge={(onEdge ? "Y" : "N")} enemyN={enemyWorkersNearby}");
-                float defWeight = node.OwnedBy.AIDefn != null ? node.OwnedBy.AIDefn.DefenseWeight : 1f;
-                float aggWeight = node.OwnedBy.AIDefn != null ? node.OwnedBy.AIDefn.AggressivenessWeight : 1f;
-                bool canUpgrade = node.Building != null && node.Building.Defn != null && node.Building.Defn.CanBeUpgraded;
-                float buttressH = ComputeButtressHeuristicPreview(node.NumWorkers, GetMaxWorkers(node), enemyWorkersNearby, onEdge, node.ChokepointScore, defWeight, aggWeight, canUpgrade);
-                if (buttressH > 0f)
-                    sb.Append($" buttressH={buttressH:F2}");
-            }
-
-            // Chokepoint score is static for the map but attaching it here makes per-node
-            // diagnostics self-contained -- you don't have to cross-reference the chokepoints
-            // section to see why a node is getting boosted priority.
             if (node.ChokepointScore > 0.05f)
                 sb.Append($" choke={node.ChokepointScore:F2}");
 
             string inv = FormatInventory(node);
-            if (inv.Length > 0)
-                sb.Append($" | {inv}");
+            if (inv.Length > 0) sb.Append($" | {inv}");
 
             sb.Append(" | neighbors:");
             AppendNeighborIds(sb, node);
@@ -257,9 +156,7 @@ public partial class AITestScene
     {
         sb.AppendLine("--- GRAPH ---");
         var seen = new System.Collections.Generic.HashSet<(int, int)>();
-
         foreach (var node in Town.Nodes)
-        {
             foreach (var conn in node.NodeConnections)
             {
                 int a = conn.Start.NodeId;
@@ -268,7 +165,6 @@ public partial class AITestScene
                 if (!seen.Add(key)) continue;
                 sb.AppendLine($"  #{key.Item1} -- #{key.Item2}{(conn.IsBidirectional ? "" : " (dir)")}");
             }
-        }
     }
 
     void AppendChokepointsSection(StringBuilder sb)
@@ -276,19 +172,18 @@ public partial class AITestScene
         sb.AppendLine("--- CHOKEPOINTS (inter-camp betweenness, 1.0 = peak) ---");
         var ranked = new System.Collections.Generic.List<NodeData>();
         foreach (var node in Town.Nodes)
-            if (node.ChokepointScore > 0.05f)
-                ranked.Add(node);
+            if (node.ChokepointScore > 0.05f) ranked.Add(node);
         ranked.Sort((a, b) => b.ChokepointScore.CompareTo(a.ChokepointScore));
         if (ranked.Count == 0)
         {
-            sb.AppendLine("  (none -- map has fewer than 2 starting camps or all camps are isolated)");
+            sb.AppendLine("  (none -- map has fewer than 2 starting camps)");
             return;
         }
         foreach (var node in ranked)
             sb.AppendLine($"  #{node.NodeId} score={node.ChokepointScore:F2}");
     }
 
-    static string FormatAIAction(AIAction action)
+    public static string FormatAIAction(AIAction action)
     {
         if (action == null) return "null";
         switch (action.Type)
@@ -318,7 +213,6 @@ public partial class AITestScene
     {
         if (action.AttackFromNodes == null || action.AttackFromNodes.Count == 0)
             return "from ?";
-
         var sb = new StringBuilder();
         sb.Append("from ");
         bool first = true;
@@ -330,33 +224,6 @@ public partial class AITestScene
         }
         return sb.ToString();
     }
-
-#if DEBUG
-    static string FormatDebuggerEntry(AIDebuggerEntryData entry)
-    {
-        switch (entry.ActionType)
-        {
-            case AIActionType.SendWorkersToOwnedNode:
-                return $"Support {entry.NumSent} #{entry.FromNode?.NodeId} -> #{entry.ToNode?.NodeId} score={entry.FinalActionScore:F2}";
-            case AIActionType.SendMultiSourceWorkersToOwnedNode:
-                {
-                    int totalSupport = 0;
-                    foreach (var kvp in entry.NumSentFromEachNode) totalSupport += kvp.Value;
-                    return $"Multi-source support #{entry.ToNode?.NodeId} ({totalSupport} from {entry.NumSentFromEachNode.Count} sources) score={entry.FinalActionScore:F2}";
-                }
-            case AIActionType.ConstructBuildingInEmptyNode:
-                return $"Build {entry.BuildingDefn?.Id} #{entry.FromNode?.NodeId} -> #{entry.ToNode?.NodeId} score={entry.FinalActionScore:F2}";
-            case AIActionType.CaptureNeutralResourceNode:
-                return $"Capture resource #{entry.ToNode?.NodeId} from #{entry.FromNode?.NodeId} score={entry.FinalActionScore:F2}";
-            case AIActionType.UpgradeBuilding:
-                return $"Upgrade #{entry.FromNode?.NodeId} score={entry.FinalActionScore:F2}";
-            case AIActionType.AttackToNode:
-                return $"Attack #{entry.ToNode?.NodeId} score={entry.FinalActionScore:F2}";
-            default:
-                return $"{entry.ActionType} score={entry.FinalActionScore:F2}";
-        }
-    }
-#endif
 
     static string FormatInventory(NodeData node)
     {
@@ -396,69 +263,5 @@ public partial class AITestScene
             if (other.OwnedBy != null)
                 enemyWorkersNearby += other.NumWorkers;
         }
-    }
-
-    bool PlayerHasExcessWorkers(PlayerData player)
-    {
-        foreach (var node in Town.Nodes)
-        {
-            if (node.OwnedBy != player) continue;
-            int max = GetMaxWorkers(node);
-            if (node.NumWorkers > max || node.NumWorkers > 15)
-                return true;
-        }
-        return false;
-    }
-
-    static float ComputeButtressHeuristicPreview(int numWorkers, int maxWorkers, int numEnemiesInNeighborNodes, bool isOnTerritoryEdge, float chokepointScore, float defenseWeight, float aggressivenessWeight, bool canUpgrade)
-    {
-        // Mirrors AI_ActionHeuristics.GetButtressHeuristic for display. Now that the real
-        // heuristic includes an upgrade-overload term, the preview must include it too --
-        // otherwise the dump shows no buttress demand on exactly the low-tier-choke-under-
-        // heavy-pressure case the buttress task is actually most active on.
-        float defenseOverkill = Mathf.Max(1f, defenseWeight);
-        // Mirrors the real heuristic: defensive choke amp is now scaled by DefenseWeight so
-        // a pacifist's preview shows no choke pull and a defender's shows compounded pull.
-        float chokeMult = 1f + chokepointScore * AI_ActionHeuristics.ChokepointDefenseScale * Mathf.Max(0f, defenseWeight);
-        int desired = 0;
-        if (numEnemiesInNeighborNodes > 0)
-            desired = Mathf.Min(maxWorkers, Mathf.Max(1, Mathf.CeilToInt(numEnemiesInNeighborNodes * defenseOverkill * chokeMult)));
-        int frontierDeficit = Mathf.Max(0, desired - numWorkers);
-
-        // Upgrade-overload preview: mirrors GetDesiredOverloadForUpgrade. Risky AIs (agg
-        // dominates) skip overload; cautious AIs (def dominates) demand 2*pressure pre-upgrade
-        // so post-upgrade can survive the visible enemy stack.
-        int overloadDeficit = 0;
-        if (canUpgrade && isOnTerritoryEdge && numWorkers >= maxWorkers && numEnemiesInNeighborNodes > 0)
-        {
-            float sum = aggressivenessWeight + defenseWeight;
-            float riskTolerance = sum > 0f ? Mathf.Clamp01(aggressivenessWeight / sum) : 0.5f;
-            if (riskTolerance < 1f)
-            {
-                float requiredRatio = 1f - 0.5f * riskTolerance;
-                int desiredPostUpgrade = Mathf.CeilToInt(numEnemiesInNeighborNodes * requiredRatio);
-                int desiredPreUpgrade = Mathf.Max(maxWorkers + 2, desiredPostUpgrade * 2);
-                overloadDeficit = Mathf.Max(0, desiredPreUpgrade - numWorkers);
-            }
-        }
-
-        float rawValue = 0f;
-        if (frontierDeficit > 0)
-            rawValue += frontierDeficit * frontierDeficit;
-        if (isOnTerritoryEdge && frontierDeficit > 0) rawValue += 10f;
-        if (overloadDeficit > 0)
-        {
-            rawValue += overloadDeficit * 10f;
-            rawValue += 10f;
-        }
-        if (maxWorkers > 0 && numWorkers < maxWorkers / 4
-            && (isOnTerritoryEdge || numEnemiesInNeighborNodes > 0))
-        {
-            float workersDeficit = maxWorkers - numWorkers;
-            rawValue += workersDeficit * 10f;
-        }
-        if (rawValue < 20f) return 0f;
-        float clamped = Mathf.Clamp(rawValue, 20f, 40f);
-        return (clamped - 20f) / 20f * 3f * chokeMult;
     }
 }

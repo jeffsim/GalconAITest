@@ -1,8 +1,18 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public partial class PlayerAI
+/// Per-player AI brain. Single-pass utility evaluator. Each tick:
+///
+///   1. Refresh worldView from TownData (mirrors nodes, projects in-flight workers).
+///   2. Compute strategicAnalysis (edges, pressure, deficits, demand) in one pre-pass.
+///   3. Each generator emits scored candidates into candidatePool.
+///   4. Pick the highest-scoring candidate.
+///   5. Copy its payload into BestNextActionToTake for the executor.
+///   6. Record the decision into AIDecisionRecord for debug/dump.
+///
+/// There is no recursion, no simulate/undo, no per-tick mutation of search state, no
+/// action pool of 25,000. Worst case is O(N_nodes * N_buildings) for the build generator.
+public class PlayerAI
 {
     public override string ToString()
     {
@@ -10,144 +20,176 @@ public partial class PlayerAI
         return BestNextActionToTake.ToString();
     }
 
-    PlayerData player;
-    AI_TownState aiTownState;
-    int minWorkersInNodeBeforeConsideringSendingAnyOut = 6;
-    int maxDepth;
-    public int debugOutput_ActionsTried;
-
-    public AIDebuggerEntryData DebugRootEntry;
+    // ============================================================================
+    // Public surface used by the rest of the game
+    // ============================================================================
 
     public AIAction BestNextActionToTake = new();
-    // Last meaningful plan/execute; used for map arrows when BestNextActionToTake is cleared or DoNothing.
     public AIAction LastActionToTake = new();
 
-    // Rolling history of the most-recently-EXECUTED actions for this player, formatted at
-    // record time so the entries survive AIAction pool recycling. Capped to keep memory
-    // bounded; consumed by AITestScene_SimulationDump to make ping-pong / oscillation
-    // patterns visible in a state snapshot ("you can see what they've done"). Recorded only
-    // by the executor call sites in TownData, not the planner-side RememberLastAction call
-    // in Update(), so the history contains actions that actually fired, not just ones the
-    // AI was considering.
+    /// History of executed actions, formatted at record-time. Capped to keep memory bounded;
+    /// consumed by AITestScene_SimulationDump to surface ping-pong oscillations.
     public const int MaxRecentExecutedActions = 100;
-    public List<string> RecentExecutedActions = new();
-    AIAction[] actionPool;
-    int actionPoolIndex;
+    public readonly List<string> RecentExecutedActions = new();
 
-    // Pre-action EvaluateScore at the current recursion depth.
-    // Cached once per DetermineBestActionToPerform call so each peer task can compute an
-    // optimistic upper bound (baseline + heuristicBonus * personality) for branch-and-bound
-    // without re-running EvaluateScore per candidate.
-    internal float currentDepthBaselineScore;
-    public AIAction GetAIAction()
-    {
-        EnsureActionPoolCapacity(actionPoolIndex + 1);
-        return actionPool[actionPoolIndex++].Reset();
-    }
-    int maxPoolSize = 25000;
-
-    void EnsureActionPoolCapacity(int requiredCapacity)
-    {
-        if (actionPool == null)
-        {
-            int initialSize = Math.Max(maxPoolSize, requiredCapacity);
-            actionPool = new AIAction[initialSize];
-            for (int i = 0; i < initialSize; i++)
-                actionPool[i] = new AIAction();
-            return;
-        }
-
-        if (requiredCapacity <= actionPool.Length)
-            return;
-
-        int newSize = actionPool.Length;
-        while (newSize < requiredCapacity)
-            newSize *= 2;
-
-        var newPool = new AIAction[newSize];
-        Array.Copy(actionPool, newPool, actionPool.Length);
-        for (int i = actionPool.Length; i < newSize; i++)
-            newPool[i] = new AIAction();
-        actionPool = newPool;
-
-#if DEBUG
-        Debug.LogWarning($"PlayerAI action pool grew to {newSize} for {player?.Name} (required {requiredCapacity})");
-#endif
-    }
-
-    public BuildingDefn[] buildableBuildingDefns;
-    public int numBuildingDefns;
-
-    // Pool of recyclable AIGoal instances. AIGoalEnumerator.EnumerateGoals returns spent
-    // goals here at the start of each enumeration so per-Update GC pressure stays flat.
-    Stack<AIGoal> goalPool = new Stack<AIGoal>();
-
-    // Read-only views for the simulation dump / debugger panel; the AI internally owns
-    // these collections and we only want callers reading, not mutating, them.
-    public List<AIGoal> GetActiveGoalsForDump() => aiTownState?.ActiveGoals;
-    public Dictionary<GoodType, int> GetResourceDemandForDump() => aiTownState?.ResourceDemand;
-
-#if DEBUG
-    int lastMaxDepth = -1;
-#endif
-
-    // Decision cache: skip the full search when nothing the AI would key on has changed.
-    // Sentinel -1 for "never searched" so the very first Update always runs.
-    int lastSearchedWorldRevision = -1;
-    int lastSearchedMaxAIDepth = -1;
-#if DEBUG
-    PlayerData lastSearchedDebugPlayer;
-    bool lastSearchedTrackDebugger;
-    bool lastSearchedHybridEnabled;
-#endif
-
-    public List<AITask> Tasks = new();
-
-    // Realtime: world-time at which this AI is scheduled to make its next decision. The
-    // realtime loop in TownData fires Update on this player when WorldTime crosses this
-    // threshold, then ScheduleNextDecision rolls a new threshold using DecisionInterval +/-
-    // DecisionVariance from PlayerAIDefn. Negative sentinel forces an immediate first decision.
+    /// Realtime: world-time at which this AI is scheduled to make its next decision.
+    /// Negative sentinel forces an immediate first decision.
     public float NextRealtimeDecisionTime = -1f;
+
+    /// Flat per-tick decision record. Replaces the old recursive AIDebuggerEntryData tree.
+    /// Always populated -- there is no #if DEBUG gating any more.
+    public readonly AIDecisionRecord DecisionRecord = new();
+
+    // ============================================================================
+    // Internals
+    // ============================================================================
+
+    PlayerData player;
+    AIWorldView worldView;
+    StrategicAnalysis analysis = new();
+    PersonalityWeights personality;
+
+    readonly List<IActionGenerator> generators = new();
+
+    // Per-tick candidate pool. Re-used across ticks; index reset at the start of each.
+    readonly List<AICandidate> candidatePool = new();
+    readonly List<AICandidate> candidatesThisTick = new();
+    int candidatePoolIndex;
+
+    // Decision cache so we don't re-search in step mode every frame if nothing changed.
+    int lastSearchedWorldRevision = -1;
+
+    int tickCount;
 
     public PlayerAI(PlayerData playerData)
     {
         player = playerData;
-        aiTownState = new AI_TownState(player);
+        worldView = new AIWorldView(player);
+        personality = PersonalityWeights.From(player.AIDefn);
 
-        // Create pool of actions to avoid allocs during search.
-        EnsureActionPoolCapacity(maxPoolSize);
-
-        // Convert dictionary to array for speed
-        buildableBuildingDefns = new BuildingDefn[GameDefns.Instance.BuildingDefns.Count];
-        numBuildingDefns = 0;
-        foreach (var buildingDefn in GameDefns.Instance.BuildingDefns.Values)
-            if (buildingDefn.CanBeBuiltByPlayer)
-                buildableBuildingDefns[numBuildingDefns++] = buildingDefn;
+        generators.Add(new AttackGenerator());
+        generators.Add(new CaptureGenerator());
+        generators.Add(new ReinforceGenerator());
+        generators.Add(new BuildGenerator());
+        generators.Add(new UpgradeGenerator());
     }
 
     public void InitializeStaticData(TownData townData)
     {
-        aiTownState.InitializeStaticData(townData);
+        worldView.InitializeStatic(townData);
     }
+
+    // ============================================================================
+    // Realtime / step-mode driver
+    // ============================================================================
+
+    public void Update(TownData townData)
+    {
+        // Decision cache: in step mode the world may not change between AITestScene.Update
+        // ticks. Skip work when WorldRevision is unchanged. Realtime path calls
+        // InvalidateDecisionCache() explicitly before its scheduled tick.
+        if (lastSearchedWorldRevision == townData.WorldRevision && BestNextActionToTake.Type != AIActionType.DoNothing)
+            return;
+
+        // Re-read personality each tick in case an inspector edit happened mid-play.
+        personality = PersonalityWeights.From(player.AIDefn);
+
+        worldView.Refresh(townData);
+        analysis.Compute(worldView, player, personality);
+
+        DecisionRecord.BeginTick(player, ++tickCount, townData.WorldTime);
+
+        ResetCandidatePool();
+        candidatesThisTick.Clear();
+        for (int g = 0; g < generators.Count; g++)
+            generators[g].Generate(worldView, analysis, personality, this, candidatesThisTick);
+
+        // Record every candidate considered for debug; pick the best for execution.
+        AICandidate best = null;
+        for (int i = 0; i < candidatesThisTick.Count; i++)
+        {
+            var c = candidatesThisTick[i];
+            DecisionRecord.RecordEvaluated(c);
+            if (c.Score <= 0f) continue;
+            if (best == null || c.Score > best.Score) best = c;
+        }
+
+        if (best == null)
+        {
+            BestNextActionToTake.SetToNothing();
+        }
+        else
+        {
+            best.CopyTo(BestNextActionToTake);
+            RememberLastAction(BestNextActionToTake);
+        }
+        DecisionRecord.RecordChosen(best);
+
+        lastSearchedWorldRevision = townData.WorldRevision;
+    }
+
+    public void InvalidateDecisionCache()
+    {
+        lastSearchedWorldRevision = -1;
+    }
+
+    public void ScheduleNextRealtimeDecision(float currentWorldTime)
+    {
+        var defn = player.AIDefn;
+        float interval = defn != null ? defn.DecisionIntervalSeconds : 1f;
+        float variance = defn != null ? defn.DecisionVarianceSeconds : 0.5f;
+        float jitter = Random.Range(-variance, variance);
+        float delta = Mathf.Max(0.05f, interval + jitter);
+        NextRealtimeDecisionTime = currentWorldTime + delta;
+    }
+
+    // ============================================================================
+    // Candidate pool (zero-alloc across ticks)
+    // ============================================================================
+
+    public AICandidate AcquireCandidate()
+    {
+        if (candidatePoolIndex < candidatePool.Count)
+        {
+            var c = candidatePool[candidatePoolIndex++];
+            c.Reset();
+            return c;
+        }
+        var fresh = new AICandidate();
+        candidatePool.Add(fresh);
+        candidatePoolIndex++;
+        return fresh;
+    }
+
+    public void ReleaseCandidate(AICandidate c)
+    {
+        // Decrement only if this is the most recently acquired -- generators always release
+        // candidates immediately after acquiring them when the score zeros out, so this is
+        // the common case and lets us actually free the slot. Out-of-order releases just
+        // leak the slot for one tick (it'll be reset next tick by ResetCandidatePool).
+        if (candidatePoolIndex > 0 && candidatePool[candidatePoolIndex - 1] == c)
+            candidatePoolIndex--;
+    }
+
+    void ResetCandidatePool()
+    {
+        candidatePoolIndex = 0;
+    }
+
+    // ============================================================================
+    // Last-action tracking (consumed by map arrows + dump history)
+    // ============================================================================
 
     public void RememberLastAction(AIAction action)
     {
-        if (action == null || action.Type == AIActionType.DoNothing || action.Type == AIActionType.RootAction)
-            return;
+        if (action == null || action.Type == AIActionType.DoNothing) return;
         LastActionToTake.CopyFrom(action);
     }
 
-    // Called by the executor (TownData) right when an action actually fires, so the history
-    // reflects what really happened on the board. Format here at record time -- AIAction
-    // instances are pooled and recycled, so storing references would let later searches
-    // overwrite the stored entries. worldTime stamps each entry so consecutive ping-pong
-    // back-and-forth dispatches are visually obvious in the dump.
     public void RecordExecutedAction(AIAction action, float worldTime)
     {
-        if (action == null || action.Type == AIActionType.DoNothing || action.Type == AIActionType.RootAction)
-            return;
+        if (action == null || action.Type == AIActionType.DoNothing) return;
         RecentExecutedActions.Add($"t={worldTime:F2} {FormatActionForHistory(action)}");
-        // Trim from the front in batches so we don't pay O(n) per add once we cross the cap.
         if (RecentExecutedActions.Count > MaxRecentExecutedActions)
             RecentExecutedActions.RemoveRange(0, RecentExecutedActions.Count - MaxRecentExecutedActions);
     }
@@ -159,26 +201,25 @@ public partial class PlayerAI
             case AIActionType.SendWorkersToOwnedNode:
                 return $"Support {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId}";
             case AIActionType.SendMultiSourceWorkersToOwnedNode:
-                return $"Multi-source support #{action.DestNode?.NodeId} {FormatAttackFromSources(action)}";
+                return $"Multi-source support #{action.DestNode?.NodeId} {FormatSources(action)}";
             case AIActionType.ConstructBuildingInEmptyNode:
                 return $"Build {action.BuildingToConstruct?.Id} send {action.Count} #{action.SourceNode?.NodeId} -> #{action.DestNode?.NodeId}";
             case AIActionType.CaptureNeutralResourceNode:
                 return $"Capture resource #{action.DestNode?.NodeId} send {action.Count} from #{action.SourceNode?.NodeId}";
             case AIActionType.CaptureNeutralNode:
-                return $"Build {action.BuildingToConstruct?.Id} on #{action.DestNode?.NodeId} {FormatAttackFromSources(action)}";
+                return $"Build {action.BuildingToConstruct?.Id} on #{action.DestNode?.NodeId} {FormatSources(action)}";
             case AIActionType.UpgradeBuilding:
                 return $"Upgrade #{action.SourceNode?.NodeId}";
             case AIActionType.AttackToNode:
-                return $"Attack #{action.DestNode?.NodeId} {FormatAttackFromSources(action)}";
+                return $"Attack #{action.DestNode?.NodeId} {FormatSources(action)}";
             default:
                 return action.Type.ToString();
         }
     }
 
-    static string FormatAttackFromSources(AIAction action)
+    static string FormatSources(AIAction action)
     {
-        if (action.AttackFromNodes == null || action.AttackFromNodes.Count == 0)
-            return "from ?";
+        if (action.AttackFromNodes == null || action.AttackFromNodes.Count == 0) return "from ?";
         var sb = new System.Text.StringBuilder();
         sb.Append("from ");
         bool first = true;
@@ -200,130 +241,12 @@ public partial class PlayerAI
         return null;
     }
 
-    public void ScheduleNextRealtimeDecision(float currentWorldTime)
-    {
-        var defn = player.AIDefn;
-        float interval = defn != null ? defn.DecisionIntervalSeconds : 1f;
-        float variance = defn != null ? defn.DecisionVarianceSeconds : 0.5f;
-        float jitter = UnityEngine.Random.Range(-variance, variance);
-        // Floor at a small minimum so we don't accidentally schedule zero-or-negative deltas
-        // when variance >= interval (which would re-trigger every frame).
-        float delta = Mathf.Max(0.05f, interval + jitter);
-        NextRealtimeDecisionTime = currentWorldTime + delta;
-    }
+    // ============================================================================
+    // Testability hooks (used by AIRegressionTests)
+    // ============================================================================
 
-    // Called by the realtime scheduled-decision path before Update() so the decision cache
-    // is guaranteed stale and the full search runs.
-    internal void InvalidateDecisionCache()
-    {
-        lastSearchedWorldRevision = -1;
-    }
-
-    internal void Update(TownData townData)
-    {
-        maxDepth = AITestScene.Instance.MaxAIDepth - 1;
-
-        aiTownState.UpdateState(townData);
-
-#if DEBUG
-        bool triggerAIDebuggerUpdate = false;
-        if (lastMaxDepth != AITestScene.Instance.MaxAIDepth)
-        {
-            lastMaxDepth = AITestScene.Instance.MaxAIDepth;
-            ConsoleClearer.ClearConsole();
-
-            triggerAIDebuggerUpdate = true;
-        }
-
-        if (AITestScene.Instance.DebugOutputStrategyReasons)
-        {
-            for (int i = 0; i < actionPool.Length; i++)
-                actionPool[i].Reset();
-        }
-#endif
-
-        // Decision cache: re-run the full search only when an input the AI keys on has changed.
-        // In realtime mode the scheduled-decision path calls InvalidateDecisionCache() before
-        // Update(), so the cache is always stale when it matters. In step mode this avoids
-        // redundant searches when the world hasn't changed between frames.
-        bool cacheValid = lastSearchedWorldRevision == townData.WorldRevision
-                       && lastSearchedMaxAIDepth == AITestScene.Instance.MaxAIDepth;
-#if DEBUG
-        cacheValid = cacheValid
-                  && lastSearchedDebugPlayer == AITestScene.Instance.DebugPlayerToViewDetailsOn
-                  && lastSearchedTrackDebugger == AITestScene.Instance.TrackSearchDebugger
-                  && lastSearchedHybridEnabled == AITestScene.Instance.EnableHybridSearch;
-#endif
-        if (cacheValid)
-            return;
-
-        // Determine the best action to take, and then take it
-        debugOutput_ActionsTried = 0;
-        actionPoolIndex = 0;
-
-#if DEBUG
-        AIDebugger.TrackForCurrentPlayer = player == AITestScene.Instance.DebugPlayerToViewDetailsOn;
-        AIDebugger.Clear();
-#endif
-
-        if (Tasks.Count == 0)
-        {
-            Tasks.Add(new AITask_CaptureNeutralResourceNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-            Tasks.Add(new AITask_MultiSourceCaptureNeutralNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-            Tasks.Add(new AITask_TryButtressOwnedNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-            Tasks.Add(new AITask_MultiSourceButtress(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-            Tasks.Add(new AITask_AttackToNode(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-            Tasks.Add(new AITask_ConstructBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-            Tasks.Add(new AITask_UpgradeBuilding(player, aiTownState, maxDepth, minWorkersInNodeBeforeConsideringSendingAnyOut));
-        }
-        AIDebugger.rootEntry.BestNextAction = null;
-
-        AI_ActionHeuristics.UpdateTerritoryDetails(aiTownState, player);
-
-        // Enumerate strategic goals (capture/defend/economic) once per real-game
-        // Update. The recursive search below is then biased by the demand vector
-        // these goals imply -- e.g. an aggressive player generates many CaptureNode
-        // goals which in turn raise demand for Barracks construction resources,
-        // which then raises the build heuristic for Woodcutters / StoneMiners.
-        AIGoalEnumerator.EnumerateGoals(player, aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals, goalPool);
-        AI_ActionHeuristics.UpdateResourceDemand(aiTownState, buildableBuildingDefns, numBuildingDefns, aiTownState.ActiveGoals);
-
-#if DEBUG
-        bool useHybrid = AITestScene.Instance.EnableHybridSearch;
-#else
-        const bool useHybrid = true;
-#endif
-        var bestAction = useHybrid
-            ? DetermineBestActionToPerform_Hybrid(0, AIDebugger.rootEntry)
-            : DetermineBestActionToPerform(0, AIDebugger.rootEntry);
-        if (bestAction == null)
-            BestNextActionToTake.SetToNothing();
-        else
-        {
-            BestNextActionToTake.CopyFrom(bestAction);
-            RememberLastAction(bestAction);
-        }
-        player.AI.DebugRootEntry = BestNextActionToTake.AIDebuggerEntry;
-        if (AITestScene.Instance.DebugOutputStrategyToConsole && AIDebugger.TrackForCurrentPlayer)
-            Debug.Log("Actions Tried: " + debugOutput_ActionsTried);
-
-#if DEBUG
-        // for ALL entries, calculate the count of all child entries under it and store in entry.AllChildEntriesCount
-        AIDebugger.rootEntry.CalculateAllChildEntriesCount();
-
-        if (triggerAIDebuggerUpdate)
-        {
-            townData.OnAIDebuggerUpdate?.Invoke(player.Id);
-            triggerAIDebuggerUpdate = false;
-        }
-#endif
-
-        lastSearchedWorldRevision = townData.WorldRevision;
-        lastSearchedMaxAIDepth = AITestScene.Instance.MaxAIDepth;
-#if DEBUG
-        lastSearchedDebugPlayer = AITestScene.Instance.DebugPlayerToViewDetailsOn;
-        lastSearchedTrackDebugger = AITestScene.Instance.TrackSearchDebugger;
-        lastSearchedHybridEnabled = AITestScene.Instance.EnableHybridSearch;
-#endif
-    }
+    /// Direct access to the WorldView for tests that need to inspect mirror state.
+    public AIWorldView GetWorldView() => worldView;
+    public StrategicAnalysis GetAnalysis() => analysis;
+    public PersonalityWeights GetPersonality() => personality;
 }

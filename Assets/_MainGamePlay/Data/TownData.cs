@@ -95,8 +95,9 @@ public class TownData
 
         if (TestOnePlayerId == 0)
         {
-            //hack: process current player last so that it RootEntry is valid for debuggerpanel
-            var debugPlayer = AITestScene.Instance.DebugPlayerToViewDetailsOn;
+            // Tests run headless without AITestScene.Instance; in that case there's no
+            // "debug player" to defer, just update each player in declaration order.
+            var debugPlayer = AITestScene.Instance != null ? AITestScene.Instance.DebugPlayerToViewDetailsOn : null;
             foreach (var player in Players)
                 if (player != debugPlayer)
                     player?.Update(this);
@@ -428,8 +429,8 @@ public class TownData
             return;
         }
 
-        // Process all players, debug-viewed player last so its DebugRootEntry is the most
-        // recent one for the panel (mirrors the Update() ordering).
+        // Process all players, debug-viewed player last so its decision record reflects the
+        // most recent search when the dump panel reads it.
         var debugPlayer = AITestScene.Instance != null ? AITestScene.Instance.DebugPlayerToViewDetailsOn : null;
         for (int i = 0; i < Players.Count; i++)
         {
@@ -786,10 +787,6 @@ public class TownData
                 case AIActionType.AttackToNode:
                     {
                         var attackFromNodes = moveToMake.AttackFromNodes;
-
-                        // List of attack results for each attack
-                        var attackResults = moveToMake.AttackResults;
-
                         foreach (var attackFromNode in attackFromNodes.Keys)
                         {
                             var sourceNode = attackFromNode.RealNode;
@@ -798,32 +795,6 @@ public class TownData
                             // attack would be immediately captured itself.
                             var numSent = Math.Min(attackFromNodes[attackFromNode], NodeData.GetMaxSendableWorkers(sourceNode.NumWorkers));
                             if (numSent <= 0) continue;
-                            // var attackResult = attackResults[i++];
-
-                            // // Subtract units sent from the source node
-                            // sourceNode.NumWorkers -= numSent;
-
-                            // // Perform the attack on the destination node based on the attack result
-                            // switch (attackResult)
-                            // {
-                            //     case AttackResult.AttackerWon:
-                            //         // If the attacker won, the destination node becomes owned by the attacker
-                            //         toNode.OwnedBy = sourceNode.OwnedBy;
-                            //         // The remaining workers are the attackers that survived
-                            //         toNode.NumWorkers = numSent - Math.Max(0, toNode.NumWorkers);
-                            //         break;
-
-                            //     case AttackResult.DefenderWon:
-                            //         // If the defender won, reduce the destination node's workers by the number of attackers
-                            //         toNode.NumWorkers -= numSent;
-                            //         break;
-
-                            //     case AttackResult.BothSidesDied:
-                            //         // If both sides died, the destination node becomes neutral
-                            //         toNode.OwnedBy = null;
-                            //         toNode.NumWorkers = 0;
-                            //         break;
-                            // }
 
                             sourceNode.NumWorkers -= numSent;
                             toNode.NumWorkers -= numSent;

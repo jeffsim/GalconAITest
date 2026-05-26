@@ -1,220 +1,80 @@
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using Codice.CM.SEIDInfo;
 
+/// Concrete move payload produced by the AI per tick. Read by TownData.ExecuteRealtimeAction
+/// and TownData.Debug_WorldTurn to actually carry out the move on the real world.
+///
+/// Slimmer than the previous version: dropped the recursive-search debug bloat
+/// (DebugOutput_*, AIDebuggerEntry, AttackResult/AttackResults), the per-search pool
+/// reset hooks, and the in-progress error states. AIDecisionRecord now owns all debug
+/// observation; this class is purely the executor's input contract.
 public enum AIActionType
 {
-    ERROR_StuckInLoop,
     DoNothing,
-    // SendWorkersToEmptyNode,
     SendWorkersToOwnedNode,
     ConstructBuildingInEmptyNode,
     CaptureNeutralResourceNode,
     CaptureNeutralNode,
-    ConstructBuildingInOwnedEmptyNode,
     AttackToNode,
-    NoAction_GameOver,
-    NoAction_MaxDepth,
-    RootAction,
     UpgradeBuilding,
     SendMultiSourceWorkersToOwnedNode,
-};
+}
 
 public class AIAction
 {
-    public override string ToString()
-    {
-        return Type switch
-        {
-            AIActionType.SendWorkersToOwnedNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId,
-            AIActionType.SendMultiSourceWorkersToOwnedNode => "Multi-source support of #" + DestNode.NodeId,
-            AIActionType.ConstructBuildingInEmptyNode => "Send " + Count + " workers from " + SourceNode.NodeId + " to " + DestNode.NodeId + " to build " + BuildingToConstruct.Id,
-            AIActionType.CaptureNeutralResourceNode => "Capture resource #" + DestNode.NodeId + " send " + Count + " from #" + SourceNode.NodeId,
-            AIActionType.CaptureNeutralNode => "Multi-source build " + (BuildingToConstruct != null ? BuildingToConstruct.Id : "?") + " on #" + DestNode.NodeId,
-            AIActionType.UpgradeBuilding => "Upgrade #" + SourceNode.NodeId,
-            AIActionType.AttackToNode => "Attack #" + DestNode.NodeId,
-            AIActionType.DoNothing => "Do nothing (No beneficial action found)",
-            AIActionType.NoAction_MaxDepth => "Max depth reached",
-            AIActionType.NoAction_GameOver => "Game Over",
-            _ => Type.ToString(),
-        };
-    }
-
-    public float Score;
-
     public AIActionType Type = AIActionType.DoNothing;
+    public float Score;
     public int Count;
     public AI_NodeState SourceNode;
     public AI_NodeState DestNode;
     public BuildingDefn BuildingToConstruct;
-    public AttackResult AttackResult;
-    public List<AttackResult> AttackResults = new();
     public Dictionary<AI_NodeState, int> AttackFromNodes = new();
 
-#if DEBUG
-    public DebugAIStateReasons DebugOutput_ScoreReasonsBeforeSubActions = new();
-    public int DebugOutput_TriedActionNum; // for debug output purposes
-    public int DebugOutput_Depth; // for debug output purposes
-    public AIDebuggerEntryData AIDebuggerEntry;
-
-    public AIAction Reset()
+    public override string ToString()
     {
-        Score = 0;
-        Count = 0;
-        BuildingToConstruct = null;
+        switch (Type)
+        {
+            case AIActionType.SendWorkersToOwnedNode:
+                return $"Send {Count} from #{SourceNode?.NodeId} to #{DestNode?.NodeId}";
+            case AIActionType.SendMultiSourceWorkersToOwnedNode:
+                return $"Multi-source support #{DestNode?.NodeId}";
+            case AIActionType.ConstructBuildingInEmptyNode:
+                return $"Send {Count} from #{SourceNode?.NodeId} to #{DestNode?.NodeId} to build {BuildingToConstruct?.Id}";
+            case AIActionType.CaptureNeutralResourceNode:
+                return $"Capture resource #{DestNode?.NodeId} send {Count} from #{SourceNode?.NodeId}";
+            case AIActionType.CaptureNeutralNode:
+                return $"Multi-source build {(BuildingToConstruct != null ? BuildingToConstruct.Id : "?")} on #{DestNode?.NodeId}";
+            case AIActionType.UpgradeBuilding:
+                return $"Upgrade #{SourceNode?.NodeId}";
+            case AIActionType.AttackToNode:
+                return $"Attack #{DestNode?.NodeId}";
+            case AIActionType.DoNothing:
+                return "Do nothing";
+            default:
+                return Type.ToString();
+        }
+    }
+
+    public void SetToNothing()
+    {
         Type = AIActionType.DoNothing;
+        Score = 0f;
+        Count = 0;
         SourceNode = null;
         DestNode = null;
-        AIDebuggerEntry = null;
-        AttackResult = AttackResult.Undefined;
-        AttackResults.Clear();
-        AttackFromNodes.Clear();
-        DebugOutput_ScoreReasonsBeforeSubActions.Reset();
-        DebugOutput_TriedActionNum = -1;
-        DebugOutput_Depth = -1;
-        return this;
-    }
-
-    public void TrackStrategyDebugInfoInAction(DebugAIStateReasons debugOutput_actionScoreReasons, int thisActionNum, int curDepth)
-    {
-        if (!AITestScene.Instance.DebugOutputStrategyToConsole) return;
-
-        DebugOutput_TriedActionNum = thisActionNum;
-        DebugOutput_Depth = curDepth;
-        if (AITestScene.Instance.DebugOutputStrategyReasons)
-            DebugOutput_ScoreReasonsBeforeSubActions = debugOutput_actionScoreReasons;
-    }
-
-    internal void CopyFrom(AIAction sourceAction)
-    {
-        Score = sourceAction.Score;
-        Count = sourceAction.Count;
-        BuildingToConstruct = sourceAction.BuildingToConstruct;
-        Type = sourceAction.Type;
-
-        // NextAction = sourceAction.NextAction;
-        SourceNode = sourceAction.SourceNode;
-        DestNode = sourceAction.DestNode;
-        AttackResult = sourceAction.AttackResult;
-        if (sourceAction.AttackResults == null)
-            AttackResults = null;
-        else
-        {
-            AttackResults.Clear();
-            AttackResults.AddRange(sourceAction.AttackResults);
-        }
-        if (sourceAction.AttackFromNodes == null)
-            AttackFromNodes = null;
-        else
-        {
-            AttackFromNodes.Clear();
-            foreach (var kvp in sourceAction.AttackFromNodes)
-                AttackFromNodes[kvp.Key] = kvp.Value;
-        }
-
-        DebugOutput_ScoreReasonsBeforeSubActions = sourceAction.DebugOutput_ScoreReasonsBeforeSubActions;
-        DebugOutput_TriedActionNum = sourceAction.DebugOutput_TriedActionNum;
-        DebugOutput_Depth = sourceAction.DebugOutput_Depth;
-        AIDebuggerEntry = sourceAction.AIDebuggerEntry;
-    }
-
-    internal void SetToNothing()
-    {
-        Score = 0;
-        Count = 0;
         BuildingToConstruct = null;
-        Type = AIActionType.DoNothing;
-
-        // NextAction = sourceAction.NextAction;
-        SourceNode = null;
-        DestNode = null;
-        AttackResult = AttackResult.Undefined;
-        DebugOutput_ScoreReasonsBeforeSubActions = null;
-        DebugOutput_TriedActionNum = 0;
-        DebugOutput_Depth = 0;
-        AIDebuggerEntry = null;
-    }
-#endif
-
-    internal void SetTo_ConstructBuildingInEmptyNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent,
-                                                     BuildingDefn buildingDefn, float score, AIDebuggerEntryData debuggerEntry)
-    {
-        AIDebuggerEntry = debuggerEntry;
-
-        Score = score;
-        Type = AIActionType.ConstructBuildingInEmptyNode;
-        SourceNode = fromNode;
-        DestNode = toNode;
-        Count = numSent;
-        BuildingToConstruct = buildingDefn;
-    }
-
-    internal void SetTo_CaptureNeutralResourceNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float score, AIDebuggerEntryData debuggerEntry)
-    {
-        AIDebuggerEntry = debuggerEntry;
-        Score = score;
-        Type = AIActionType.CaptureNeutralResourceNode;
-        SourceNode = fromNode;
-        DestNode = toNode;
-        Count = numSent;
-    }
-
-    internal void SetTo_CaptureNeutralNode(Dictionary<AI_NodeState, int> captureFromNodes, AI_NodeState toNode, BuildingDefn buildingDefn, float score, AIDebuggerEntryData debuggerEntry)
-    {
-        AIDebuggerEntry = debuggerEntry;
-        Score = score;
-        Type = AIActionType.CaptureNeutralNode;
-        DestNode = toNode;
-        BuildingToConstruct = buildingDefn;
         AttackFromNodes.Clear();
-        foreach (var kvp in captureFromNodes)
-            AttackFromNodes[kvp.Key] = kvp.Value;
     }
 
-    internal void SetTo_SendWorkersToOwnedNode(AI_NodeState fromNode, AI_NodeState toNode, int numSent, float score, AIDebuggerEntryData debuggerEntry)
+    public void CopyFrom(AIAction other)
     {
-        AIDebuggerEntry = debuggerEntry;
-        Score = score;
-        Type = AIActionType.SendWorkersToOwnedNode;
-        SourceNode = fromNode;
-        DestNode = toNode;
-        Count = numSent;
-    }
-
-    internal void SetTo_SendMultiSourceWorkersToOwnedNode(Dictionary<AI_NodeState, int> sendFromNodes, AI_NodeState toNode, float score, AIDebuggerEntryData debuggerEntry)
-    {
-        AIDebuggerEntry = debuggerEntry;
-        Score = score;
-        Type = AIActionType.SendMultiSourceWorkersToOwnedNode;
-        DestNode = toNode;
-        SourceNode = null;
+        Type = other.Type;
+        Score = other.Score;
+        Count = other.Count;
+        SourceNode = other.SourceNode;
+        DestNode = other.DestNode;
+        BuildingToConstruct = other.BuildingToConstruct;
         AttackFromNodes.Clear();
-        foreach (var kvp in sendFromNodes)
-            AttackFromNodes[kvp.Key] = kvp.Value;
-    }
-
-    // New method
-    internal void SetTo_AttackToNode(Dictionary<AI_NodeState, int> attackFromNodes, AI_NodeState toNode, List<AttackResult> attackResults, float score, AIDebuggerEntryData debuggerEntry)
-    {
-        AIDebuggerEntry = debuggerEntry;
-        Score = score;
-        Type = AIActionType.AttackToNode;
-        DestNode = toNode;
-
-        AttackFromNodes.Clear();
-        foreach (var kvp in attackFromNodes)
-            AttackFromNodes[kvp.Key] = kvp.Value;
-
-        // AttackResults.Clear();
-        // AttackResults.AddRange(attackResults);
-    }
-
-    internal void SetTo_UpgradeBuilding(AI_NodeState fromNode, float score, AIDebuggerEntryData debuggerEntry)
-    {
-        AIDebuggerEntry = debuggerEntry;
-        Score = score;
-        Type = AIActionType.UpgradeBuilding;
-        SourceNode = fromNode;
+        foreach (var kv in other.AttackFromNodes)
+            AttackFromNodes[kv.Key] = kv.Value;
     }
 }
